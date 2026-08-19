@@ -1,0 +1,352 @@
+/* src/styles/pages/learner.css */
+.learner-home {
+  font-family: var(--font-family);
+  color: var(--color-text-primary);
+}
+
+/* Header/Navigation */
+.learner-header {
+  background-color: var(--color-white);
+  border-bottom: 1px solid var(--color-border);
+  padding: 1rem 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.learner-header .container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.learner-header .logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 700;
+  font-size: 1.2rem;
+}
+
+.learner-header .logo img {
+  height: 32px;
+}
+
+.learner-header nav {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.learner-header nav a {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  transition: color 0.2s ease;
+}
+
+.learner-header nav a:hover {
+  color: var(--color-primary);
+}
+
+.learner-header .nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.btn-outline {
+  padding: 0.5rem 1.25rem;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  transition: all 0.2s ease;
+}
+
+.btn-outline:hover {
+  background-color: var(--color-background);
+  border-color: var(--color-text-secondary);
+}
+
+.btn-secondary {
+  padding: 0.5rem 1.25rem;
+  background-color: #000000;
+  color: #ffff;
+  border: none;
+  border-radius: var(--border-radius);
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+.btn-secondary:hover {
+  background-color: var(--color-accent-hover);
+}
+
+/* Hero Section */
+.hero-section {
+  background: #ffffff;
+  color: #000000;
+  padding: 4rem 0;
+  text-align: center;
+}
+
+.hero-section h1 {
+  font-size: 2.8rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.02em;
+}
+
+.hero-section .hero-subtitle {
+  font-size: 1.2rem;
+  max-width: 650px;
+  margin: 0 auto 2rem;
+  opacity: 0.9;
+}
+
+.hero-section .hero-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.btn-hero-primary {
+  padding: 0.8rem 2.5rem;
+  background-color: #000;
+  color: #ffff;
+  border: none;
+  border-radius: var(--border-radius);
+  font-weight: 600;
+  font-size: 1rem;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.btn-hero-primary:hover {
+  background-color: var(--color-accent-hover);
+}
+
+.btn-hero-secondary {
+  padding: 0.8rem 2.5rem;
+  background: transparent;
+  color: #000;
+  border: 1px solid rgba(255,255,255,0.4);
+  border-radius: var(--border-radius);
+  font-weight: 600;
+  font-size: 1rem;
+  transition: background-color 0.2s ease;
+}
+
+.btn-hero-secondary:hover {
+  background-color: rgba(255,255,255,0.1);
+}
+
+/* Programmes Section */
+.programmes-section {
+  padding: 4rem 0;
+  background-color: var(--color-white);
+}
+
+.programmes-section h2 {
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.programmes-section > .container > p {
+  text-align: center;
+  color: var(--color-text-secondary);
+  max-width: 600px;
+  margin: 0 auto 3rem;
+}
+
+.programmes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2rem;
+}
+
+.programme-card {
+  background-color: var(--color-background);
+  border-radius: 12px;
+  padding: 2rem 1.5rem;
+  text-align: left;
+  border: 1px solid var(--color-border);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.programme-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+
+.programme-card .icon {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  display: inline-block;
+}
+
+.programme-card h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.programme-card p {
+  color: var(--color-text-secondary);
+  font-size: 0.95rem;
+  margin-bottom: 1.5rem;
+}
+
+.programme-card .btn-view {
+  background: none;
+  border: none;
+  color: var(--color-accent);
+  font-weight: 600;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.programme-card .btn-view:hover {
+  text-decoration: underline;
+}
+
+/* Testimonials Section */
+.testimonials-section {
+  background-color: var(--color-background);
+  padding: 4rem 0;
+}
+
+.testimonials-section h2 {
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 3rem;
+}
+
+.testimonials-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2rem;
+}
+
+.testimonial-card {
+  background-color: var(--color-white);
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border);
+}
+
+.testimonial-card .quote {
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--color-text-secondary);
+  margin-bottom: 1rem;
+  font-style: italic;
+}
+
+.testimonial-card .author {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.testimonial-card .author-role {
+  font-size: 0.85rem;
+  color: var(--color-text-light);
+}
+
+/* CTA Section */
+.cta-section {
+  background: whitesmoke;
+  color: black;
+  padding: 4rem 0;
+  text-align: center;
+}
+
+.cta-section h2 {
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.cta-section p {
+  font-size: 1.1rem;
+  opacity: 0.9;
+  margin-bottom: 2rem;
+}
+
+.btn-cta {
+  padding: 0.8rem 3rem;
+  background-color: transparent;
+  color: var(--color-primary);
+  border: solid;
+  border-radius: var(--border-radius);
+  font-weight: 600;
+  font-size: 1rem;
+  transition: background-color 0.2s ease;
+}
+
+.btn-cta:hover {
+  background-color: var(--color-accent-hover);
+}
+
+/* Footer */
+.learner-footer {
+  background-color: var(--color-primary);
+  color: rgba(255,255,255,0.8);
+  padding: 2.5rem 0 1.5rem;
+}
+
+.learner-footer .footer-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.learner-footer .footer-brand p {
+  font-size: 0.9rem;
+  max-width: 300px;
+  margin-top: 0.5rem;
+}
+
+.learner-footer h4 {
+  color: var(--color-white);
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.learner-footer .footer-links a {
+  display: block;
+  font-size: 0.9rem;
+  margin-bottom: 0.4rem;
+  transition: color 0.2s ease;
+}
+
+.learner-footer .footer-links a:hover {
+  color: var(--color-white);
+}
+
+.learner-footer .footer-bottom {
+  border-top: 1px solid rgba(255,255,255,0.1);
+  padding-top: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.learner-footer .footer-bottom .badge {
+  background-color: rgba(255,255,255,0.1);
+  padding: 0.25rem 1rem;
+  border-radius: 20px;
+  font-weight: 500;
+}
