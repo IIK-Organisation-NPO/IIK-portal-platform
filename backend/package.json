@@ -1,0 +1,25 @@
+{
+  "name": "learner-portal-backend",
+  "version": "1.0.0",
+  "description": "Backend for IIK Learner Certificate Portal",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "devDependencies": {
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "express-validator": "^7.3.2",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "mysql2": "^3.23.4",
+    "nodemailer": "^9.0.5",
+    "nodemon": "^3.1.14",
+    "south-african-id-validator": "^2.0.0",
+    "swagger-jsdoc": "^6.3.0",
+    "swagger-ui-express": "^5.0.1"
+  }
+}
