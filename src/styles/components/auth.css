@@ -124,6 +124,38 @@
   margin-bottom: 1.75rem;
 }
 
+/* ============ SELECT DROPDOWN ============ */
+.auth-form .input-wrapper select {
+  width: 100%;
+  padding: 0.75rem 0.75rem 0.75rem 2.75rem;
+  border: 1px solid #cccccc;
+  border-radius: 0;
+  font-size: 0.95rem;
+  transition: border-color 0.2s ease;
+  background-color: #fafafa;
+  color: #000000;
+  appearance: auto;
+  /* keeps native arrow */
+  cursor: pointer;
+}
+
+.auth-form .input-wrapper select:focus {
+  outline: none;
+  border-color: #000000;
+  background-color: #ffffff;
+}
+
+.auth-form .input-wrapper select.error {
+  border-color: #cc0000;
+  background-color: #fff5f5;
+}
+
+/* Optional: style the dropdown arrow for consistency */
+.auth-form .input-wrapper select option {
+  padding: 8px;
+  background-color: #ffffff;
+}
+
 /* ============ FORM STYLES ============ */
 
 .auth-form .form-group {
@@ -403,7 +435,7 @@
   .auth-card {
     padding: 1.5rem;
   }
-  
+
   .auth-card-wide {
     padding: 1.5rem;
   }
@@ -437,7 +469,7 @@
   .auth-card {
     padding: 1rem;
   }
-  
+
   .auth-card-wide {
     padding: 1rem;
   }

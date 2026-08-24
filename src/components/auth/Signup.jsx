@@ -1,15 +1,16 @@
 // src/components/auth/Signup.jsx
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { 
-  FaUser, 
-  FaEnvelope, 
-  FaPhone, 
-  FaIdCard, 
-  FaLock, 
-  FaEye, 
+import {
+  FaUser,
+  FaEnvelope,
+  FaPhone,
+  FaIdCard,
+  FaLock,
+  FaEye,
   FaEyeSlash,
-  FaGoogle 
+  FaGoogle,
+  FaVenusMars
 } from 'react-icons/fa';
 import Footer from '../common/Footer';
 import Input from '../common/Input';
@@ -22,6 +23,7 @@ const Signup = () => {
     fullName: '',
     email: '',
     phone: '',
+    gender: '',
     idNumber: '',
     password: '',
     confirmPassword: ''
@@ -47,39 +49,42 @@ const Signup = () => {
 
   const validateForm = () => {
     const newErrors = {};
-    
+
     if (!formData.fullName.trim()) {
       newErrors.fullName = 'Full name is required';
     }
-    
+
     if (!formData.email.trim()) {
       newErrors.email = 'Email address is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Please enter a valid email address';
     }
-    
+
     if (!formData.phone.trim()) {
       newErrors.phone = 'Phone number is required';
     }
-    
+    if (!formData.gender) {
+      newErrors.gender = 'Please select your gender';
+    }
+
     if (!formData.idNumber.trim()) {
       newErrors.idNumber = 'ID/Passport number is required';
     }
-    
+
     if (!formData.password) {
       newErrors.password = 'Password is required';
     } else if (formData.password.length < 8) {
       newErrors.password = 'Password must be at least 8 characters';
     }
-    
+
     if (formData.confirmPassword !== formData.password) {
       newErrors.confirmPassword = 'Passwords do not match';
     }
-    
+
     if (!agreeTerms) {
       newErrors.terms = 'You must agree to the Terms of Service';
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -104,7 +109,7 @@ const Signup = () => {
           <nav className="header-nav">
             <Link to="/learner/homepage">Home</Link>
             <Link to="/contact">Contact</Link>
-             <Link to="/Blog">Blog</Link>
+            <Link to="/Blog">Blog</Link>
           </nav>
         </div>
       </header>
@@ -173,6 +178,30 @@ const Signup = () => {
                   />
                 </div>
                 {errors.phone && <span className="error-text">{errors.phone}</span>}
+              </div>
+            </div>
+
+            
+            <div className="form-row">
+              <div className="form-group full-width">
+                <label htmlFor="gender">Gender</label>
+                <div className="input-wrapper">
+                  <FaVenusMars className="input-icon" />
+                  <select
+                    id="gender"
+                    name="gender"
+                    value={formData.gender}
+                    onChange={handleChange}
+                    className={errors.gender ? 'error' : ''}
+                  >
+                    <option value="">Select gender</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                    <option value="prefer-not">Prefer not to say</option>
+                  </select>
+                </div>
+                {errors.gender && <span className="error-text">{errors.gender}</span>}
               </div>
             </div>
 
