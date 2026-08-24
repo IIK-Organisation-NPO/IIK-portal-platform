@@ -1,7 +1,7 @@
 // src/components/auth/ForgotPassword.jsx
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaEnvelope, FaArrowLeft } from 'react-icons/fa';
+import { FaEnvelope, FaArrowLeft, FaLock } from 'react-icons/fa';
 import Footer from '../common/Footer';
 import '../../styles/components/forgotpassword.css';
 import logo from '../../assets/images/small Mki.png';
@@ -52,9 +52,11 @@ const ForgotPassword = () => {
       {/* Forgot Password Form */}
       <div className="forgot-password-container">
         <div className="forgot-password-card">
-          <div className="logo">
-            <img src={logo} alt="IIK Portal Logo" />
-            <span className="logo-text">Learner Certificate Portal</span>
+          
+          <div className="icon-container">
+            <div className="lock-icon-wrapper">
+              <FaLock size={40} color="#000000" />
+            </div>
           </div>
 
           <h2>Forgot Password?</h2>
