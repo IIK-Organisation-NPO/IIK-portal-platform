@@ -7,6 +7,7 @@ import ForgotPassword from '../components/auth/ForgotPassword';
 import VerifyOTP from '../components/auth/VerifyOTP';
 import ResetPassword from '../components/auth/ResetPassword';
 import LearnerDashBoard from '../pages/Learner_Screens/Learner_DashBoard';
+import LearnerProfile from '../pages/Learner_Screens/Learner_Profile';
 
 const AppRoutes = () => {
   return (
@@ -20,6 +21,7 @@ const AppRoutes = () => {
         <Route path="/verify-otp" element={<VerifyOTP />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/learner-dashboard" element={<LearnerDashBoard />} />
+        <Route path="/learner/profile" element={<LearnerProfile />} />
         {/* Now this is where to add more routes here as you build the app. dont forget */}
       </Routes>
     </Router>
