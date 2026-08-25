@@ -17,7 +17,7 @@ const Login = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     console.log('Login attempt with:', { email, password, rememberMe });
-    navigate('/admin/dashboard');
+    navigate('/learner-dashboard');
   };
 
   return (
