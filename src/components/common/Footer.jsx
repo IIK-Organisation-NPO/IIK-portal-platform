@@ -27,14 +27,7 @@ const Footer = () => {
               <span>Johannesburg, South Africa</span>
             </div>
           </div>
-          <div>
-            <h4>Quick Links</h4>
-            <div className="footer-links">
-              <Link to="/learner/dashboard">Dashboard</Link>
-              <Link to="/learner/programmes">Programmes</Link>
-              <Link to="/learner/certificates">Certificates</Link>
-            </div>
-          </div>
+
         </div>
         <div className="footer-bottom">
           <span>© 2025 IIK Learner Certificate Portal. All rights reserved.</span>

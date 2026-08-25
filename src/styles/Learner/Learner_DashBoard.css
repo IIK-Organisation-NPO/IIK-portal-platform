@@ -1,0 +1,258 @@
+/* ---- Layout Wrapper ---- */
+.dashboard-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  width: 100%;
+}
+
+.dashboard-body {
+  display: flex;
+  flex: 1;
+  min-height: calc(100vh - 72px);
+}
+
+/* ---- Dashboard Content ---- */
+.learner-dashboard {
+  flex: 1;
+  background: #f7f7f7;
+  padding: 32px 40px 48px;
+  overflow-y: auto;
+}
+
+.learner-dashboard .dashboard-welcome {
+  margin-bottom: 32px;
+}
+
+.learner-dashboard .dashboard-welcome h1 {
+  font-size: 28px;
+  font-weight: 700;
+  color: #000000;
+  letter-spacing: -0.3px;
+}
+
+.learner-dashboard .dashboard-welcome h1 span {
+  color: #000000;
+}
+
+.learner-dashboard .dashboard-welcome p {
+  font-size: 16px;
+  color: #777777;
+  margin-top: 6px;
+}
+
+/* ---- Stats Cards ---- */
+.learner-dashboard .stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-bottom: 44px;
+}
+
+.learner-dashboard .stats-grid .stat-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 22px 26px;
+  border: 1px solid #eaeaea;
+  transition: box-shadow 0.2s, transform 0.15s;
+}
+
+.learner-dashboard .stats-grid .stat-card:hover {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  transform: translateY(-2px);
+}
+
+.learner-dashboard .stats-grid .stat-card .stat-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #888888;
+  letter-spacing: 0.2px;
+}
+
+.learner-dashboard .stats-grid .stat-card .stat-value {
+  font-size: 38px;
+  font-weight: 700;
+  color: #000000;
+  margin-top: 6px;
+  letter-spacing: -0.5px;
+}
+
+.learner-dashboard .stats-grid .stat-card .stat-icon {
+  float: right;
+  font-size: 28px;
+  color: #cccccc;
+  margin-top: 4px;
+}
+
+/* ---- Programmes Section ---- */
+.learner-dashboard .programmes-section h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: #000000;
+  margin-bottom: 20px;
+  letter-spacing: -0.2px;
+}
+
+.learner-dashboard .programmes-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.learner-dashboard .programmes-grid .programme-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 26px 28px 28px;
+  border: 1px solid #eaeaea;
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow 0.2s, transform 0.15s;
+  position: relative;
+}
+
+.learner-dashboard .programmes-grid .programme-card:hover {
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.05);
+  transform: translateY(-2px);
+}
+
+.learner-dashboard .programmes-grid .programme-card .programme-icon {
+  font-size: 32px;
+  color: #000000;
+  margin-bottom: 12px;
+}
+
+.learner-dashboard .programmes-grid .programme-card h3 {
+  font-size: 19px;
+  font-weight: 700;
+  color: #000000;
+  letter-spacing: -0.2px;
+}
+
+.learner-dashboard .programmes-grid .programme-card .programme-desc {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #666666;
+  margin: 10px 0 16px;
+  flex: 1;
+}
+
+.learner-dashboard .programmes-grid .programme-card .programme-duration {
+  font-size: 13px;
+  font-weight: 500;
+  color: #999999;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.learner-dashboard .programmes-grid .programme-card .programme-duration i {
+  font-size: 14px;
+  color: #aaaaaa;
+}
+
+.learner-dashboard .programmes-grid .programme-card .btn-interest {
+  background: #000000;
+  color: #ffffff;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 40px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  width: fit-content;
+  letter-spacing: 0.2px;
+  align-self: flex-start;
+}
+
+.learner-dashboard .programmes-grid .programme-card .btn-interest:hover {
+  background: #2a2a2a;
+  transform: scale(1.02);
+}
+
+.learner-dashboard .programmes-grid .programme-card .btn-interest:active {
+  transform: scale(0.97);
+}
+
+/* ---- Mobile Responsive ---- */
+@media (max-width: 1200px) {
+  .learner-dashboard .programmes-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 992px) {
+  .learner-dashboard {
+    padding: 24px 24px 36px;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-body {
+    flex-direction: column;
+    min-height: auto;
+  }
+
+  .learner-dashboard {
+    padding: 20px 16px 32px;
+    min-height: calc(100vh - 64px);
+  }
+
+  .learner-dashboard .dashboard-welcome h1 {
+    font-size: 22px;
+  }
+
+  .learner-dashboard .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .learner-dashboard .stats-grid .stat-card {
+    padding: 16px 18px;
+  }
+
+  .learner-dashboard .stats-grid .stat-card .stat-value {
+    font-size: 30px;
+  }
+
+  .learner-dashboard .stats-grid .stat-card .stat-icon {
+    font-size: 22px;
+  }
+
+  .learner-dashboard .programmes-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .learner-dashboard .programmes-section h2 {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .learner-dashboard {
+    padding: 16px 12px 24px;
+  }
+
+  .learner-dashboard .dashboard-welcome h1 {
+    font-size: 18px;
+  }
+
+  .learner-dashboard .dashboard-welcome p {
+    font-size: 14px;
+  }
+
+  .learner-dashboard .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .learner-dashboard .stats-grid .stat-card .stat-value {
+    font-size: 26px;
+  }
+
+  .learner-dashboard .programmes-grid .programme-card {
+    padding: 20px;
+  }
+}
