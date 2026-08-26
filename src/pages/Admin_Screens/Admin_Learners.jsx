@@ -1,11 +1,14 @@
 // src/pages/Admin_Screens/Admin_Learners.jsx
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom"; // ✅ Already imported
 import Admin_Sidebar from "../../components/Admin/Admin_Sidebar";
 import Admin_Header from "../../components/Admin/Admin_Header";
 import "../../styles/Admin/Admin_Learners.css";
-import { useNavigate } from "react-router-dom";
 
 const Admin_Learners = () => {
+  // ✅ Initialize useNavigate here (this was missing!)
+  const navigate = useNavigate();
+  
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeNav] = useState("learners");
 
