@@ -10,7 +10,7 @@ const Admin_Sidebar = ({ active = 'dashboard', isMobileOpen, onClose }) => {
         { id: 'dashboard', label: 'Dashboard', icon: 'fa-th-large', path: '/admin-dashboard' },
         { id: 'analytics', label: 'Analytics', icon: 'fa-chart-line', path: '/admin/analytics' },
         { id: 'learners', label: 'Learners', icon: 'fa-users', path: '/admin/learners' },
-        { id: 'certificates', label: 'Certificates', icon: 'fa-certificate', path: '/admin/certificates' },
+        { id: 'certificates', label: 'Certificates', icon: 'fa-certificate', path: '/admin-certificates' },
         { id: 'programmes', label: 'Programmes', icon: 'fa-book-open', path: '/admin/programmes' },
         { id: 'blog', label: 'Blog & News', icon: 'fa-newspaper', path: '/admin/blog' },
         { id: 'staff', label: 'Staff Management', icon: 'fa-user-cog', path: '/admin/staff' },
@@ -29,10 +29,10 @@ const Admin_Sidebar = ({ active = 'dashboard', isMobileOpen, onClose }) => {
             {isMobileOpen && (
                 <div className="admin-sidebar-overlay" onClick={onClose}></div>
             )}
-            
+
             <aside className={`admin-sidebar ${isMobileOpen ? 'mobile-open' : ''}`}>
                 <div className="admin-sidebar-menu-label">Admin Portal</div>
-                
+
                 <nav className="admin-sidebar-nav">
                     {navItems.map((item) => {
                         if (item.isLogout) {
@@ -57,7 +57,7 @@ const Admin_Sidebar = ({ active = 'dashboard', isMobileOpen, onClose }) => {
                                 className={active === item.id ? 'active' : ''}
                                 onClick={onClose}
                             >
-                                <i className={`fas ${item.icon}`}></i> 
+                                <i className={`fas ${item.icon}`}></i>
                                 <span>{item.label}</span>
                             </Link>
                         );
