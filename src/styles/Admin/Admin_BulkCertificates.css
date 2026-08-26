@@ -1,0 +1,583 @@
+/* src/styles/pages/admin_bulkupload.css */
+
+/* ---- Layout ---- */
+.admin-bulkupload-layout {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    width: 100%;
+}
+
+.admin-bulkupload-body {
+    display: flex;
+    flex: 1;
+    min-height: calc(100vh - 72px);
+}
+
+.admin-bulkupload-content {
+    flex: 1;
+    background: #f7f7f7;
+    padding: 32px 40px 48px;
+    overflow-y: auto;
+}
+
+/* ---- Page Header ---- */
+.bulkupload-page-header {
+    margin-bottom: 28px;
+}
+
+.bulkupload-page-header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #000000;
+    margin: 0 0 4px;
+}
+
+.bulkupload-page-header p {
+    font-size: 16px;
+    color: #777777;
+    margin: 0;
+}
+
+/* ---- Filter Section ---- */
+.filter-section {
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid #eaeaea;
+    padding: 20px 24px;
+    margin-bottom: 28px;
+}
+
+.filter-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.filter-group {
+    flex: 1;
+    min-width: 150px;
+}
+
+.filter-group label {
+    display: block;
+    font-weight: 500;
+    font-size: 13px;
+    color: #333333;
+    margin-bottom: 4px;
+}
+
+.filter-group select {
+    width: 100%;
+    padding: 9px 14px;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+    background: #fafafa;
+    transition: border-color 0.2s;
+    font-family: inherit;
+}
+
+.filter-group select:focus {
+    outline: none;
+    border-color: #000000;
+    background: #ffffff;
+}
+
+.filter-group.filter-actions {
+    flex: 0 0 auto;
+    min-width: auto;
+}
+
+.btn-apply-filters {
+    padding: 9px 24px;
+    background: #000000;
+    color: #ffffff;
+    border: none;
+    border-radius: 40px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.2s;
+    white-space: nowrap;
+}
+
+.btn-apply-filters:hover {
+    background: #2a2a2a;
+}
+
+/* ---- Bulk Upload Section ---- */
+.bulk-upload-section {
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid #eaeaea;
+    padding: 24px 28px;
+    margin-bottom: 28px;
+}
+
+.bulk-upload-section h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #000000;
+    margin: 0 0 4px;
+}
+
+.bulk-upload-section>p {
+    font-size: 14px;
+    color: #777777;
+    margin: 0 0 16px;
+}
+
+.bulk-file-upload-area {
+    border: 2px dashed #d0d0d0;
+    border-radius: 14px;
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    background: #fafafa;
+}
+
+.bulk-file-upload-area:hover {
+    border-color: #000000;
+}
+
+.bulk-file-upload-area i.fa-cloud-upload-alt {
+    font-size: 40px;
+    color: #cccccc;
+}
+
+.bulk-file-upload-area p {
+    font-weight: 500;
+    color: #333333;
+    margin: 10px 0 4px;
+    font-size: 16px;
+}
+
+.bulk-file-upload-area .upload-hint {
+    font-size: 13px;
+    color: #999999;
+    display: block;
+}
+
+.bulk-file-upload-area .btn-select-files {
+    margin-top: 16px;
+    padding: 10px 24px;
+    background: #000000;
+    color: #ffffff;
+    border: none;
+    border-radius: 40px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.2s;
+}
+
+.bulk-file-upload-area .btn-select-files:hover {
+    background: #2a2a2a;
+}
+
+.selected-files-info {
+    margin-top: 12px;
+    padding: 10px 16px;
+    background: #e3f5e9;
+    border-radius: 8px;
+    color: #0a6b3b;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+}
+
+.selected-files-info i {
+    font-size: 18px;
+}
+
+.supported-formats {
+    margin-top: 12px;
+    font-size: 13px;
+    color: #999999;
+}
+
+/* ---- Recipient Preview ---- */
+.recipient-preview-section {
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid #eaeaea;
+    overflow: hidden;
+    margin-bottom: 28px;
+}
+
+.preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 24px;
+    border-bottom: 1px solid #eaeaea;
+}
+
+.preview-header h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #000000;
+    margin: 0;
+}
+
+.selected-count {
+    background: #f0f0f0;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #333333;
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+
+.recipient-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.recipient-table thead {
+    background: #fafafa;
+}
+
+.recipient-table thead th {
+    text-align: left;
+    padding: 12px 16px;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #888888;
+    border-bottom: 1px solid #eaeaea;
+}
+
+.recipient-table tbody td {
+    padding: 12px 16px;
+    border-bottom: 1px solid #f0f0f0;
+    color: #1a1a1a;
+}
+
+.recipient-table tbody tr:hover {
+    background: #fafafa;
+}
+
+.recipient-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.recipient-table input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #000000;
+    cursor: pointer;
+}
+
+.learner-name {
+    font-weight: 500;
+}
+
+.learner-email {
+    color: #555555;
+}
+
+.cert-number {
+    font-weight: 500;
+    color: #1a1a1a;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 30px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.status-completed {
+    background: #e3f5e9;
+    color: #0a6b3b;
+}
+
+.status-in-progress {
+    background: #fff3e0;
+    color: #b85c00;
+}
+
+.status-pending {
+    background: #fde8e8;
+    color: #b33c3c;
+}
+
+/* ---- Bulk Actions ---- */
+.bulk-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.bulk-actions-right {
+    display: flex;
+    gap: 12px;
+}
+
+.btn-back {
+    padding: 10px 24px;
+    background: #ffffff;
+    color: #333333;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 40px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.btn-back:hover {
+    border-color: #000000;
+    color: #000000;
+}
+
+.btn-preview {
+    padding: 10px 24px;
+    background: #ffffff;
+    color: #333333;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 40px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.btn-preview:hover {
+    border-color: #000000;
+    color: #000000;
+}
+
+.btn-issue-bulk {
+    padding: 10px 28px;
+    background: #000000;
+    color: #ffffff;
+    border: none;
+    border-radius: 40px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.2s;
+}
+
+.btn-issue-bulk:hover {
+    background: #2a2a2a;
+}
+
+/* ---- Mobile Responsive ---- */
+@media (max-width: 992px) {
+    .admin-bulkupload-content {
+        padding: 24px 24px 36px;
+    }
+
+    .filter-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+
+    .filter-group {
+        min-width: auto;
+    }
+
+    .filter-group.filter-actions {
+        flex: 1;
+    }
+
+    .btn-apply-filters {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 768px) {
+    .admin-bulkupload-body {
+        flex-direction: column;
+        min-height: auto;
+    }
+
+    .admin-bulkupload-content {
+        padding: 20px 16px 32px;
+        min-height: calc(100vh - 64px);
+    }
+
+    .bulkupload-page-header h1 {
+        font-size: 22px;
+    }
+
+    .bulk-upload-section {
+        padding: 18px 16px;
+    }
+
+    .bulk-file-upload-area {
+        padding: 28px 16px;
+    }
+
+    .bulk-file-upload-area i.fa-cloud-upload-alt {
+        font-size: 32px;
+    }
+
+    .preview-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .bulk-actions {
+        flex-direction: column;
+    }
+
+    .bulk-actions-right {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .btn-back,
+    .btn-preview,
+    .btn-issue-bulk {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .admin-bulkupload-content {
+        padding: 16px 12px 24px;
+    }
+
+    .recipient-table thead th,
+    .recipient-table tbody td {
+        padding: 10px 12px;
+        font-size: 13px;
+    }
+
+    .bulk-file-upload-area p {
+        font-size: 14px;
+    }
+
+    .bulk-file-upload-area .upload-hint {
+        font-size: 12px;
+    }
+
+    .bulk-upload-section {
+        padding: 14px 12px;
+    }
+}
+
+/* ---- Preview Header Actions ---- */
+.preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 24px;
+    border-bottom: 1px solid #eaeaea;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.preview-header h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #000000;
+    margin: 0;
+}
+
+.preview-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.selected-count {
+    background: #000000;
+    color: #ffffff;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.btn-select-all {
+    padding: 6px 16px;
+    background: #e3f5e9;
+    color: #0a6b3b;
+    border: none;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.2s;
+}
+
+.btn-select-all:hover {
+    background: #c8e6d9;
+}
+
+.btn-deselect-all {
+    padding: 6px 16px;
+    background: #fde8e8;
+    color: #b33c3c;
+    border: none;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.2s;
+}
+
+.btn-deselect-all:hover {
+    background: #f5d0d0;
+}
+
+/* ---- Table Checkbox Column ---- */
+.recipient-table th:first-child,
+.recipient-table td:first-child {
+    width: 40px;
+    text-align: center;
+}
+
+.recipient-table input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #000000;
+    cursor: pointer;
+}
