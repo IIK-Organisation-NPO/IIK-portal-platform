@@ -9,7 +9,7 @@ import ResetPassword from '../components/auth/ResetPassword';
 import LearnerDashBoard from '../pages/Learner_Screens/Learner_DashBoard';
 import LearnerProfile from '../pages/Learner_Screens/Learner_Profile';
 import AdminDashboard from '../pages/Admin_Screens/Admin_Dashboard';
-
+import AdminLearners from '../pages/Admin_Screens/Admin_Learners';
 
 const AppRoutes = () => {
   return (
@@ -28,6 +28,7 @@ const AppRoutes = () => {
         <Route path="/learner/profile" element={<LearnerProfile />} />
         {/* Admin routes – add more as you build */}
         <Route path="/admin-dashboard" element={<AdminDashboard />} />
+        <Route path="/admin/learners" element={<AdminLearners />} />
         
       </Routes>
     </Router>
