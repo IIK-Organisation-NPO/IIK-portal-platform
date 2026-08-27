@@ -10,13 +10,13 @@ const VerifyOTP = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const email = location.state?.email || 'e****@example.com';
-  
+
   const [otp, setOtp] = useState(['', '', '', '', '']);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [timer, setTimer] = useState(30);
   const [canResend, setCanResend] = useState(false);
-  
+
   const inputRefs = useRef([]);
 
   useEffect(() => {
@@ -34,12 +34,12 @@ const VerifyOTP = () => {
   const handleChange = (index, value) => {
     // Only allow numbers
     if (!/^\d*$/.test(value)) return;
-    
+
     const newOtp = [...otp];
     newOtp[index] = value.slice(0, 1);
     setOtp(newOtp);
     setError('');
-    
+
     // Auto-focus next input
     if (value && index < 4) {
       inputRefs.current[index + 1].focus();
@@ -57,7 +57,7 @@ const VerifyOTP = () => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData('text').slice(0, 5);
     const digits = pastedData.replace(/\D/g, '').split('');
-    
+
     const newOtp = [...otp];
     digits.forEach((digit, index) => {
       if (index < 5) {
@@ -65,7 +65,7 @@ const VerifyOTP = () => {
       }
     });
     setOtp(newOtp);
-    
+
     // Focus the next empty input or last input
     const nextIndex = digits.length < 5 ? digits.length : 4;
     inputRefs.current[nextIndex].focus();
@@ -74,15 +74,15 @@ const VerifyOTP = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     const otpCode = otp.join('');
-    
+
     if (otpCode.length !== 5) {
       setError('Please enter the complete 5-digit code');
       return;
     }
-    
+
     setError('');
     setIsLoading(true);
-    
+
     // Simulate API verification
     setTimeout(() => {
       setIsLoading(false);
@@ -110,7 +110,7 @@ const VerifyOTP = () => {
             <img src={logo} alt="IIK Portal Logo" />
             <span>IIK Portal</span>
           </div>
-          
+
         </div>
       </header>
 
@@ -178,7 +178,7 @@ const VerifyOTP = () => {
         </div>
       </div>
 
-      
+
     </div>
   );
 };

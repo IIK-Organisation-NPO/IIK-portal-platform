@@ -18,7 +18,7 @@ const AppRoutes = () => {
     <Router>
       <Routes>
         {/* Public routes */}
-        <Route path="/" element={<Login />} />
+        <Route path="/" element={< Homepage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -34,7 +34,7 @@ const AppRoutes = () => {
 
         <Route path="/admin-dashboard" element={<AdminDashboard />} />
         <Route path="/admin/learners" element={<AdminLearners />} />
-        
+
         <Route path="/admin-certificates" element={<AdminCertificates />} />
         <Route path="/admin-bulkCertificates" element={<AdminBulkCertificates />} />
       </Routes>
