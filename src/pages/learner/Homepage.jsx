@@ -14,21 +14,20 @@ const Homepage = () => {
       <header className="learner-header">
         <div className="container" style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1.5rem' }}>
           <div className="logo">
-            <img 
-              src={logo} 
-              alt="IIK Portal Logo" 
-              style={{ height: '40px', width: 'auto' }} 
+            <img
+              src={logo}
+              alt="IIK Portal Logo"
+              style={{ height: '40px', width: 'auto' }}
             />
             <span style={{ fontSize: '1.25rem', fontWeight: '600' }}>Learner Certificate Portal</span>
           </div>
           <nav>
             <Link to="/learner/home">Home</Link>
-            <Link to="/learner/programmes">Programmes</Link>
             <Link to="/contact">Contact</Link>
             <Link to="/blog">Blog</Link>
             <div className="nav-actions">
               <Link to="/login" className="btn-outline">Login</Link>
-              <Link to="/signup" className="btn-secondary">Sign In</Link>
+              <Link to="/signup" className="btn-secondary">Sign Up</Link>
             </div>
           </nav>
         </div>
