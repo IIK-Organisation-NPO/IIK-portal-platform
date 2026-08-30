@@ -30,8 +30,14 @@ const Login = () => {
             <span>Learner Certificate Portal</span>
           </div>
           <nav className="header-nav">
-            <Link to="/learner/homepage">Home</Link> 
-            <Link to="/contact">Contact</Link>
+            <Link to="/Homepage">Home</Link> 
+            <a
+              href="https://www.iik.co.za/contact-us"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Contact
+            </a>
             <Link to="/Blog">Blog</Link>
           </nav>
         </div>

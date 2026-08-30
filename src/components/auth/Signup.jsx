@@ -1,6 +1,6 @@
 // src/components/auth/Signup.jsx
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   FaUser,
   FaEnvelope,
@@ -10,23 +10,23 @@ import {
   FaEye,
   FaEyeSlash,
   FaGoogle,
-  FaVenusMars
-} from 'react-icons/fa';
-import Footer from '../common/Footer';
-import Input from '../common/Input';
-import '../../styles/components/auth.css';
-import logo from '../../assets/images/small Mki.png';
+  FaVenusMars,
+} from "react-icons/fa";
+import Footer from "../common/Footer";
+import Input from "../common/Input";
+import "../../styles/components/auth.css";
+import logo from "../../assets/images/small Mki.png";
 
 const Signup = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
-    phone: '',
-    gender: '',
-    idNumber: '',
-    password: '',
-    confirmPassword: ''
+    fullName: "",
+    email: "",
+    phone: "",
+    gender: "",
+    idNumber: "",
+    password: "",
+    confirmPassword: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -35,14 +35,14 @@ const Signup = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
     if (errors[name]) {
-      setErrors(prev => ({
+      setErrors((prev) => ({
         ...prev,
-        [name]: ''
+        [name]: "",
       }));
     }
   };
@@ -51,38 +51,38 @@ const Signup = () => {
     const newErrors = {};
 
     if (!formData.fullName.trim()) {
-      newErrors.fullName = 'Full name is required';
+      newErrors.fullName = "Full name is required";
     }
 
     if (!formData.email.trim()) {
-      newErrors.email = 'Email address is required';
+      newErrors.email = "Email address is required";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
+      newErrors.email = "Please enter a valid email address";
     }
 
     if (!formData.phone.trim()) {
-      newErrors.phone = 'Phone number is required';
+      newErrors.phone = "Phone number is required";
     }
     if (!formData.gender) {
-      newErrors.gender = 'Please select your gender';
+      newErrors.gender = "Please select your gender";
     }
 
     if (!formData.idNumber.trim()) {
-      newErrors.idNumber = 'ID/Passport number is required';
+      newErrors.idNumber = "ID/Passport number is required";
     }
 
     if (!formData.password) {
-      newErrors.password = 'Password is required';
+      newErrors.password = "Password is required";
     } else if (formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters';
+      newErrors.password = "Password must be at least 8 characters";
     }
 
     if (formData.confirmPassword !== formData.password) {
-      newErrors.confirmPassword = 'Passwords do not match';
+      newErrors.confirmPassword = "Passwords do not match";
     }
 
     if (!agreeTerms) {
-      newErrors.terms = 'You must agree to the Terms of Service';
+      newErrors.terms = "You must agree to the Terms of Service";
     }
 
     setErrors(newErrors);
@@ -92,8 +92,8 @@ const Signup = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (validateForm()) {
-      console.log('Signup attempt with:', formData);
-      navigate('/learner/homepage');
+      console.log("Signup attempt with:", formData);
+      navigate("/learner/homepage");
     }
   };
 
@@ -107,8 +107,14 @@ const Signup = () => {
             <span>Learner Certificate Portal</span>
           </div>
           <nav className="header-nav">
-            <Link to="/learner/homepage">Home</Link>
-            <Link to="/contact">Contact</Link>
+            <Link to="/Homepage">Home</Link>
+            <a
+              href="https://www.iik.co.za/contact-us"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Contact
+            </a>
             <Link to="/Blog">Blog</Link>
           </nav>
         </div>
@@ -123,7 +129,9 @@ const Signup = () => {
           </div>
 
           <h2>Create Your Account</h2>
-          <p className="subtitle">Enter your details below to set up your learner profile</p>
+          <p className="subtitle">
+            Enter your details below to set up your learner profile
+          </p>
 
           <form className="auth-form signup-form" onSubmit={handleSubmit}>
             <div className="form-row">
@@ -138,10 +146,12 @@ const Signup = () => {
                     value={formData.fullName}
                     onChange={handleChange}
                     placeholder="e.g. Sarah Krumac"
-                    className={errors.fullName ? 'error' : ''}
+                    className={errors.fullName ? "error" : ""}
                   />
                 </div>
-                {errors.fullName && <span className="error-text">{errors.fullName}</span>}
+                {errors.fullName && (
+                  <span className="error-text">{errors.fullName}</span>
+                )}
               </div>
             </div>
 
@@ -157,10 +167,12 @@ const Signup = () => {
                     value={formData.email}
                     onChange={handleChange}
                     placeholder="e.g. sarah@example.com"
-                    className={errors.email ? 'error' : ''}
+                    className={errors.email ? "error" : ""}
                   />
                 </div>
-                {errors.email && <span className="error-text">{errors.email}</span>}
+                {errors.email && (
+                  <span className="error-text">{errors.email}</span>
+                )}
               </div>
 
               <div className="form-group">
@@ -174,14 +186,15 @@ const Signup = () => {
                     value={formData.phone}
                     onChange={handleChange}
                     placeholder="e.g. +27 82 123 4567"
-                    className={errors.phone ? 'error' : ''}
+                    className={errors.phone ? "error" : ""}
                   />
                 </div>
-                {errors.phone && <span className="error-text">{errors.phone}</span>}
+                {errors.phone && (
+                  <span className="error-text">{errors.phone}</span>
+                )}
               </div>
             </div>
 
-            
             <div className="form-row">
               <div className="form-group full-width">
                 <label htmlFor="gender">Gender</label>
@@ -192,7 +205,7 @@ const Signup = () => {
                     name="gender"
                     value={formData.gender}
                     onChange={handleChange}
-                    className={errors.gender ? 'error' : ''}
+                    className={errors.gender ? "error" : ""}
                   >
                     <option value="">Select gender</option>
                     <option value="male">Male</option>
@@ -201,7 +214,9 @@ const Signup = () => {
                     <option value="prefer-not">Prefer not to say</option>
                   </select>
                 </div>
-                {errors.gender && <span className="error-text">{errors.gender}</span>}
+                {errors.gender && (
+                  <span className="error-text">{errors.gender}</span>
+                )}
               </div>
             </div>
 
@@ -217,10 +232,12 @@ const Signup = () => {
                     value={formData.idNumber}
                     onChange={handleChange}
                     placeholder="13-digit South African ID or Passport"
-                    className={errors.idNumber ? 'error' : ''}
+                    className={errors.idNumber ? "error" : ""}
                   />
                 </div>
-                {errors.idNumber && <span className="error-text">{errors.idNumber}</span>}
+                {errors.idNumber && (
+                  <span className="error-text">{errors.idNumber}</span>
+                )}
               </div>
             </div>
 
@@ -230,13 +247,13 @@ const Signup = () => {
                 <div className="input-wrapper">
                   <FaLock className="input-icon" />
                   <input
-                    type={showPassword ? 'text' : 'password'}
+                    type={showPassword ? "text" : "password"}
                     id="password"
                     name="password"
                     value={formData.password}
                     onChange={handleChange}
                     placeholder="Min. 8 characters"
-                    className={errors.password ? 'error' : ''}
+                    className={errors.password ? "error" : ""}
                   />
                   <button
                     type="button"
@@ -247,7 +264,9 @@ const Signup = () => {
                     {showPassword ? <FaEyeSlash /> : <FaEye />}
                   </button>
                 </div>
-                {errors.password && <span className="error-text">{errors.password}</span>}
+                {errors.password && (
+                  <span className="error-text">{errors.password}</span>
+                )}
               </div>
 
               <div className="form-group">
@@ -255,13 +274,13 @@ const Signup = () => {
                 <div className="input-wrapper">
                   <FaLock className="input-icon" />
                   <input
-                    type={showConfirmPassword ? 'text' : 'password'}
+                    type={showConfirmPassword ? "text" : "password"}
                     id="confirmPassword"
                     name="confirmPassword"
                     value={formData.confirmPassword}
                     onChange={handleChange}
                     placeholder="Re-enter password"
-                    className={errors.confirmPassword ? 'error' : ''}
+                    className={errors.confirmPassword ? "error" : ""}
                   />
                   <button
                     type="button"
@@ -272,7 +291,9 @@ const Signup = () => {
                     {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
                   </button>
                 </div>
-                {errors.confirmPassword && <span className="error-text">{errors.confirmPassword}</span>}
+                {errors.confirmPassword && (
+                  <span className="error-text">{errors.confirmPassword}</span>
+                )}
               </div>
             </div>
 
@@ -284,9 +305,14 @@ const Signup = () => {
                     checked={agreeTerms}
                     onChange={(e) => setAgreeTerms(e.target.checked)}
                   />
-                  <span>I agree to the <Link to="/terms">Terms of Service</Link> and <Link to="/privacy">Privacy Policy</Link> (POPIA compliant).</span>
+                  <span>
+                    I agree to the <Link to="/terms">Terms of Service</Link> and{" "}
+                    <Link to="/privacy">Privacy Policy</Link> (POPIA compliant).
+                  </span>
                 </label>
-                {errors.terms && <span className="error-text">{errors.terms}</span>}
+                {errors.terms && (
+                  <span className="error-text">{errors.terms}</span>
+                )}
               </div>
             </div>
 
@@ -311,7 +337,10 @@ const Signup = () => {
 
           <div className="signup-disclaimer">
             <p>
-              Your personal information is secure with us. IIK respects your privacy and manages all collected personal information strictly in accordance with the Protection of Personal Information Act (POPIA), Act No. 4 of 2013.
+              Your personal information is secure with us. IIK respects your
+              privacy and manages all collected personal information strictly in
+              accordance with the Protection of Personal Information Act
+              (POPIA), Act No. 4 of 2013.
             </p>
           </div>
         </div>
