@@ -1,0 +1,553 @@
+/* src/styles/Admin/Admin_InterestedLearners.css */
+
+/* Layout */
+.admin-interested-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  width: 100%;
+}
+
+.admin-interested-body {
+  display: flex;
+  flex: 1;
+  min-height: calc(100vh - 72px);
+}
+
+.admin-interested-content {
+  flex: 1;
+  background: #f7f7f7;
+  padding: 32px 40px 48px;
+  overflow-y: auto;
+}
+
+/* ---- TOP ROW: Header + Stats side by side ---- */
+.admin-interested-top-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  gap: 16px;
+}
+
+.admin-interested-top-row .header-left-group {
+  flex: 1 1 auto;
+}
+
+.admin-interested-top-row .header-left-group h1 {
+  font-size: 28px;
+  font-weight: 700;
+  color: #000000;
+  letter-spacing: -0.3px;
+  margin: 0 0 4px 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.admin-interested-top-row .header-left-group p {
+  font-size: 16px;
+  color: #777777;
+  margin: 0;
+}
+
+/* ---- Stats as Filter Buttons ---- */
+.header-stats-group {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-shrink: 0;
+  padding-top: 4px;
+}
+
+.stat-filter-btn {
+  border: none;
+  padding: 6px 18px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+.stat-filter-btn:hover {
+  opacity: 0.8;
+  transform: scale(1.02);
+}
+
+.stat-filter-btn.stat-total {
+  background: #e0e0e0;   /* grey background */
+  color: #000000;        /* black text */
+}
+
+.stat-filter-btn.stat-new {
+  background: #E1EFFE;   /* light blue */
+  color: #1E429F;        /* dark blue */
+}
+
+/* Programme dropdown */
+.programme-dropdown {
+  font-size: 28px;
+  font-weight: 700;
+  color: #000000;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid #000000;
+  padding: 0 4px 2px 4px;
+  cursor: pointer;
+  font-family: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+  min-width: 200px;
+}
+
+.programme-dropdown:focus {
+  outline: none;
+}
+
+.dropdown-arrow {
+  font-size: 16px;
+  color: #000000;
+  margin-left: -4px;
+  pointer-events: none;
+}
+
+/* ---- Toolbar ---- */
+.admin-interested-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #eaeaea;
+  padding: 12px 20px;
+}
+
+.admin-interested-toolbar .toolbar-left {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-interested-toolbar .toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Group filters together on the right */
+.admin-interested-toolbar .toolbar-filters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-interested-toolbar .filter-select {
+  padding: 6px 12px;
+  border: 1px solid #cccccc;
+  border-radius: 6px;
+  font-size: 13px;
+  background: #ffffff;
+  color: #333333;
+  min-width: 160px;
+  cursor: pointer;
+}
+
+.admin-interested-toolbar .filter-select:focus {
+  outline: none;
+  border-color: #000000;
+}
+
+.admin-interested-toolbar .search-input {
+  padding: 6px 14px;
+  border: 1px solid #cccccc;
+  border-radius: 6px;
+  font-size: 14px;
+  background: #ffffff;
+  color: #333333;
+  min-width: 220px;
+  transition: border-color 0.2s;
+}
+
+.admin-interested-toolbar .search-input:focus {
+  outline: none;
+  border-color: #000000;
+}
+
+.admin-interested-toolbar .search-input::placeholder {
+  color: #aaaaaa;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .admin-interested-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .admin-interested-toolbar .toolbar-left,
+  .admin-interested-toolbar .toolbar-right {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-interested-toolbar .toolbar-filters {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .admin-interested-toolbar .filter-select,
+  .admin-interested-toolbar .search-input {
+    width: 100%;
+    min-width: unset;
+  }
+
+  .admin-interested-toolbar .btn-outline {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-interested-toolbar {
+    padding: 10px 14px;
+  }
+
+  .admin-interested-toolbar .filter-select,
+  .admin-interested-toolbar .search-input {
+    font-size: 13px;
+    padding: 5px 12px;
+  }
+}
+
+/* Buttons */
+.btn-outline {
+  background: transparent;
+  border: 1px solid #cccccc;
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #333333;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.btn-outline:hover {
+  background: #f0f0f0;
+  border-color: #999999;
+}
+
+/* ---- Table ---- */
+.admin-interested-table-wrapper {
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #eaeaea;
+  overflow-x: auto;
+  margin-bottom: 24px;
+}
+
+.admin-interested-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  min-width: 900px;
+}
+
+.admin-interested-table thead th {
+  text-align: left;
+  padding: 14px 16px;
+  font-weight: 600;
+  color: #888888;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  border-bottom: 1px solid #eaeaea;
+  background: #fafafa;
+}
+
+.admin-interested-table tbody td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  color: #1a1a1a;
+}
+
+.admin-interested-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* ---- Status Badges (distinct colors) ---- */
+.status-badge {
+  display: inline-block;
+  padding: 3px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.status-badge.status-new {
+  background: #e8e8e8;
+  color: #555555;
+}
+
+.status-badge.status-contacted {
+  background: #d0d0d0;
+  color: #222222;
+}
+
+.status-badge.status-enrolled {
+  background: #1E429F;    /* dark blue – you can change to match your theme */
+  color: #ffffff;
+}
+
+/* ---- Action Buttons (side by side) ---- */
+.admin-interested-table tbody td.action-cell {
+  white-space: nowrap;
+}
+
+.action-btn {
+  border: none;
+  background: none;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 5px 14px;
+  border-radius: 4px;
+  transition: background 0.2s, color 0.2s;
+  margin-right: 6px;
+  font-family: inherit;
+  display: inline-block;
+}
+
+.action-btn.contact {
+  background: transparent;
+  color: #000000;
+  border: 1.5px solid #000000;
+}
+
+.action-btn.contact:hover {
+  background: #f0f0f0;
+}
+
+.action-btn.enroll {
+  background: #000000;
+  color: #ffffff;
+  border: 1.5px solid #000000;
+}
+
+.action-btn.enroll:hover {
+  background: #2a2a2a;
+  border-color: #2a2a2a;
+}
+
+.action-btn:last-child {
+  margin-right: 0;
+}
+
+/* ---- Pagination ---- */
+.admin-interested-pagination {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0;
+}
+
+.pagination-btn.next-only {
+  background: #ffffff;
+  border: 1px solid #cccccc;
+  border-radius: 6px;
+  padding: 8px 24px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333333;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.pagination-btn.next-only:hover {
+  background: #f0f0f0;
+}
+
+/* ---- Mobile Responsive ---- */
+@media (max-width: 992px) {
+  .admin-interested-content {
+    padding: 24px 24px 36px;
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-interested-body {
+    flex-direction: column;
+    min-height: auto;
+  }
+
+  .admin-interested-content {
+    padding: 20px 16px 32px;
+    min-height: calc(100vh - 64px);
+  }
+
+  .admin-interested-top-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .admin-interested-top-row .header-left-group h1 {
+    font-size: 22px;
+  }
+
+  .programme-dropdown {
+    font-size: 22px;
+    min-width: 140px;
+  }
+
+  .admin-interested-top-row .header-left-group p {
+    font-size: 14px;
+  }
+
+  .header-stats-group {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding-top: 0;
+  }
+
+  .stat-filter-btn {
+    font-size: 13px;
+    padding: 5px 14px;
+  }
+
+  .admin-interested-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .admin-interested-toolbar .toolbar-left,
+  .admin-interested-toolbar .toolbar-right {
+    flex-wrap: wrap;
+  }
+
+  .admin-interested-toolbar .toolbar-right {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-interested-toolbar .filter-select,
+  .admin-interested-toolbar .search-input {
+    width: 100%;
+    min-width: unset;
+  }
+
+  .admin-interested-toolbar .btn-outline {
+    width: 100%;
+    text-align: center;
+  }
+
+  .admin-interested-table-wrapper {
+    border-radius: 8px;
+  }
+
+  .admin-interested-table thead th,
+  .admin-interested-table tbody td {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .admin-interested-table {
+    min-width: 700px;
+  }
+
+  .action-btn {
+    font-size: 12px;
+    padding: 4px 10px;
+  }
+
+  .pagination-btn.next-only {
+    padding: 6px 18px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-interested-content {
+    padding: 16px 12px 24px;
+  }
+
+  .admin-interested-top-row .header-left-group h1 {
+    font-size: 18px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+
+  .programme-dropdown {
+    font-size: 18px;
+    min-width: 120px;
+    border-bottom-width: 1.5px;
+  }
+
+  .dropdown-arrow {
+    font-size: 13px;
+  }
+
+  .admin-interested-top-row .header-left-group p {
+    font-size: 13px;
+  }
+
+  .header-stats-group {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .stat-filter-btn {
+    font-size: 12px;
+    padding: 4px 12px;
+    width: 100%;
+    text-align: center;
+  }
+
+  .admin-interested-table {
+    font-size: 12px;
+    min-width: 500px;
+  }
+
+  .admin-interested-table thead th,
+  .admin-interested-table tbody td {
+    padding: 8px 8px;
+  }
+
+  .status-badge {
+    font-size: 11px;
+    padding: 2px 10px;
+  }
+
+  .action-btn {
+    font-size: 11px;
+    padding: 3px 8px;
+    margin-right: 4px;
+  }
+
+  .admin-interested-pagination {
+    justify-content: center;
+  }
+
+  .pagination-btn.next-only {
+    padding: 6px 16px;
+    font-size: 12px;
+    width: 100%;
+    text-align: center;
+  }
+}

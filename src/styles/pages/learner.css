@@ -5,54 +5,137 @@
 }
 
 /* Header/Navigation */
-.learner-header {
+/* ===== Home Header ===== */
+.home-header {
   background-color: var(--color-white);
   border-bottom: 1px solid var(--color-border);
-  padding: 1rem 0;
+  padding: 0.75rem 0;
   position: sticky;
   top: 0;
   z-index: 100;
 }
 
-.learner-header .container {
+.home-header .header-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.learner-header .logo {
+.home-header .header-logo {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-weight: 700;
-  font-size: 1.2rem;
+  gap: 0.75rem;
+  flex-shrink: 0;
 }
 
-.learner-header .logo img {
-  height: 32px;
+.home-header .header-logo img {
+  height: 38px;
+  width: auto;
 }
 
-.learner-header nav {
+.home-header .header-logo span {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+}
+
+.home-header .header-nav {
   display: flex;
   align-items: center;
-  gap: 2rem;
+  gap: 2.5rem;
 }
 
-.learner-header nav a {
+.home-header .header-nav a {
   font-size: 0.9rem;
   font-weight: 500;
   color: var(--color-text-secondary);
+  text-decoration: none;
   transition: color 0.2s ease;
+  white-space: nowrap;
 }
 
-.learner-header nav a:hover {
+.home-header .header-nav a:hover {
   color: var(--color-primary);
 }
 
-.learner-header .nav-actions {
+.home-header .nav-actions {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
+  margin-left: 0.5rem;
+}
+
+.home-header .nav-actions .btn-login {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  padding: 0.4rem 1rem;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.home-header .nav-actions .btn-login:hover {
+  color: var(--color-primary);
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+.home-header .nav-actions .btn-signup {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-white);
+  background-color: var(--color-primary);
+  padding: 0.4rem 1.25rem;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.home-header .nav-actions .btn-signup:hover {
+  background-color: var(--color-primary-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+  .home-header .header-container {
+    padding: 0 1rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .home-header .header-logo span {
+    font-size: 0.95rem;
+  }
+
+  .home-header .header-logo img {
+    height: 32px;
+  }
+
+  .home-header .header-nav {
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .home-header .header-nav a {
+    font-size: 0.8rem;
+  }
+
+  .home-header .nav-actions {
+    gap: 0.4rem;
+  }
+
+  .home-header .nav-actions .btn-login,
+  .home-header .nav-actions .btn-signup {
+    font-size: 0.8rem;
+    padding: 0.3rem 0.75rem;
+  }
 }
 
 .btn-outline {
@@ -73,15 +156,11 @@
 .btn-secondary {
   padding: 0.5rem 1.25rem;
   background-color: #000000;
-  color: #ffff;
+  color: #FFFFFF;
   border: none;
   border-radius: var(--border-radius);
   font-weight: 500;
   transition: background-color 0.2s ease;
-}
-
-.btn-secondary:hover {
-  background-color: var(--color-accent-hover);
 }
 
 /* Hero Section */
@@ -283,17 +362,11 @@
 
 .btn-cta {
   padding: 0.8rem 3rem;
-  background-color: transparent;
-  color: var(--color-primary);
-  border: solid;
-  border-radius: var(--border-radius);
+  background-color:#000000;
+  color: #FFFFFF;
   font-weight: 600;
   font-size: 1rem;
   transition: background-color 0.2s ease;
-}
-
-.btn-cta:hover {
-  background-color: var(--color-accent-hover);
 }
 
 /* Footer */
