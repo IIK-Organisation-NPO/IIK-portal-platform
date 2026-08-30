@@ -10,17 +10,13 @@ import LearnerDashBoard from '../pages/Learner_Screens/Learner_DashBoard';
 import LearnerProfile from '../pages/Learner_Screens/Learner_Profile';
 import AdminDashboard from '../pages/Admin_Screens/Admin_Dashboard';
 import AdminLearners from '../pages/Admin_Screens/Admin_Learners';
-import AdminCertificates from '../pages/Admin_Screens/Admin_Certificates';
-import AdminBulkCertificates from '../pages/Admin_Screens/Admin_BulkCertificates';
-import AdminInterestedLearners from '../pages/Admin_Screens/Admin_InterestedLearners';
-import About from '../pages/Home/About';
 
 const AppRoutes = () => {
   return (
     <Router>
       <Routes>
         {/* Public routes */}
-        <Route path="/Homepage" element={< Homepage />} />
+        <Route path="/" element={<Login />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -37,9 +33,7 @@ const AppRoutes = () => {
 
         <Route path="/admin-dashboard" element={<AdminDashboard />} />
         <Route path="/admin/learners" element={<AdminLearners />} />
-        <Route path="/admin-certificates" element={<AdminCertificates />} />
-        <Route path="/admin-bulkCertificates" element={<AdminBulkCertificates />} />
-        <Route path="/admin/interested-learners" element={<AdminInterestedLearners />} />
+        
       </Routes>
     </Router>
   );
