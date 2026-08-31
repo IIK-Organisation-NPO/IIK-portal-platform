@@ -10,6 +10,7 @@ import LearnerDashBoard from '../pages/Learner_Screens/Learner_DashBoard';
 import LearnerProfile from '../pages/Learner_Screens/Learner_Profile';
 import AdminDashboard from '../pages/Admin_Screens/Admin_Dashboard';
 import AdminLearners from '../pages/Admin_Screens/Admin_Learners';
+import About from './pages/Home/About';
 
 const AppRoutes = () => {
   return (
