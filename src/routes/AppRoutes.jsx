@@ -12,6 +12,9 @@ import LearnerProfile from '../pages/Learner_Screens/Learner_Profile';
 import AdminDashboard from '../pages/Admin_Screens/Admin_Dashboard';
 import AdminLearners from '../pages/Admin_Screens/Admin_Learners';
 import AdminInterestedLearners from '../pages/Admin_Screens/Admin_InterestedLearners';
+import Admin_Certificates from '../pages/Admin_Screens/Admin_Certificates';
+import Admin_BulkUpload from '../pages/Admin_Screens/Admin_BulkCertificates';
+import VerifyEmail from '../components/auth/VerifyEmail'; // ✅ Fixed: changed from './components/auth/VerifyEmail' to '../components/auth/VerifyEmail'
 
 const AppRoutes = () => {
   return (
@@ -21,6 +24,7 @@ const AppRoutes = () => {
         <Route path="/" element={<Login />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/verify-otp" element={<VerifyOTP />} />
         <Route path="/reset-password" element={<ResetPassword />} />
@@ -34,6 +38,9 @@ const AppRoutes = () => {
         <Route path="/admin-dashboard" element={<AdminDashboard />} />
         <Route path="/admin/learners" element={<AdminLearners />} />
         <Route path="/admin/interested-learners" element={<AdminInterestedLearners />} />
+        <Route path="/admin/certificates" element={<Admin_Certificates />} />
+        <Route path="/admin/bulk-upload" element={<Admin_BulkUpload />} />
+        
       </Routes>
     </Router>
   );

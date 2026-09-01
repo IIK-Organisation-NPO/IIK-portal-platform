@@ -1,0 +1,522 @@
+/* src/styles/components/VerifyEmail.css */
+
+/* Reset default styles for consistent rendering - but ONLY within the container */
+/* Don't target body directly - it affects the entire app */
+
+/* Main container that holds the entire verification page */
+.verify-email-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff; /* Changed from #000 to #fff (white background) */
+  color: #000000; /* Changed from #fff to #000 (black text) */
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  /* All styles are now scoped to this container */
+}
+
+/* ===== HEADER STYLES ===== */
+.verify-email-header {
+  background: #ffffff; /* Changed from #0a0a0a to light grey */
+  border-bottom: 1px solid #e0e0e0; /* Changed from #222 to light border */
+  padding: 1rem 2rem;
+}
+
+/* Header inner container with max width for centering */
+.verify-email-container .header-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Logo section with image and text */
+.verify-email-container .header-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.verify-email-container .header-logo img {
+  height: 36px;
+  width: auto;
+}
+
+.verify-email-container .header-logo span {
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+  color: #000000; /* Changed from #fff to #000 (black text) */
+}
+
+/* Navigation links */
+.verify-email-container .header-nav {
+  display: flex;
+  gap: 2rem;
+}
+
+.verify-email-container .header-nav a {
+  color: #555555; /* Changed from #aaa to darker grey for better contrast on white */
+  text-decoration: none;
+  font-size: 0.95rem;
+  transition: color 0.2s ease;
+}
+
+.verify-email-container .header-nav a:hover {
+  color: #000000; /* Changed from #fff to #000 (black on hover) */
+}
+
+.verify-email-container .header-nav a:active {
+  color: #888888;
+}
+
+/* ===== MAIN CONTENT STYLES ===== */
+.verify-email-container .verify-content {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem 1rem;
+}
+
+/* Verification card - the main form container */
+.verify-email-container .verify-card {
+  background: #ffffff; /* Changed from #0f0f0f to white */
+  border: 1px solid #e0e0e0; /* Changed from #222 to light border */
+  border-radius: 16px;
+  padding: 2.5rem 2.8rem;
+  max-width: 500px;
+  width: 100%;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1); /* Lighter shadow */
+}
+
+.verify-email-container .verify-card h1 {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.5px;
+  color: #000000; /* Changed from #fff to #000 */
+}
+
+.verify-email-container .verify-description {
+  color: #555555; /* Changed from #aaa to darker grey */
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+}
+
+/* Email display section showing where the code was sent */
+.verify-email-container .email-display {
+  background: #f5f5f5; /* Changed from #1a1a1a to light grey */
+  border-radius: 8px;
+  padding: 0.9rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.8rem;
+  border: 1px solid #e0e0e0; /* Changed from #2a2a2a to light border */
+}
+
+.verify-email-container .email-icon {
+  font-size: 1.2rem;
+  color: #888888; /* Changed from #666 to lighter grey */
+}
+
+.verify-email-container .email-address {
+  color: #333333; /* Changed from #ccc to dark grey */
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+/* ===== CODE INPUT STYLES ===== */
+.verify-email-container .code-input-group {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+/* Individual digit input fields */
+.verify-email-container .code-input {
+  width: 52px;
+  height: 60px;
+  background: #f5f5f5; /* Changed from #1a1a1a to light grey */
+  border: 2px solid #cccccc; /* Changed from #333 to light border */
+  border-radius: 10px;
+  color: #000000; /* Changed from #fff to #000 */
+  font-size: 1.8rem;
+  font-weight: 600;
+  text-align: center;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.verify-email-container .code-input:focus {
+  border-color: #666666; /* Changed from #888 to darker grey */
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05); /* Lighter shadow */
+  background: #ffffff; /* Changed from #222 to white */
+}
+
+.verify-email-container .code-input::placeholder {
+  color: #aaaaaa; /* Changed from #444 to lighter grey */
+}
+
+/* ===== BUTTON & MESSAGE STYLES ===== */
+.verify-email-container .btn-primary {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  padding: 0.9rem 0;
+  background: #000000; /* Changed from #fff to #000 (black button) */
+  color: #ffffff; /* Changed from #000 to #fff (white text) */
+  font-weight: 600;
+  font-size: 1rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.1s ease;
+  text-decoration: none;
+  margin-top: 0.5rem;
+}
+
+.verify-email-container .btn-primary:hover {
+  background: #1a1a1a; /* Changed from #e6e6e6 to dark grey */
+}
+
+.verify-email-container .btn-primary:active {
+  transform: scale(0.98);
+}
+
+.verify-email-container .verify-btn {
+  margin-bottom: 1.5rem;
+}
+
+.verify-email-container .error-message {
+  color: #cc0000; /* Changed from #ff6b6b to darker red for better contrast on white */
+  font-size: 0.9rem;
+  text-align: center;
+  margin: -0.5rem 0 1rem 0;
+}
+
+/* ===== RESEND SECTION STYLES ===== */
+.verify-email-container .resend-section {
+  text-align: center;
+  margin: 1.2rem 0 1rem;
+  color: #555555; /* Changed from #aaa to darker grey */
+  font-size: 0.9rem;
+}
+
+.verify-email-container .resend-link {
+  background: none;
+  border: none;
+  color: #000000; /* Changed from #fff to #000 */
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  padding: 0 0.2rem;
+  transition: opacity 0.2s ease;
+}
+
+.verify-email-container .resend-link.disabled {
+  color: #aaaaaa; /* Changed from #555 to lighter grey */
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
+.verify-email-container .resend-link:not(.disabled):hover {
+  opacity: 0.7;
+}
+
+.verify-email-container .timer {
+  color: #888888; /* Changed from #666 to lighter grey */
+  font-weight: 400;
+}
+
+.verify-email-container .password-hint {
+  font-size: 0.75rem;
+  color: #aaaaaa; /* Changed from #555 to lighter grey */
+  margin-top: 0.3rem;
+  letter-spacing: 0.3px;
+}
+
+/* ===== BACK LINK STYLES ===== */
+.verify-email-container .back-link {
+  display: block;
+  text-align: center;
+  margin-top: 1.5rem;
+  color: #888888; /* Changed from #888 to keep grey */
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: color 0.2s ease;
+}
+
+.verify-email-container .back-link:hover {
+  color: #000000; /* Changed from #fff to #000 */
+}
+
+/* ===== SUCCESS ANIMATION OVERLAY ===== */
+.verify-email-container .success-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.95); /* Changed from black to white overlay */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.5s ease;
+}
+
+.verify-email-container .success-modal {
+  background: #ffffff; /* Changed from #0f0f0f to white */
+  border: 1px solid #e0e0e0; /* Changed from #222 to light border */
+  border-radius: 24px;
+  padding: 3rem 2.5rem;
+  max-width: 420px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.15); /* Lighter shadow */
+  animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.verify-email-container .success-modal h2 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0.5rem 0 0.5rem;
+  color: #000000; /* Changed from #fff to #000 */
+}
+
+.verify-email-container .success-modal p {
+  color: #555555; /* Changed from #aaa to darker grey */
+  font-size: 1rem;
+  line-height: 1.6;
+  margin-bottom: 2rem;
+}
+
+.verify-email-container .success-modal .btn-primary {
+  width: auto;
+  padding: 0.8rem 2.5rem;
+  margin: 0 auto;
+}
+
+/* ===== CHECKMARK ANIMATION ===== */
+/* Keep the checkmark white but invert the container */
+.verify-email-container .checkmark-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 0.5rem;
+}
+
+.verify-email-container .checkmark {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  display: block;
+  stroke-width: 3;
+  stroke: #000000; /* Changed from #fff to #000 for black checkmark */
+  stroke-miterlimit: 10;
+  animation: scaleIn 0.6s ease forwards;
+}
+
+.verify-email-container .checkmark-circle {
+  stroke-dasharray: 166;
+  stroke-dashoffset: 166;
+  stroke-width: 3;
+  stroke-miterlimit: 10;
+  stroke: #000000; /* Changed from #fff to #000 */
+  fill: none;
+  animation: stroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+}
+
+.verify-email-container .checkmark-check {
+  transform-origin: 50% 50%;
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  stroke: #000000; /* Changed from #fff to #000 */
+  fill: none;
+  animation: stroke 0.4s cubic-bezier(0.65, 0, 0.45, 1) 0.4s forwards;
+}
+
+/* Animation keyframes for the checkmark */
+@keyframes stroke {
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes scaleIn {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  0% {
+    transform: translateY(40px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* ===== RESPONSIVE STYLES ===== */
+/* Mobile devices (tablets and smaller) */
+@media (max-width: 768px) {
+  .verify-email-container .verify-email-header {
+    padding: 0.8rem 1.5rem;
+  }
+
+  .verify-email-container .header-nav {
+    gap: 1.5rem;
+  }
+
+  .verify-email-container .verify-card {
+    padding: 2rem 1.5rem;
+  }
+
+  .verify-email-container .code-input {
+    width: 48px;
+    height: 56px;
+    font-size: 1.6rem;
+  }
+}
+
+/* Small mobile devices (phones) */
+@media (max-width: 640px) {
+  .verify-email-container .verify-email-header {
+    padding: 0.8rem 1rem;
+  }
+
+  .verify-email-container .header-logo span {
+    font-size: 0.9rem;
+  }
+
+  .verify-email-container .header-nav {
+    gap: 1rem;
+  }
+  .verify-email-container .header-nav a {
+    font-size: 0.8rem;
+  }
+
+  .verify-email-container .verify-card {
+    padding: 1.8rem 1.2rem;
+  }
+
+  .verify-email-container .verify-card h1 {
+    font-size: 1.5rem;
+  }
+
+  .verify-email-container .code-input {
+    width: 42px;
+    height: 50px;
+    font-size: 1.4rem;
+  }
+
+  .verify-email-container .code-input-group {
+    gap: 0.4rem;
+  }
+
+  .verify-email-container .success-modal {
+    padding: 2rem 1.5rem;
+  }
+
+  .verify-email-container .success-modal h2 {
+    font-size: 1.5rem;
+  }
+}
+
+/* Extra small mobile devices */
+@media (max-width: 400px) {
+  .verify-email-container .code-input {
+    width: 36px;
+    height: 44px;
+    font-size: 1.2rem;
+  }
+  .verify-email-container .code-input-group {
+    gap: 0.3rem;
+  }
+
+  .verify-email-container .header-logo img {
+    height: 28px;
+  }
+
+  .verify-email-container .header-logo span {
+    font-size: 0.75rem;
+  }
+
+  .verify-email-container .header-nav {
+    gap: 0.6rem;
+  }
+  .verify-email-container .header-nav a {
+    font-size: 0.7rem;
+  }
+
+  .verify-email-container .verify-card {
+    padding: 1.2rem 0.8rem;
+  }
+
+  .verify-email-container .email-display {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.8rem;
+  }
+}
+
+/* Landscape orientation support for mobile devices */
+@media (max-height: 600px) and (orientation: landscape) {
+  .verify-email-container .verify-content {
+    padding: 0.5rem 1rem;
+  }
+
+  .verify-email-container .verify-card {
+    padding: 1rem 1.2rem;
+  }
+
+  .verify-email-container .code-input {
+    width: 38px;
+    height: 44px;
+    font-size: 1.2rem;
+  }
+
+  .verify-email-container .code-input-group {
+    gap: 0.3rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .verify-email-container .verify-card h1 {
+    font-size: 1.2rem;
+    margin-bottom: 0.2rem;
+  }
+
+  .verify-email-container .verify-description {
+    font-size: 0.8rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .verify-email-container .btn-primary {
+    padding: 0.6rem 0;
+  }
+
+  .verify-email-container .success-modal {
+    padding: 1.5rem 1.2rem;
+  }
+}
