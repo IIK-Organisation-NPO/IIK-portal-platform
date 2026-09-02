@@ -1,5 +1,6 @@
 // src/pages/Admin_Screens/Admin_Dashboard.jsx
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Admin_Sidebar from '../../components/Admin/Admin_Sidebar';
 import Admin_Header from '../../components/Admin/Admin_Header';
 import '../../styles/Admin/Admin_Dashboard.css';
@@ -7,6 +8,7 @@ import '../../styles/Admin/Admin_Dashboard.css';
 const Admin_Dashboard = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [activeNav, setActiveNav] = useState('dashboard');
+    const navigate = useNavigate();
 
     const toggleMobileMenu = () => {
         setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -16,12 +18,28 @@ const Admin_Dashboard = () => {
         setIsMobileMenuOpen(false);
     };
 
-    // Stats data
+    // Stats data with correct icons
     const stats = [
-        { label: 'Total Learners', value: 247, icon: 'fa-users' },
-        { label: 'Active Programmes', value: 3, icon: 'fa-book-open' },
-        { label: 'Certificates Issued', value: 189, icon: 'fa-certificate' },
-        { label: 'Pending Certificates', value: 12, icon: 'fa-clock' },
+        { 
+            label: 'Total Learners', 
+            value: 247, 
+            icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' // Users icon
+        },
+        { 
+            label: 'Active Programmes', 
+            value: 3, 
+            icon: 'M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222' // Graduation icon
+        },
+        { 
+            label: 'Certificates Issued', 
+            value: 189, 
+            icon: 'M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222' // Certificate/Ribbon badge icon
+        },
+        { 
+            label: 'Pending Certificates', 
+            value: 12, 
+            icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' // Clock icon
+        },
     ];
 
     // Programme interest data
@@ -37,6 +55,13 @@ const Admin_Dashboard = () => {
         { time: '1 hour ago', description: 'New learner registered: John Smith' },
         { time: '2 hours ago', description: 'Staff member updated program info: Microsoft 365' },
     ];
+
+    const handleViewInterested = (programmeName) => {
+        // Navigate to interested learners page with programme name as state
+        navigate('/admin/interested-learners', { 
+            state: { programme: programmeName } 
+        });
+    };
 
     return (
         <div className="admin-dashboard-layout">
@@ -63,9 +88,24 @@ const Admin_Dashboard = () => {
                     <div className="admin-stats-grid">
                         {stats.map((stat, index) => (
                             <div className="admin-stat-card" key={index}>
-                                <div className="admin-stat-label">{stat.label}</div>
+                                <div className="admin-stat-header">
+                                    <div className="admin-stat-icon">
+                                        <svg 
+                                            width="18" 
+                                            height="18" 
+                                            viewBox="0 0 24 24" 
+                                            fill="none" 
+                                            stroke="#111827" 
+                                            strokeWidth="2" 
+                                            strokeLinecap="round" 
+                                            strokeLinejoin="round"
+                                        >
+                                            <path d={stat.icon} />
+                                        </svg>
+                                    </div>
+                                    <div className="admin-stat-label">{stat.label}</div>
+                                </div>
                                 <div className="admin-stat-value">{stat.value}</div>
-                                <i className={`fas ${stat.icon} admin-stat-icon`}></i>
                             </div>
                         ))}
                     </div>
@@ -95,7 +135,12 @@ const Admin_Dashboard = () => {
                                             </td>
                                             <td>{prog.lastDate}</td>
                                             <td>
-                                                <button className="admin-view-btn">View</button>
+                                                <button 
+                                                    className="admin-view-btn"
+                                                    onClick={() => handleViewInterested(prog.name)}
+                                                >
+                                                    View
+                                                </button>
                                             </td>
                                         </tr>
                                     ))}

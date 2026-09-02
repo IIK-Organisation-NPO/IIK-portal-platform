@@ -1,4 +1,5 @@
 /* src/styles/Admin/Admin_Dashboard.css */
+
 /* ---- Layout Wrapper ---- */
 .admin-dashboard-layout {
   display: flex;
@@ -32,6 +33,10 @@
   letter-spacing: -0.3px;
 }
 
+.admin-dashboard-content .admin-dashboard-welcome h1 span {
+  color: #000000;
+}
+
 .admin-dashboard-content .admin-dashboard-welcome p {
   font-size: 16px;
   color: #777777;
@@ -52,7 +57,8 @@
   padding: 22px 26px;
   border: 1px solid #eaeaea;
   transition: box-shadow 0.2s, transform 0.15s;
-  position: relative;
+  display: flex;
+  flex-direction: column;
 }
 
 .admin-dashboard-content .admin-stats-grid .admin-stat-card:hover {
@@ -60,10 +66,34 @@
   transform: translateY(-2px);
 }
 
+/* Header section with icon and label side by side */
+.admin-dashboard-content .admin-stats-grid .admin-stat-card .admin-stat-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.admin-dashboard-content .admin-stats-grid .admin-stat-card .admin-stat-icon {
+  width: 18px;
+  height: 18px;
+  color: #111827;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.admin-dashboard-content .admin-stats-grid .admin-stat-card .admin-stat-icon svg {
+  width: 18px;
+  height: 18px;
+  stroke: #111827;
+}
+
 .admin-dashboard-content .admin-stats-grid .admin-stat-card .admin-stat-label {
   font-size: 14px;
   font-weight: 500;
-  color: #888888;
+  color: #4B5563;
   letter-spacing: 0.2px;
 }
 
@@ -71,15 +101,7 @@
   font-size: 38px;
   font-weight: 700;
   color: #000000;
-  margin-top: 6px;
   letter-spacing: -0.5px;
-}
-
-.admin-dashboard-content .admin-stats-grid .admin-stat-card .admin-stat-icon {
-  float: right;
-  font-size: 28px;
-  color: #cccccc;
-  margin-top: -6px;
 }
 
 /* ---- Programmes Section ---- */
@@ -237,10 +259,6 @@
 
   .admin-dashboard-content .admin-stats-grid .admin-stat-card .admin-stat-value {
     font-size: 30px;
-  }
-
-  .admin-dashboard-content .admin-stats-grid .admin-stat-card .admin-stat-icon {
-    font-size: 22px;
   }
 
   .admin-programme-table thead th,
