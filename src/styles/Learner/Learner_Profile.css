@@ -1,3 +1,5 @@
+/* src/styles/Learner/Learner_Profile.css */
+
 /* ---- Layout Wrapper ---- */
 .profile-layout {
   display: flex;
@@ -23,7 +25,7 @@
 /* Profile Header */
 .learner-profile .profile-header {
   margin-bottom: 32px;
-  background: #999999;
+  background: #F9FAFB;
   border-radius: 16px;
   padding: 28px 32px;
   border: 1px solid #eaeaea;
@@ -45,7 +47,7 @@
 
 .learner-profile .profile-user-info .member-since {
   font-size: 14px;
-  color: #ffffff;
+  color: #E5E7EB;
   margin: 0;
 }
 
@@ -223,22 +225,19 @@
   border-bottom: none;
 }
 
-/* Status Badge */
+/* Status Badge - Updated colors */
 .learner-profile .status-badge {
   display: inline-block;
   padding: 4px 14px;
-  border-radius: 20px;
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.3px;
+  background: #111827;
+  color: #ffffff;
+  border-radius: 4px;
 }
 
-.learner-profile .status-badge.issued {
-  background: #e6f7e6;
-  color: #1a7a1a;
-}
-
-/* Currently Enrolled */
+/* Currently Enrolled - Removed icon */
 .learner-profile .enrolled-card {
   padding: 4px 0;
 }
@@ -246,16 +245,10 @@
 .learner-profile .enrolled-item {
   display: flex;
   align-items: center;
-  gap: 14px;
   padding: 12px 16px;
   background: #f7f7f7;
   border-radius: 10px;
   border-left: 4px solid #000000;
-}
-
-.learner-profile .enrolled-item i {
-  font-size: 20px;
-  color: #000000;
 }
 
 .learner-profile .enrolled-item span {
@@ -264,33 +257,25 @@
   color: #1a1a1a;
 }
 
-/* POPIA Notice */
+/* POPIA Notice - Updated styles */
 .learner-profile .popia-notice {
-  display: flex;
-  gap: 16px;
   padding: 20px 24px;
-  background: #f8f9fa;
+  border: 1px solid #eaeaea;
   border-radius: 12px;
-  border-left: 4px solid #1a7a1a;
   margin-top: 8px;
-}
-
-.learner-profile .popia-notice i {
-  font-size: 24px;
-  color: #1a7a1a;
-  flex-shrink: 0;
-  margin-top: 2px;
+  background: #ffffff;
 }
 
 .learner-profile .popia-notice p {
   font-size: 14px;
   line-height: 1.6;
-  color: #555555;
+  color: #4B5563;
   margin: 0;
 }
 
 .learner-profile .popia-notice p strong {
-  color: #1a1a1a;
+  color: #4B5563;
+  font-weight: 700;
 }
 
 /* ---- Mobile Responsive ---- */
@@ -361,13 +346,7 @@
   }
 
   .learner-profile .popia-notice {
-    flex-direction: column;
-    gap: 10px;
     padding: 16px 18px;
-  }
-
-  .learner-profile .popia-notice i {
-    font-size: 20px;
   }
 
   .learner-profile .popia-notice p {

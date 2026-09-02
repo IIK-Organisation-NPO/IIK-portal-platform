@@ -22,7 +22,8 @@ const Learner_Profile = () => {
   
   // Personal Information
   const [personalInfo, setPersonalInfo] = useState({
-    name: 'Sarah Khumalo',
+    firstName: 'Sarah',
+    lastName: 'Khumalo',
     idNumber: '940214 5123 084',
     phone: '+27 82 123 4567',
     address: '12 Rosebank Road, Johannesburg, 2196'
@@ -61,19 +62,7 @@ const Learner_Profile = () => {
     setEditValue('');
   };
 
-  // Render non-editable field (Name & Surname, ID Number)
-  const renderNonEditableField = (label, value) => {
-    return (
-      <div className="info-item">
-        <label>{label}</label>
-        <div className="info-value-wrapper">
-          <p>{value}</p>
-        </div>
-      </div>
-    );
-  };
-
-  // Render editable field (Phone Number, Physical Address)
+  // Render editable field
   const renderEditableField = (label, field, value) => {
     const isEditing = editingField === field;
     
@@ -145,11 +134,19 @@ const Learner_Profile = () => {
           <section className="profile-section">
             <h2>Personal Information</h2>
             <div className="profile-info-list">
-              {/* Name & Surname - Not Editable */}
-              {renderNonEditableField('Name & Surname', personalInfo.name)}
+              {/* First Name - Editable */}
+              {renderEditableField('First Name', 'firstName', personalInfo.firstName)}
+              
+              {/* Last Name - Editable */}
+              {renderEditableField('Last Name', 'lastName', personalInfo.lastName)}
               
               {/* ID Number / Passport - Not Editable */}
-              {renderNonEditableField('ID Number / Passport', personalInfo.idNumber)}
+              <div className="info-item">
+                <label>ID Number / Passport</label>
+                <div className="info-value-wrapper">
+                  <p>{personalInfo.idNumber}</p>
+                </div>
+              </div>
               
               {/* Phone Number - Editable */}
               {renderEditableField('Phone Number', 'phone', personalInfo.phone)}
@@ -177,7 +174,7 @@ const Learner_Profile = () => {
                       <td>{programme.name}</td>
                       <td>{programme.completionDate}</td>
                       <td>
-                        <span className="status-badge issued">{programme.status}</span>
+                        <span className="status-badge">{programme.status}</span>
                       </td>
                     </tr>
                   ))}
@@ -191,7 +188,6 @@ const Learner_Profile = () => {
             <h2>Currently Enrolled</h2>
             <div className="enrolled-card">
               <div className="enrolled-item">
-                <i className="fas fa-book-open"></i>
                 <span>{currentlyEnrolled}</span>
               </div>
             </div>
@@ -199,7 +195,6 @@ const Learner_Profile = () => {
 
           {/* POPIA Notice */}
           <div className="popia-notice">
-            <i className="fas fa-shield-alt"></i>
             <p>
               <strong>POPIA Notice:</strong> All personal information shown on this profile is processed in compliance with the South African Protection of Personal Information Act (POPIA). 
               Your ID and contact details are fully encrypted and only used for verified academic credential issuing.
