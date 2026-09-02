@@ -1,19 +1,32 @@
 // src/pages/Admin_Screens/Admin_Learners.jsx
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom"; // ✅ Already imported
+import { useNavigate } from "react-router-dom";
 import Admin_Sidebar from "../../components/Admin/Admin_Sidebar";
 import Admin_Header from "../../components/Admin/Admin_Header";
 import "../../styles/Admin/Admin_Learners.css";
 
 const Admin_Learners = () => {
-  // ✅ Initialize useNavigate here (this was missing!)
   const navigate = useNavigate();
   
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeNav] = useState("learners");
+  
+  // State for edit mode - tracks which row is being edited (by index)
+  const [editingIndex, setEditingIndex] = useState(null);
+  
+  // State for edited learner data
+  const [editedLearner, setEditedLearner] = useState({
+    name: '',
+    email: '',
+    phone: ''
+  });
+
+  // State for deactivate confirmation modal
+  const [showDeactivateModal, setShowDeactivateModal] = useState(false);
+  const [deactivateTarget, setDeactivateTarget] = useState(null); // Stores the index of learner to deactivate
 
   // Sample learner data
-  const learners = [
+  const [learners, setLearners] = useState([
     {
       name: "Sibusiso Ndlovu",
       email: "sibundlo.",
@@ -78,7 +91,7 @@ const Admin_Learners = () => {
       date: "Mar 05, 2026",
       status: "Active",
     },
-  ];
+  ]);
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -89,10 +102,84 @@ const Admin_Learners = () => {
   };
 
   const stats = [
-    { label: "Total Learners", value: 247 },
-    { label: "Active Enrolments", value: 198 },
-    { label: "Completed Programmes", value: 49 },
+    { label: "Total Learners", value: learners.length },
+    { label: "Active Enrolments", value: learners.filter(l => l.status === "Active").length },
+    { label: "Completed Programmes", value: learners.filter(l => l.status === "Completed").length },
   ];
+
+  // Handle Edit button click - enables editing mode for a specific row
+  const handleEditClick = (index) => {
+    setEditingIndex(index);
+    // Pre-fill the edit form with current learner data
+    setEditedLearner({
+      name: learners[index].name,
+      email: learners[index].email,
+      phone: learners[index].phone
+    });
+  };
+
+  // Handle Cancel edit - exits editing mode without saving changes
+  const handleCancelEdit = () => {
+    setEditingIndex(null);
+    setEditedLearner({
+      name: '',
+      email: '',
+      phone: ''
+    });
+  };
+
+  // Handle Save edit - saves the changes made to the learner
+  const handleSaveEdit = (index) => {
+    const updatedLearners = [...learners];
+    updatedLearners[index] = {
+      ...updatedLearners[index],
+      name: editedLearner.name,
+      email: editedLearner.email,
+      phone: editedLearner.phone
+    };
+    setLearners(updatedLearners);
+    setEditingIndex(null); // Exit edit mode after saving
+    setEditedLearner({
+      name: '',
+      email: '',
+      phone: ''
+    });
+  };
+
+  // Handle input changes in the edit form
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setEditedLearner({
+      ...editedLearner,
+      [name]: value
+    });
+  };
+
+  // Open deactivate confirmation modal
+  const handleDeactivateClick = (index) => {
+    setDeactivateTarget(index);
+    setShowDeactivateModal(true);
+  };
+
+  // Confirm deactivation - actually deactivates the learner
+  const confirmDeactivate = () => {
+    if (deactivateTarget !== null) {
+      const updatedLearners = [...learners];
+      updatedLearners[deactivateTarget] = {
+        ...updatedLearners[deactivateTarget],
+        status: "Inactive" // Change status to Inactive
+      };
+      setLearners(updatedLearners);
+      setShowDeactivateModal(false);
+      setDeactivateTarget(null);
+    }
+  };
+
+  // Close deactivate modal without deactivating
+  const cancelDeactivate = () => {
+    setShowDeactivateModal(false);
+    setDeactivateTarget(null);
+  };
 
   return (
     <div className="admin-learners-layout">
@@ -128,7 +215,7 @@ const Admin_Learners = () => {
             ))}
           </div>
 
-          {/* Toolbar – now includes "Interested Learners" button */}
+          {/* Toolbar */}
           <div className="admin-learners-toolbar">
             <div className="toolbar-left">
               <button className="btn-outline">Export Records</button>
@@ -177,9 +264,54 @@ const Admin_Learners = () => {
               <tbody>
                 {learners.map((learner, index) => (
                   <tr key={index}>
-                    <td>{learner.name}</td>
-                    <td>{learner.email}</td>
-                    <td>{learner.phone}</td>
+                    {/* Name column - editable when in edit mode */}
+                    <td>
+                      {editingIndex === index ? (
+                        <input
+                          type="text"
+                          name="name"
+                          value={editedLearner.name}
+                          onChange={handleInputChange}
+                          className="edit-input"
+                          placeholder="Enter name"
+                        />
+                      ) : (
+                        learner.name
+                      )}
+                    </td>
+                    
+                    {/* Email column - editable when in edit mode */}
+                    <td>
+                      {editingIndex === index ? (
+                        <input
+                          type="email"
+                          name="email"
+                          value={editedLearner.email}
+                          onChange={handleInputChange}
+                          className="edit-input"
+                          placeholder="Enter email"
+                        />
+                      ) : (
+                        learner.email
+                      )}
+                    </td>
+                    
+                    {/* Phone column - editable when in edit mode */}
+                    <td>
+                      {editingIndex === index ? (
+                        <input
+                          type="text"
+                          name="phone"
+                          value={editedLearner.phone}
+                          onChange={handleInputChange}
+                          className="edit-input"
+                          placeholder="Enter phone"
+                        />
+                      ) : (
+                        learner.phone
+                      )}
+                    </td>
+                    
                     <td>{learner.programme}</td>
                     <td>{learner.date}</td>
                     <td>
@@ -189,11 +321,42 @@ const Admin_Learners = () => {
                         {learner.status}
                       </span>
                     </td>
+                    
+                    {/* Actions column - shows different buttons based on edit mode */}
                     <td>
-                      <button className="action-btn edit">Edit</button>
-                      <button className="action-btn deactivate">
-                        Deactivate
-                      </button>
+                      {editingIndex === index ? (
+                        // Show Save and Cancel buttons when in edit mode
+                        <>
+                          <button 
+                            className="action-btn save" 
+                            onClick={() => handleSaveEdit(index)}
+                          >
+                            Save
+                          </button>
+                          <button 
+                            className="action-btn cancel" 
+                            onClick={handleCancelEdit}
+                          >
+                            ✕
+                          </button>
+                        </>
+                      ) : (
+                        // Show Edit and Deactivate buttons when not in edit mode
+                        <>
+                          <button 
+                            className="action-btn edit" 
+                            onClick={() => handleEditClick(index)}
+                          >
+                            Edit
+                          </button>
+                          <button 
+                            className="action-btn deactivate" 
+                            onClick={() => handleDeactivateClick(index)}
+                          >
+                            Deactivate
+                          </button>
+                        </>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -222,6 +385,27 @@ const Admin_Learners = () => {
           </div>
         </div>
       </div>
+
+      {/* Deactivate Confirmation Modal */}
+      {showDeactivateModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h2>Confirm Deactivation</h2>
+            <p>Are you sure you want to deactivate this student?</p>
+            <p className="modal-warning">
+              This action will change the student's status to "Inactive".
+            </p>
+            <div className="modal-actions">
+              <button className="modal-btn cancel-btn" onClick={cancelDeactivate}>
+                Cancel
+              </button>
+              <button className="modal-btn confirm-btn" onClick={confirmDeactivate}>
+                Yes, Deactivate
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
