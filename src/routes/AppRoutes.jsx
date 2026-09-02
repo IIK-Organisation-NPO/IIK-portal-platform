@@ -38,8 +38,8 @@ const AppRoutes = () => {
         <Route path="/admin-dashboard" element={<AdminDashboard />} />
         <Route path="/admin/learners" element={<AdminLearners />} />
         <Route path="/admin/interested-learners" element={<AdminInterestedLearners />} />
-        <Route path="/admin/certificates" element={<Admin_Certificates />} />
-        <Route path="/admin/bulk-upload" element={<Admin_BulkUpload />} />
+        <Route path="/admin-certificates" element={<Admin_Certificates />} />
+        <Route path="/admin-bulkCertificates" element={<Admin_BulkUpload />} />
         
       </Routes>
     </Router>
