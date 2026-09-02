@@ -1,3 +1,5 @@
+/* src/styles/Learner/Learner_DashBoard.css */
+
 /* ---- Layout Wrapper ---- */
 .dashboard-layout {
   display: flex;
@@ -77,14 +79,11 @@
   letter-spacing: -0.5px;
 }
 
-.learner-dashboard .stats-grid .stat-card .stat-icon {
-  float: right;
-  font-size: 28px;
-  color: #cccccc;
-  margin-top: 4px;
+/* ---- Programmes Section ---- */
+.learner-dashboard .programmes-section {
+  margin-bottom: 40px;
 }
 
-/* ---- Programmes Section ---- */
 .learner-dashboard .programmes-section h2 {
   font-size: 22px;
   font-weight: 700;
@@ -93,90 +92,82 @@
   letter-spacing: -0.2px;
 }
 
+/* ---- Programme Cards ---- */
 .learner-dashboard .programmes-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
+  gap: 20px;
 }
 
 .learner-dashboard .programmes-grid .programme-card {
   background: #ffffff;
   border-radius: 16px;
-  padding: 26px 28px 28px;
+  padding: 24px 26px 26px;
   border: 1px solid #eaeaea;
+  transition: box-shadow 0.2s, transform 0.15s;
   display: flex;
   flex-direction: column;
-  transition: box-shadow 0.2s, transform 0.15s;
-  position: relative;
 }
 
 .learner-dashboard .programmes-grid .programme-card:hover {
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
   transform: translateY(-2px);
 }
 
-.learner-dashboard .programmes-grid .programme-card .programme-icon {
-  font-size: 32px;
-  color: #000000;
-  margin-bottom: 12px;
-}
-
 .learner-dashboard .programmes-grid .programme-card h3 {
-  font-size: 19px;
+  font-size: 18px;
   font-weight: 700;
   color: #000000;
+  margin-bottom: 10px;
   letter-spacing: -0.2px;
 }
 
 .learner-dashboard .programmes-grid .programme-card .programme-desc {
   font-size: 14px;
+  color: #4B5563;
   line-height: 1.6;
-  color: #666666;
-  margin: 10px 0 16px;
+  margin-bottom: 16px;
   flex: 1;
 }
 
 .learner-dashboard .programmes-grid .programme-card .programme-duration {
+  display: inline-block;
+  background: #F3F4F6;
+  color: #1F2937;
+  padding: 4px 14px;
   font-size: 13px;
   font-weight: 500;
-  color: #999999;
-  margin-bottom: 18px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.learner-dashboard .programmes-grid .programme-card .programme-duration i {
-  font-size: 14px;
-  color: #aaaaaa;
+  border: 1px solid #e5e7eb;
+  margin-bottom: 16px;
+  align-self: flex-start;
+  /* No border-radius - square/box-like */
 }
 
 .learner-dashboard .programmes-grid .programme-card .btn-interest {
   background: #000000;
   color: #ffffff;
   border: none;
-  padding: 12px 20px;
-  border-radius: 40px;
+  padding: 10px 20px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
-  transition: background 0.2s, transform 0.1s;
-  width: fit-content;
-  letter-spacing: 0.2px;
-  align-self: flex-start;
+  transition: background 0.2s;
+  /* No border-radius - square/box-like */
+  border-radius: 0;
+  width: 100%;
+  text-align: center;
 }
 
 .learner-dashboard .programmes-grid .programme-card .btn-interest:hover {
   background: #2a2a2a;
-  transform: scale(1.02);
-}
-
-.learner-dashboard .programmes-grid .programme-card .btn-interest:active {
-  transform: scale(0.97);
 }
 
 /* ---- Mobile Responsive ---- */
 @media (max-width: 1200px) {
+  .learner-dashboard .stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
   .learner-dashboard .programmes-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -204,7 +195,7 @@
   }
 
   .learner-dashboard .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 12px;
   }
 
@@ -216,17 +207,13 @@
     font-size: 30px;
   }
 
-  .learner-dashboard .stats-grid .stat-card .stat-icon {
-    font-size: 22px;
-  }
-
   .learner-dashboard .programmes-grid {
     grid-template-columns: 1fr;
     gap: 16px;
   }
 
-  .learner-dashboard .programmes-section h2 {
-    font-size: 20px;
+  .learner-dashboard .programmes-grid .programme-card {
+    padding: 20px;
   }
 }
 
@@ -252,7 +239,11 @@
     font-size: 26px;
   }
 
-  .learner-dashboard .programmes-grid .programme-card {
-    padding: 20px;
+  .learner-dashboard .programmes-grid .programme-card h3 {
+    font-size: 16px;
+  }
+
+  .learner-dashboard .programmes-grid .programme-card .programme-desc {
+    font-size: 13px;
   }
 }
