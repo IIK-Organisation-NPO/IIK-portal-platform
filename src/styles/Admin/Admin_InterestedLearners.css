@@ -80,13 +80,17 @@
 }
 
 .stat-filter-btn.stat-total {
-  background: #e0e0e0;   /* grey background */
-  color: #000000;        /* black text */
+  background: #e0e0e0;
+  /* grey background */
+  color: #000000;
+  /* black text */
 }
 
 .stat-filter-btn.stat-new {
-  background: #E1EFFE;   /* light blue */
-  color: #1E429F;        /* dark blue */
+  background: #E1EFFE;
+  /* light blue */
+  color: #1E429F;
+  /* dark blue */
 }
 
 /* Programme dropdown */
@@ -309,7 +313,8 @@
 }
 
 .status-badge.status-enrolled {
-  background: #1E429F;    /* dark blue – you can change to match your theme */
+  background: #1E429F;
+  /* dark blue – you can change to match your theme */
   color: #ffffff;
 }
 
@@ -550,4 +555,118 @@
     width: 100%;
     text-align: center;
   }
+}
+
+/* ---- Enroll Confirmation Modal ---- */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.modal-content {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 32px 40px;
+  max-width: 440px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.modal-content h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: #000000;
+  margin: 0 0 12px 0;
+  letter-spacing: -0.3px;
+}
+
+.modal-content p {
+  font-size: 16px;
+  color: #4B5563;
+  margin: 0 0 8px 0;
+  line-height: 1.5;
+}
+
+.modal-content .modal-warning {
+  font-size: 14px;
+  color: #ef4444;
+  background: #fef2f2;
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin: 12px 0 20px 0;
+  border-left: 4px solid #ef4444;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.modal-btn {
+  padding: 10px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.modal-btn:hover {
+  transform: scale(1.02);
+}
+
+.modal-btn:active {
+  transform: scale(0.98);
+}
+
+.modal-btn.cancel-btn {
+  background: #f3f4f6;
+  color: #1F2937;
+}
+
+.modal-btn.cancel-btn:hover {
+  background: #e5e7eb;
+}
+
+.modal-btn.confirm-btn {
+  background: #000000;
+  color: #ffffff;
+}
+
+.modal-btn.confirm-btn:hover {
+  background: #2a2a2a;
 }
