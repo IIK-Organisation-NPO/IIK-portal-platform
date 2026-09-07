@@ -64,9 +64,7 @@ const Admin_Sidebar = ({ active = 'dashboard', isMobileOpen, onClose }) => {
                     })}
                 </nav>
 
-                <div className="admin-sidebar-version">
-                    <small>v2.0.0</small>
-                </div>
+
             </aside>
         </>
     );

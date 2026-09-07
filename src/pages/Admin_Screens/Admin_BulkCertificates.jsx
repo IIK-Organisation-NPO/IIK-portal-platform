@@ -64,6 +64,10 @@ const Admin_BulkUpload = () => {
 
     const [allSelected, setAllSelected] = useState(true);
 
+    // ---- Modal States ----
+    const [showPreviewModal, setShowPreviewModal] = useState(false);
+    const [showIssueConfirmModal, setShowIssueConfirmModal] = useState(false);
+
     const adminName = 'Admin User';
 
     const toggleMobileMenu = () => {
@@ -82,7 +86,6 @@ const Admin_BulkUpload = () => {
         }
         setSelectedFiles(files);
     };
-
 
     const handleSelectAllEligible = () => {
         setSelectedLearners(prev =>
@@ -105,7 +108,6 @@ const Admin_BulkUpload = () => {
         setAllSelected(false);
     };
 
-
     const handleSelectLearner = (id) => {
         setSelectedLearners(prev =>
             prev.map(learner =>
@@ -115,7 +117,6 @@ const Admin_BulkUpload = () => {
             )
         );
     };
-
 
     const handleSelectAll = () => {
         const allChecked = !allSelected;
@@ -130,6 +131,41 @@ const Admin_BulkUpload = () => {
 
     //  Count selected learners
     const selectedCount = selectedLearners.filter(l => l.selected).length;
+
+    // ---- Preview Selected ----
+    const handlePreviewSelected = () => {
+        if (selectedCount === 0) {
+            alert('No learners selected.');
+            return;
+        }
+        setShowPreviewModal(true);
+    };
+
+    // ---- Issue Certificates ----
+    const handleIssueCertificates = () => {
+        if (selectedCount === 0) {
+            alert('No learners selected.');
+            return;
+        }
+        setShowIssueConfirmModal(true);
+    };
+
+    const confirmIssue = () => {
+        // Here you would call your API to issue certificates
+        console.log('Issuing certificates for:', selectedLearners.filter(l => l.selected));
+        alert(`Certificates issued to ${selectedCount} learner(s)!`);
+        setShowIssueConfirmModal(false);
+        // Optionally navigate back to certificates page
+        navigate('/admin/certificates');
+    };
+
+    const cancelIssue = () => {
+        setShowIssueConfirmModal(false);
+    };
+
+    const closePreview = () => {
+        setShowPreviewModal(false);
+    };
 
     const programmes = ['Digital Literacy', 'Microsoft 365', 'Digital Marketing', 'Risk & Compliance Excellence', 'Data Analytics'];
     const statusOptions = ['All', 'Completed', 'In Progress', 'Pending', 'Not Started'];
@@ -211,7 +247,6 @@ const Admin_BulkUpload = () => {
                     {/* Bulk Upload Section */}
                     <div className="bulk-upload-section">
                         <h3>Bulk Upload Certificate PDFs</h3>
-                        <p>Upload certificate PDF files. Max 50 files, 10MB each. Filename must match recipient emails.</p>
 
                         <div
                             className="bulk-file-upload-area"
@@ -320,16 +355,82 @@ const Admin_BulkUpload = () => {
                             <i className="fas fa-arrow-left"></i> Back to Certificates
                         </button>
                         <div className="bulk-actions-right">
-                            <button className="btn-preview">
+                            <button className="btn-preview" onClick={handlePreviewSelected}>
                                 <i className="fas fa-eye"></i> Preview Selected ({selectedCount})
                             </button>
-                            <button className="btn-issue-bulk">
+                            <button className="btn-issue-bulk" onClick={handleIssueCertificates}>
                                 <i className="fas fa-certificate"></i> Issue Certificates ({selectedCount})
                             </button>
                         </div>
                     </div>
                 </main>
             </div>
+
+            {/* ===== PREVIEW SELECTED MODAL ===== */}
+            {showPreviewModal && (
+                <div className="modal-overlay" onClick={closePreview}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        <h2>Preview Selected Learners</h2>
+                        <p>The following learners are selected for certificate issuance:</p>
+                        <div className="modal-details" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                                <thead>
+                                    <tr style={{ borderBottom: '1px solid #eaeaea' }}>
+                                        <th style={{ textAlign: 'left', padding: '6px 8px' }}>Name</th>
+                                        <th style={{ textAlign: 'left', padding: '6px 8px' }}>Email</th>
+                                        <th style={{ textAlign: 'left', padding: '6px 8px' }}>Certificate #</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {selectedLearners.filter(l => l.selected).map((learner) => (
+                                        <tr key={learner.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                                            <td style={{ padding: '6px 8px' }}>{learner.name}</td>
+                                            <td style={{ padding: '6px 8px' }}>{learner.email}</td>
+                                            <td style={{ padding: '6px 8px' }}>{learner.certNumber}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div className="modal-actions">
+                            <button className="modal-btn cancel-btn" onClick={closePreview}>Close</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ===== ISSUE CONFIRMATION MODAL ===== */}
+            {showIssueConfirmModal && (
+                <div className="modal-overlay" onClick={cancelIssue}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        <h2>Confirm Bulk Issuance</h2>
+                        <p>You are about to issue certificates to <strong>{selectedCount}</strong> learner(s).</p>
+                        <div className="modal-details" style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                                <thead>
+                                    <tr style={{ borderBottom: '1px solid #eaeaea' }}>
+                                        <th style={{ textAlign: 'left', padding: '6px 8px' }}>Name</th>
+                                        <th style={{ textAlign: 'left', padding: '6px 8px' }}>Certificate #</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {selectedLearners.filter(l => l.selected).map((learner) => (
+                                        <tr key={learner.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                                            <td style={{ padding: '6px 8px' }}>{learner.name}</td>
+                                            <td style={{ padding: '6px 8px' }}>{learner.certNumber}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        <p style={{ marginTop: '12px', color: '#555' }}>This action cannot be undone. Proceed?</p>
+                        <div className="modal-actions">
+                            <button className="modal-btn cancel-btn" onClick={cancelIssue}>Cancel</button>
+                            <button className="modal-btn confirm-btn" onClick={confirmIssue}>Yes, Issue Certificates</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
