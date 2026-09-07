@@ -115,6 +115,7 @@ const Signup = () => {
             >
               Contact
             </a>
+            <Link to="/about">About</Link>
             <Link to="/Blog">Blog</Link>
           </nav>
         </div>

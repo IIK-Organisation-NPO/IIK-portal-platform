@@ -624,4 +624,45 @@
     justify-content: center;
     text-align: center;
   }
+  /* src/styles/Admin/Admin_Learners.css */
+
+/* Add these styles to the existing CSS file */
+
+/* ---- Deactivating Row Animation ---- */
+.deactivating-row {
+  animation: fadeOutAndRemove 3s ease forwards;
+  background-color: #fef2f2 !important; /* Light red background for visual feedback */
+}
+
+@keyframes fadeOutAndRemove {
+  0% {
+    opacity: 1;
+    background-color: #fef2f2;
+  }
+  70% {
+    opacity: 0.5;
+    background-color: #fecaca;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-20px);
+    max-height: 0;
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+  }
+}
+
+/* Disabled deactivate button during deactivation process */
+.action-btn.deactivate:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: #9ca3af;
+  border-color: #9ca3af;
+}
+
+.action-btn.deactivate:disabled:hover {
+  background: #9ca3af;
+  border-color: #9ca3af;
+}
 }
