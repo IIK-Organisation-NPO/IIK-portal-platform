@@ -1,0 +1,156 @@
+/* src/styles/Admin/Admin_Sidebar.css */
+.admin-sidebar {
+  width: 260px;
+  background: #ffffff;
+  border-right: 1px solid #e5e5e5;
+  padding: 24px 16px 20px;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  min-height: calc(100vh - 72px);
+  height: calc(100vh - 72px);
+  position: sticky;
+  top: 72px;
+  overflow-y: auto;
+  transition: transform 0.3s ease-in-out;
+}
+
+.admin-sidebar .admin-sidebar-menu-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: #999999;
+  font-weight: 600;
+  margin-bottom: 12px;
+  padding: 0 4px;
+}
+
+.admin-sidebar .admin-sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.admin-sidebar .admin-sidebar-nav a,
+.admin-sidebar .admin-sidebar-nav .admin-logout-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 500;
+  color: #444444;
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  font-family: inherit;
+}
+
+.admin-sidebar .admin-sidebar-nav a i,
+.admin-sidebar .admin-sidebar-nav .admin-logout-nav-item i {
+  width: 20px;
+  font-size: 16px;
+  color: #777777;
+  transition: color 0.15s;
+}
+
+.admin-sidebar .admin-sidebar-nav a:hover {
+  background: #000000;
+  color: #ffffff;
+}
+
+.admin-sidebar .admin-sidebar-nav a:hover i {
+  color: #f0f0f0;
+}
+
+.admin-sidebar .admin-sidebar-nav a.active {
+  background: #000000;
+  color: #ffffff;
+}
+
+.admin-sidebar .admin-sidebar-nav a.active i {
+  color: #f0f0f0;
+}
+
+.admin-sidebar .admin-sidebar-nav .admin-logout-nav-item {
+  margin-top: 4px;
+  color: #e53e3e;
+}
+
+.admin-sidebar .admin-sidebar-nav .admin-logout-nav-item i {
+  color: #e53e3e;
+}
+
+.admin-sidebar .admin-sidebar-nav .admin-logout-nav-item:hover {
+  background: #000000;
+  color: #ffffff;
+}
+
+.admin-sidebar .admin-sidebar-nav .admin-logout-nav-item:hover i {
+  color: #ffffff;
+}
+
+.admin-sidebar .admin-sidebar-version {
+  text-align: center;
+  color: #aaaaaa;
+  font-size: 12px;
+  padding-top: 16px;
+  border-top: 1px solid #eaeaea;
+  margin-top: auto;
+}
+
+/* Mobile Overlay */
+.admin-sidebar-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .admin-sidebar-overlay {
+    display: block;
+  }
+
+  .admin-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 280px;
+    height: 100vh;
+    z-index: 1000;
+    transform: translateX(-100%);
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+    min-height: 100vh;
+    top: 0;
+    padding-top: 16px;
+    transition: transform 0.3s ease-in-out;
+  }
+
+  .admin-sidebar.mobile-open {
+    transform: translateX(0);
+  }
+
+  .admin-sidebar .admin-sidebar-nav a,
+  .admin-sidebar .admin-sidebar-nav .admin-logout-nav-item {
+    padding: 10px 14px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-sidebar {
+    width: 100%;
+    max-width: 320px;
+  }
+}

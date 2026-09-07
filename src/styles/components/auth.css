@@ -1,0 +1,488 @@
+/* src/styles/components/auth.css */
+
+/* ============ COMMON AUTH STYLES ============ */
+
+/* Auth Page Layout */
+.auth-page,
+.login-page,
+.signup-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #f5f5f5;
+}
+
+/* Header Styles (Shared between Login and Signup) */
+.auth-header,
+.login-header {
+  background-color: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 1rem 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.header-logo img {
+  height: 36px;
+  width: auto;
+}
+
+.header-logo span {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #000000;
+}
+
+.header-nav {
+  display: flex;
+  gap: 2rem;
+  align-items: center;
+}
+
+.header-nav a {
+  color: #333333;
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.header-nav a:hover {
+  color: #000000;
+}
+
+/* Auth Container - Centered Form */
+.auth-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex: 1;
+  padding: 2rem 1.5rem;
+  background-color: #f5f5f5;
+}
+
+/* Auth Card - Clean White with Sharp Edges */
+.auth-card {
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  padding: 2.5rem 2.5rem 2rem;
+  width: 100%;
+  max-width: 440px;
+  border: 1px solid #e0e0e0;
+  border-radius: 0;
+}
+
+/* Wide card for signup */
+.auth-card-wide {
+  max-width: 720px;
+}
+
+.auth-card .logo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.auth-card .logo img {
+  height: 40px;
+  width: auto;
+}
+
+.auth-card .logo .logo-text {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #000000;
+}
+
+.auth-card h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #000000;
+  margin-bottom: 0.25rem;
+}
+
+.auth-card .subtitle {
+  color: #666666;
+  font-size: 0.95rem;
+  margin-bottom: 1.75rem;
+}
+
+/* ============ SELECT DROPDOWN ============ */
+.auth-form .input-wrapper select {
+  width: 100%;
+  padding: 0.75rem 0.75rem 0.75rem 2.75rem;
+  border: 1px solid #cccccc;
+  border-radius: 0;
+  font-size: 0.95rem;
+  transition: border-color 0.2s ease;
+  background-color: #fafafa;
+  color: #000000;
+  appearance: auto;
+  /* keeps native arrow */
+  cursor: pointer;
+}
+
+.auth-form .input-wrapper select:focus {
+  outline: none;
+  border-color: #000000;
+  background-color: #ffffff;
+}
+
+.auth-form .input-wrapper select.error {
+  border-color: #cc0000;
+  background-color: #fff5f5;
+}
+
+/* Optional: style the dropdown arrow for consistency */
+.auth-form .input-wrapper select option {
+  padding: 8px;
+  background-color: #ffffff;
+}
+
+/* ============ FORM STYLES ============ */
+
+.auth-form .form-group {
+  margin-bottom: 1.25rem;
+}
+
+.auth-form label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #333333;
+  margin-bottom: 0.4rem;
+}
+
+.auth-form .input-wrapper {
+  position: relative;
+}
+
+.auth-form .input-wrapper .input-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #888888;
+  font-size: 16px;
+}
+
+.auth-form input[type="email"],
+.auth-form input[type="password"],
+.auth-form input[type="text"],
+.auth-form input[type="tel"] {
+  width: 100%;
+  padding: 0.75rem 0.75rem 0.75rem 2.75rem;
+  border: 1px solid #cccccc;
+  border-radius: 0;
+  font-size: 0.95rem;
+  transition: border-color 0.2s ease;
+  background-color: #fafafa;
+  color: #000000;
+}
+
+.auth-form input:focus {
+  outline: none;
+  border-color: #000000;
+  background-color: #ffffff;
+}
+
+.auth-form input.error {
+  border-color: #cc0000;
+  background-color: #fff5f5;
+}
+
+.auth-form .password-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #888888;
+  padding: 4px;
+  cursor: pointer;
+}
+
+.auth-form .password-toggle:hover {
+  color: #000000;
+}
+
+.error-text {
+  color: #cc0000;
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+  display: block;
+}
+
+.auth-form .form-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0.25rem 0 1.5rem;
+  font-size: 0.875rem;
+}
+
+.auth-form .form-options label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #555555;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.auth-form .form-options label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #000000;
+}
+
+.auth-form .form-options a {
+  color: #000000;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.auth-form .form-options a:hover {
+  text-decoration: underline;
+}
+
+/* ============ BUTTONS ============ */
+
+.btn-primary {
+  width: 100%;
+  padding: 0.8rem;
+  background-color: #000000;
+  color: #ffffff;
+  border: 1px solid #000000;
+  border-radius: 0;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  background-color: #1a1a1a;
+  border-color: #1a1a1a;
+}
+
+.btn-primary:active {
+  transform: scale(0.98);
+}
+
+/* ============ DIVIDER ============ */
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  margin: 1.5rem 0;
+  color: #888888;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.auth-divider hr {
+  flex: 1;
+  border: none;
+  border-top: 1px solid #e0e0e0;
+}
+
+.auth-divider span {
+  padding: 0 1rem;
+}
+
+/* ============ GOOGLE BUTTON ============ */
+
+.btn-google {
+  width: 100%;
+  padding: 0.7rem;
+  background-color: #ffffff;
+  color: #333333;
+  border: 1px solid #cccccc;
+  border-radius: 0;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.btn-google:hover {
+  background-color: #f5f5f5;
+  border-color: #999999;
+}
+
+/* ============ FOOTER TEXT ============ */
+
+.auth-footer-text {
+  text-align: center;
+  margin-top: 1.5rem;
+  font-size: 0.9rem;
+  color: #555555;
+}
+
+.auth-footer-text a {
+  color: #000000;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.auth-footer-text a:hover {
+  text-decoration: underline;
+}
+
+/* ============ SIGNUP-SPECIFIC STYLES ============ */
+
+/* Signup Form Grid Layout */
+.signup-form .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+.signup-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 0;
+}
+
+.signup-form .form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+/* Terms Checkbox */
+.terms-group {
+  margin-top: 0.5rem;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #555555;
+  line-height: 1.5;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  flex-shrink: 0;
+  accent-color: #000000;
+  border-radius: 0;
+}
+
+.checkbox-label a {
+  color: #000000;
+  font-weight: 500;
+  text-decoration: underline;
+}
+
+.checkbox-label a:hover {
+  color: #333333;
+}
+
+/* Signup Disclaimer */
+.signup-disclaimer {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e0e0e0;
+}
+
+.signup-disclaimer p {
+  font-size: 0.8rem;
+  color: #777777;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.signup-disclaimer a {
+  color: #000000;
+  font-weight: 500;
+}
+
+.signup-disclaimer a:hover {
+  text-decoration: underline;
+}
+
+/* ============ responsive design for both mobile and desktop ============ */
+
+@media (max-width: 768px) {
+  .auth-card {
+    padding: 1.5rem;
+  }
+
+  .auth-card-wide {
+    padding: 1.5rem;
+  }
+
+  .signup-form .form-row {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .signup-form .form-group.full-width {
+    grid-column: 1;
+  }
+
+  .header-container {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .header-nav {
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .auth-card h2 {
+    font-size: 1.3rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 1rem;
+  }
+
+  .auth-card-wide {
+    padding: 1rem;
+  }
+
+  .auth-container {
+    padding: 1rem;
+  }
+
+  .header-nav {
+    gap: 0.75rem;
+  }
+
+  .header-nav a {
+    font-size: 0.85rem;
+  }
+}

@@ -1,0 +1,607 @@
+/* src/styles/pages/admin_certificates.css */
+
+/* ---- Layout ---- */
+.admin-certificates-layout {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    width: 100%;
+}
+
+.admin-certificates-body {
+    display: flex;
+    flex: 1;
+    min-height: calc(100vh - 72px);
+}
+
+.admin-certificates-content {
+    flex: 1;
+    background: #f7f7f7;
+    padding: 32px 40px 48px;
+    overflow-y: auto;
+}
+
+/* ---- 1. Page Header ---- */
+.certificates-page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.page-header-left h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #000000;
+    margin: 0 0 4px;
+}
+
+.page-header-left p {
+    font-size: 16px;
+    color: #777777;
+    margin: 0;
+}
+
+.page-header-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.btn-action {
+    padding: 10px 20px;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 40px;
+    background: #ffffff;
+    color: #555555;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.btn-action:hover {
+    border-color: #000000;
+    color: #000000;
+}
+
+.btn-action.active {
+    background: #000000;
+    color: #ffffff;
+    border-color: #000000;
+}
+
+.btn-action.btn-upload.active {
+    background: #000000;
+    color: #ffffff;
+    border-color: #000000;
+}
+
+/* ---- 2. Two Column Layout ---- */
+.certificates-two-column {
+    display: grid;
+    grid-template-columns: 1fr 1.8fr;
+    gap: 28px;
+    margin-bottom: 32px;
+    align-items: stretch;
+}
+
+/* ---- Upload Column (resized) ---- */
+.upload-column {
+    display: flex;
+}
+
+.file-upload-area {
+    flex: 1;
+    border: 2px dashed #d0d0d0;
+    border-radius: 14px;
+    padding: 32px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 280px;
+}
+
+.file-upload-area:hover {
+    border-color: #000000;
+}
+
+.file-upload-area.has-file {
+    border-color: #00a86b;
+    border-style: solid;
+    background: #f0faf5;
+}
+
+.file-upload-area i.fa-cloud-upload-alt {
+    font-size: 36px;
+    color: #cccccc;
+}
+
+.file-upload-area p {
+    font-weight: 500;
+    color: #333333;
+    margin: 10px 0 4px;
+    font-size: 15px;
+}
+
+.file-upload-area .file-upload-hint {
+    font-size: 13px;
+    color: #999999;
+}
+
+.file-upload-area .file-info {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+.file-upload-area .file-info i.fa-file-pdf {
+    font-size: 32px;
+    color: #cc0000;
+}
+
+.file-upload-area .file-info span {
+    font-weight: 500;
+    color: #333333;
+    font-size: 15px;
+}
+
+.file-upload-area .file-info .file-remove-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #cc0000;
+    font-size: 18px;
+    padding: 4px;
+    transition: color 0.2s;
+}
+
+.file-upload-area .file-info .file-remove-btn:hover {
+    color: #990000;
+}
+
+/* ---- Assign Column ---- */
+.assign-column {
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid #eaeaea;
+    padding: 24px 28px;
+    display: flex;
+    flex-direction: column;
+}
+
+.assign-section-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #000000;
+    margin: 0 0 18px;
+}
+
+.assign-column form {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.assign-form-group {
+    margin-bottom: 14px;
+}
+
+.assign-form-group label {
+    display: block;
+    font-weight: 500;
+    font-size: 13px;
+    color: #333333;
+    margin-bottom: 4px;
+}
+
+.assign-form-group select,
+.assign-form-group input {
+    width: 100%;
+    padding: 9px 14px;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+    background: #fafafa;
+    transition: border-color 0.2s;
+    font-family: inherit;
+}
+
+.assign-form-group select:focus,
+.assign-form-group input:focus {
+    outline: none;
+    border-color: #000000;
+    background: #ffffff;
+}
+
+.assign-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.assign-form-group .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: #555555;
+    cursor: pointer;
+}
+
+.assign-form-group .checkbox-label input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #000000;
+    padding: 0;
+    margin: 0;
+}
+
+/* ---- Assign Button ---- */
+.btn-assign-certificate {
+    width: 100%;
+    padding: 12px;
+    background: #000000;
+    color: #ffffff;
+    border: none;
+    border-radius: 40px;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: background 0.2s;
+    margin-top: 6px;
+}
+
+.btn-assign-certificate:hover {
+    background: #2a2a2a;
+}
+
+/* ---- 3. Table ---- */
+.certificates-table-wrapper {
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid #eaeaea;
+    overflow: hidden;
+}
+
+.certificates-table-wrapper .table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 24px;
+    border-bottom: 1px solid #eaeaea;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.certificates-table-wrapper .table-header h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #000000;
+    margin: 0;
+}
+
+.certificates-table-wrapper .table-filters {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.certificates-table-wrapper .table-filters select,
+.certificates-table-wrapper .table-filters input {
+    padding: 8px 14px;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+    background: #fafafa;
+    transition: border-color 0.2s;
+}
+
+.certificates-table-wrapper .table-filters select:focus,
+.certificates-table-wrapper .table-filters input:focus {
+    outline: none;
+    border-color: #000000;
+}
+
+.admin-table-responsive {
+    overflow-x: auto;
+}
+
+.certificates-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.certificates-table thead {
+    background: #fafafa;
+}
+
+.certificates-table thead th {
+    text-align: left;
+    padding: 14px 20px;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #888888;
+    border-bottom: 1px solid #eaeaea;
+}
+
+.certificates-table tbody td {
+    padding: 14px 20px;
+    border-bottom: 1px solid #f0f0f0;
+    color: #1a1a1a;
+}
+
+.certificates-table tbody tr:hover {
+    background: #fafafa;
+}
+
+.certificates-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* ---- Certificate Row Styles ---- */
+.certificate-no {
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.certificate-learner {
+    font-weight: 500;
+}
+
+.certificate-programme {
+    color: #555555;
+}
+
+.certificate-date {
+    color: #777777;
+    font-size: 13px;
+}
+
+/* ---- Status Badge ---- */
+.status-badge {
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: 30px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.status-issued {
+    background: #e3f5e9;
+    color: #0a6b3b;
+}
+
+.status-pending {
+    background: #fff3e0;
+    color: #b85c00;
+}
+
+.status-revoked {
+    background: #fde8e8;
+    color: #b33c3c;
+}
+
+.status-expired {
+    background: #f0f0f0;
+    color: #777777;
+}
+
+/* ---- Actions ---- */
+.certificate-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.certificate-actions .action-btn {
+    background: none;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.2s;
+}
+
+.certificate-actions .view-btn {
+    color: #1976d2;
+}
+
+.certificate-actions .view-btn:hover {
+    background: #e3f0ff;
+}
+
+.certificate-actions .edit-btn {
+    color: #f57c00;
+}
+
+.certificate-actions .edit-btn:hover {
+    background: #fff3e0;
+}
+
+.certificate-actions .delete-btn {
+    color: #d32f2f;
+}
+
+.certificate-actions .delete-btn:hover {
+    background: #fde8e8;
+}
+
+.no-results {
+    text-align: center;
+    padding: 40px !important;
+    color: #888888;
+}
+
+.no-results i {
+    font-size: 32px;
+    display: block;
+    margin-bottom: 8px;
+}
+
+.no-results p {
+    margin: 0;
+}
+
+/* ---- Mobile Responsive ---- */
+@media (max-width: 992px) {
+    .admin-certificates-content {
+        padding: 24px 24px 36px;
+    }
+
+    .certificates-two-column {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .file-upload-area {
+        min-height: 180px;
+        padding: 24px 16px;
+    }
+}
+
+@media (max-width: 768px) {
+    .admin-certificates-body {
+        flex-direction: column;
+        min-height: auto;
+    }
+
+    .admin-certificates-content {
+        padding: 20px 16px 32px;
+        min-height: calc(100vh - 64px);
+    }
+
+    .certificates-page-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .page-header-actions {
+        width: 100%;
+    }
+
+    .btn-action {
+        flex: 1;
+        justify-content: center;
+    }
+
+    .certificates-two-column {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .file-upload-area {
+        min-height: 160px;
+        padding: 20px 16px;
+    }
+
+    .file-upload-area i.fa-cloud-upload-alt {
+        font-size: 28px;
+    }
+
+    .assign-column {
+        padding: 18px 16px;
+    }
+
+    .assign-form-row {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+
+    .assign-section-title {
+        font-size: 16px;
+    }
+
+    .certificates-table-wrapper .table-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .certificates-table-wrapper .table-filters {
+        flex-direction: column;
+    }
+
+    .certificates-table-wrapper .table-filters select,
+    .certificates-table-wrapper .table-filters input {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .admin-certificates-content {
+        padding: 16px 12px 24px;
+    }
+
+    .page-header-left h1 {
+        font-size: 22px;
+    }
+
+    .certificates-table thead th,
+    .certificates-table tbody td {
+        padding: 10px 12px;
+        font-size: 13px;
+    }
+
+    .btn-action {
+        font-size: 12px;
+        padding: 8px 14px;
+    }
+
+    .assign-column {
+        padding: 14px 12px;
+    }
+
+    .btn-assign-certificate {
+        font-size: 14px;
+        padding: 10px;
+    }
+}
+
+/* ---- Bulk Upload Button ---- */
+.btn-bulk-upload {
+    padding: 10px 28px;
+    background: #000000;
+    color: #ffffff;
+    border: none;
+    border-radius: 40px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: background 0.2s, transform 0.1s;
+    white-space: nowrap;
+}
+
+.btn-bulk-upload:hover {
+    background: #2a2a2a;
+    transform: translateY(-1px);
+}
+
+.btn-bulk-upload:active {
+    transform: scale(0.97);
+}
+
+.btn-bulk-upload i {
+    font-size: 16px;
+}

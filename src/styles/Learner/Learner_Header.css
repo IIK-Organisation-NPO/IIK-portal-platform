@@ -1,0 +1,144 @@
+.learner-header {
+  background: #ffffff;
+  padding: 0 24px;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #eaeaea;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  width: 100%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.learner-header .header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.learner-header .header-left .menu-toggle {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #1a1a1a;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  transition: background 0.2s;
+  width: 40px;
+  height: 40px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.learner-header .header-left .menu-toggle:hover {
+  background: #f0f0f0;
+}
+
+.learner-header .header-left .menu-toggle i {
+  font-size: 24px;
+  color: #1a1a1a;
+}
+
+.learner-header .header-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.learner-header .header-logo img {
+  height: 36px;
+  width: auto;
+}
+
+.learner-header .header-logo .header-title {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+  color: #000000;
+  white-space: nowrap;
+}
+
+.learner-header .header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.learner-header .header-right .user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #000000;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+
+.learner-header .header-right .user-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1a1a1a;
+}
+
+.learner-header .header-right .user-name span {
+  font-weight: 400;
+  color: #1a1a1a;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .learner-header {
+    padding: 0 16px;
+    height: 64px;
+  }
+
+  .learner-header .header-left .menu-toggle {
+    display: flex !important;
+  }
+
+  .learner-header .header-logo .header-title {
+    font-size: 15px;
+  }
+
+  .learner-header .header-right .user-name {
+    display: none;
+  }
+
+  .learner-header .header-logo img {
+    height: 30px;
+  }
+}
+
+@media (max-width: 480px) {
+  .learner-header {
+    height: 56px;
+    padding: 0 12px;
+  }
+
+  .learner-header .header-logo .header-title {
+    font-size: 13px;
+  }
+
+  .learner-header .header-logo img {
+    height: 26px;
+  }
+
+  .learner-header .header-right .user-avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
+  }
+}
