@@ -384,6 +384,7 @@
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -404,6 +405,7 @@
     transform: translateY(20px);
     opacity: 0;
   }
+
   to {
     transform: translateY(0);
     opacity: 1;
@@ -624,45 +626,114 @@
     justify-content: center;
     text-align: center;
   }
+
   /* src/styles/Admin/Admin_Learners.css */
 
-/* Add these styles to the existing CSS file */
+  /* Add these styles to the existing CSS file */
 
-/* ---- Deactivating Row Animation ---- */
-.deactivating-row {
-  animation: fadeOutAndRemove 3s ease forwards;
-  background-color: #fef2f2 !important; /* Light red background for visual feedback */
-}
-
-@keyframes fadeOutAndRemove {
-  0% {
-    opacity: 1;
-    background-color: #fef2f2;
+  /* ---- Deactivating Row Animation ---- */
+  .deactivating-row {
+    animation: fadeOutAndRemove 3s ease forwards;
+    background-color: #fef2f2 !important;
+    /* Light red background for visual feedback */
   }
-  70% {
-    opacity: 0.5;
-    background-color: #fecaca;
+
+  @keyframes fadeOutAndRemove {
+    0% {
+      opacity: 1;
+      background-color: #fef2f2;
+    }
+
+    70% {
+      opacity: 0.5;
+      background-color: #fecaca;
+    }
+
+    100% {
+      opacity: 0;
+      transform: translateX(-20px);
+      max-height: 0;
+      padding: 0;
+      margin: 0;
+      overflow: hidden;
+    }
   }
-  100% {
-    opacity: 0;
-    transform: translateX(-20px);
-    max-height: 0;
-    padding: 0;
-    margin: 0;
-    overflow: hidden;
+
+  /* Disabled deactivate button during deactivation process */
+  .action-btn.deactivate:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: #9ca3af;
+    border-color: #9ca3af;
+  }
+
+  .action-btn.deactivate:disabled:hover {
+    background: #9ca3af;
+    border-color: #9ca3af;
   }
 }
 
-/* Disabled deactivate button during deactivation process */
-.action-btn.deactivate:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  background: #9ca3af;
-  border-color: #9ca3af;
+/* ============================================
+   FILTER ROW POSITIONING FIX (Prog / Status / Search)
+   Replace the existing .toolbar-right, .filter-select and
+   .search-input rules in Admin_Learners.css with the rules below.
+   ============================================ */
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: nowrap;
+  /* keep everything on one line on desktop */
 }
 
-.action-btn.deactivate:disabled:hover {
-  background: #9ca3af;
-  border-color: #9ca3af;
+/* Dedicated wrapper for the three filter controls so they always
+   move/wrap together as one group, and so we have a high-specificity
+   hook that beats any global input/select reset in the project. */
+.toolbar-filters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: nowrap;
 }
+
+/* High-specificity + explicit display/width so this wins over any
+   global "select, input { display:block; width:100% }" reset that
+   might exist elsewhere in the project's stylesheet. */
+.admin-learners-toolbar .toolbar-filters .filter-select,
+.admin-learners-toolbar .toolbar-filters .search-input {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  /* never grow/shrink to fill the row */
+}
+
+.admin-learners-toolbar .toolbar-filters .filter-select {
+  width: 110px;
+  min-width: 0;
+}
+
+.admin-learners-toolbar .toolbar-filters .search-input {
+  width: 230px;
+  min-width: 0;
+}
+
+/* ---- Mobile: let the group drop to full width & stack again ---- */
+@media (max-width: 768px) {
+  .toolbar-right {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .toolbar-filters {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .admin-learners-toolbar .toolbar-filters .filter-select,
+  .admin-learners-toolbar .toolbar-filters .search-input {
+    width: 100%;
+  }
 }
