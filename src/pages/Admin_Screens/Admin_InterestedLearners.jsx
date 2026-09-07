@@ -1,4 +1,5 @@
 // src/pages/Admin_Screens/Admin_InterestedLearners.jsx
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Admin_Sidebar from '../../components/Admin/Admin_Sidebar';
@@ -91,6 +92,11 @@ const Admin_InterestedLearners = () => {
 
   const closeMobileMenu = () => {
     setIsMobileMenuOpen(false);
+  };
+
+  // Navigate back to learner management
+  const handleBackToManagement = () => {
+    navigate('/admin/learners'); // Adjust the path as needed
   };
 
   const getStatusClass = (status) => {
@@ -310,8 +316,14 @@ const Admin_InterestedLearners = () => {
             </table>
           </div>
 
-          {/* PAGINATION */}
+          {/* PAGINATION with BACK BUTTON */}
           <div className="admin-interested-pagination">
+            <button 
+              className="pagination-btn back-btn" 
+              onClick={handleBackToManagement}
+            >
+              ← Back to Management
+            </button>
             <button className="pagination-btn next-only">Next</button>
           </div>
         </div>
