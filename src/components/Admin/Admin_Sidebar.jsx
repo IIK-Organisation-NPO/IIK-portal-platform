@@ -11,7 +11,7 @@ const Admin_Sidebar = ({ active = 'dashboard', isMobileOpen, onClose }) => {
 
     const navItems = [
         { id: 'dashboard', label: 'Dashboard', icon: 'fa-th-large', path: '/admin-dashboard' },
-        { id: 'analytics', label: 'Analytics', icon: 'fa-chart-line', path: '/admin/analytics' },
+        { id: 'analytics', label: 'Analytics', icon: 'fa-chart-line', path: '/admin-analytics' },
         { id: 'learners', label: 'Learners', icon: 'fa-users', path: '/admin/learners' },
         { id: 'certificates', label: 'Certificates', icon: 'fa-certificate', path: '/admin-certificates' },
         { id: 'programmes', label: 'Programmes', icon: 'fa-book-open', path: '/admin/programmes' },
