@@ -1,0 +1,302 @@
+/* src/styles/Admin/EmailComposerModal.css */
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    padding: 24px;
+}
+
+.email-composer-modal {
+    background: #ffffff;
+    border-radius: 12px;
+    width: 640px;
+    max-width: 92vw;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+}
+
+/* Header */
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #eaeaea;
+    padding: 18px 24px;
+    flex-shrink: 0;
+}
+
+.modal-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.header-icon {
+    font-size: 18px;
+    color: #000;
+}
+
+.modal-header h2 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #000;
+    margin: 0;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: #888;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+}
+
+.close-btn:hover {
+    color: #000;
+    background: #f0f0f0;
+}
+
+/* Body */
+.modal-body {
+    padding: 22px 24px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* Form */
+.form-group {
+    margin-bottom: 18px;
+}
+
+.form-group:last-child {
+    margin-bottom: 0;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #8a8f98;
+    margin-bottom: 6px;
+}
+
+/* TO field / chip */
+.to-heading {
+    font-weight: 700;
+    font-size: 14px;
+    text-transform: none;
+    letter-spacing: normal;
+    color: #111318;
+    margin-bottom: 10px;
+}
+
+.to-field {
+    background: transparent;
+    padding: 0;
+    border: none;
+}
+
+.learner-chip-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.learner-chip {
+    display: inline-flex;
+    align-items: center;
+    background: #eef1f6;
+    color: #1f2430;
+    font-weight: 500;
+    font-size: 13.5px;
+    padding: 8px 16px;
+    border-radius: 20px;
+    white-space: nowrap;
+}
+
+/* Inputs */
+select,
+input[type='text'],
+textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid #d0d5dd;
+    border-radius: 8px;
+    font-size: 14px;
+    background: #ffffff;
+    transition: border-color 0.2s;
+    font-family: inherit;
+    box-sizing: border-box;
+    color: #111;
+}
+
+select:focus,
+input[type='text']:focus {
+    outline: none;
+    border-color: #000;
+}
+
+select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23555' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+    cursor: pointer;
+}
+
+/* Rich-text style editor */
+.editor-wrapper {
+    border: 1.5px solid #d0d5dd;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #ffffff;
+    transition: border-color 0.2s;
+}
+
+.editor-wrapper:focus-within {
+    border-color: #000;
+}
+
+.editor-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 8px 10px;
+    background: #f7f8fa;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.toolbar-btn {
+    background: none;
+    border: none;
+    width: 26px;
+    height: 26px;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #444;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.toolbar-btn:hover {
+    background: #e9eaec;
+}
+
+.toolbar-divider {
+    width: 1px;
+    height: 18px;
+    background: #dcdfe4;
+    margin: 0 6px;
+}
+
+.editor-wrapper textarea {
+    border: none;
+    border-radius: 0;
+    min-height: 160px;
+    line-height: 1.7;
+    padding: 14px;
+}
+
+.editor-wrapper textarea:focus {
+    outline: none;
+}
+
+textarea {
+    resize: vertical;
+}
+
+/* Footer */
+.modal-footer {
+    border-top: 1px solid #eaeaea;
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.btn-send-primary {
+    background: #000;
+    color: #fff;
+    border: none;
+    padding: 13px 0;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    transition: background 0.2s;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-send-primary:hover {
+    background: #2a2a2a;
+}
+
+.btn-icon {
+    font-size: 13px;
+}
+
+.secondary-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.btn-secondary {
+    flex: 1;
+    background: #fff;
+    border: 1.5px solid #d0d5dd;
+    border-radius: 8px;
+    color: #1a1a1a;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 11px 0;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.btn-secondary:hover {
+    background: #f5f5f5;
+    border-color: #000;
+}
+
+/* Scroll */
+.modal-body::-webkit-scrollbar {
+    width: 6px;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 4px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+    background: #f5f5f5;
+}
