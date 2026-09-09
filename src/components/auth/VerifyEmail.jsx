@@ -215,7 +215,7 @@ const VerifyEmail = () => {
             >
               Contact
             </a>
-            <Link to="/Blog">Blog</Link>
+            <Link to="/blog">Blog</Link>
           </nav>
         </div>
       </header>

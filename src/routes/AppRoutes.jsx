@@ -1,9 +1,10 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Login from '../components/auth/Login';
+import Signup from '../components/auth/Signup';
 import Homepage from '../pages/Home/Homepage';
 import About from '../pages/Home/About'; // ✅ Fixed: changed from './pages/Home/About' to '../pages/Home/About'
-import Signup from '../components/auth/Signup';
+import Blog from '../pages/Home/Blog';
 import ForgotPassword from '../components/auth/ForgotPassword';
 import VerifyOTP from '../components/auth/VerifyOTP';
 import ResetPassword from '../components/auth/ResetPassword';
@@ -33,6 +34,7 @@ const AppRoutes = () => {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/homepage" element={<Homepage />} />
         <Route path="/about" element={<About />} />
+        <Route path="/blog" element={<Blog />} />
         {/* Learner routes */}
         <Route path="/learner-dashboard" element={<LearnerDashBoard />} />
         <Route path="/learner/profile" element={<LearnerProfile />} />
