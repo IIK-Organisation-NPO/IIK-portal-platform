@@ -1,0 +1,591 @@
+/* src/styles/Admin/Admin_CreateProgramme.css */
+
+.admin-create-programme-layout {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background-color: #f8f9fa;
+}
+
+.admin-create-programme-body {
+    display: flex;
+    flex: 1;
+}
+
+.admin-create-programme-content {
+    flex: 1;
+    padding: 32px 40px;
+    min-width: 0;
+}
+
+/* Header Section */
+.admin-page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 32px;
+}
+
+.admin-page-header-left h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #111827;
+    margin: 0 0 8px 0;
+}
+
+.admin-page-subtitle {
+    color: #6b7280;
+    font-size: 15px;
+    margin: 0;
+}
+
+.admin-logout-btn {
+    background: none;
+    border: none;
+    color: #6b7280;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 8px 12px;
+    transition: color 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.admin-logout-btn:hover {
+    color: #dc2626;
+}
+
+/* Publish Message */
+.admin-publish-message {
+    background-color: #d1fae5;
+    border: 1px solid #6ee7b7;
+    border-radius: 8px;
+    padding: 14px 20px;
+    margin-bottom: 24px;
+    animation: slideDown 0.3s ease-out;
+}
+
+.admin-publish-message-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #065f46;
+    font-weight: 500;
+}
+
+.admin-check-icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Main Form Container */
+.admin-programme-form-container {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 32px;
+}
+
+.admin-form-main {
+    background: white;
+    border-radius: 12px;
+    padding: 32px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.admin-form-group {
+    margin-bottom: 28px;
+}
+
+.admin-form-group:last-of-type {
+    margin-bottom: 0;
+}
+
+.admin-form-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.admin-form-select,
+.admin-form-input,
+.admin-form-textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #111827;
+    background: white;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.admin-form-select:focus,
+.admin-form-input:focus,
+.admin-form-textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.admin-form-textarea {
+    resize: vertical;
+    font-family: inherit;
+}
+
+/* Duration Section */
+.admin-duration-container {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.admin-duration-select {
+    flex: 1;
+}
+
+.admin-custom-duration {
+    flex: 1;
+}
+
+/* Date Picker */
+.admin-date-picker-container {
+    position: relative;
+}
+
+.admin-date-input-wrapper {
+    display: flex;
+    align-items: center;
+    position: relative;
+    cursor: pointer;
+}
+
+.admin-date-input {
+    padding-right: 40px;
+    cursor: pointer;
+}
+
+.admin-calendar-icon {
+    position: absolute;
+    right: 14px;
+    width: 20px;
+    height: 20px;
+    color: #9ca3af;
+    pointer-events: none;
+}
+
+.admin-calendar-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    width: 320px;
+}
+
+.admin-calendar-header {
+    text-align: center;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: #111827;
+}
+
+.admin-calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+}
+
+.admin-calendar-weekday {
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b7280;
+    padding: 6px 0;
+}
+
+.admin-calendar-day {
+    text-align: center;
+    padding: 8px 0;
+    font-size: 14px;
+    color: #111827;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background-color 0.2s;
+}
+
+.admin-calendar-day:hover:not(:empty) {
+    background-color: #f3f4f6;
+}
+
+.admin-calendar-today {
+    background-color: #eff6ff;
+    color: #3b82f6;
+    font-weight: 600;
+}
+
+.admin-calendar-selected {
+    background-color: #3b82f6;
+    color: white !important;
+}
+
+.admin-calendar-selected:hover {
+    background-color: #2563eb !important;
+}
+
+.admin-calendar-footer {
+    margin-top: 12px;
+    text-align: right;
+}
+
+.admin-calendar-close {
+    background: none;
+    border: none;
+    color: #6b7280;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 4px 12px;
+}
+
+.admin-calendar-close:hover {
+    color: #111827;
+}
+
+/* Form Actions */
+.admin-cancel-btn {
+    padding: 8px 24px;
+    background: none;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    color: #6b7280;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.admin-cancel-btn:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+/* Sidebar */
+.admin-form-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.admin-status-card {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.admin-status-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #111827;
+    margin: 0 0 16px 0;
+}
+
+.admin-status-display {
+    margin-bottom: 16px;
+}
+
+.admin-status-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+
+.admin-status-select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    background: white;
+    color: #111827;
+}
+
+.admin-status-select:focus {
+    outline: none;
+    border-color: #3b82f6;
+}
+
+.admin-status-badge {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.admin-status-indicator {
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.admin-status-indicator.upcoming {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+.admin-status-indicator.active {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.admin-status-indicator.completed {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+.admin-status-indicator.draft {
+    background-color: #f3f4f6;
+    color: #374151;
+}
+
+.admin-status-indicator.archived {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+/* Action Buttons */
+.admin-action-buttons {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 24px;
+    margin-top: 28px;
+    padding-top: 24px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.admin-save-draft-btn,
+.admin-publish-btn {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.admin-save-draft-btn {
+    background: white;
+    color: #374151;
+    border: 1px solid #d1d5db;
+}
+
+.admin-save-draft-btn:hover {
+    background: #f9fafb;
+    border-color: #9ca3af;
+}
+
+.admin-publish-btn {
+    background: #000000;
+    color: white;
+}
+
+.admin-publish-btn:hover {
+    background: #1f2937;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Modal */
+.admin-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    animation: fadeIn 0.2s;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.admin-modal {
+    background: white;
+    border-radius: 12px;
+    max-width: 440px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+}
+
+.admin-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.admin-modal-header h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #111827;
+    margin: 0;
+}
+
+.admin-modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+}
+
+.admin-modal-close:hover {
+    color: #111827;
+}
+
+.admin-modal-body {
+    padding: 24px;
+}
+
+.admin-modal-body p {
+    margin: 0 0 8px 0;
+    color: #374151;
+}
+
+.admin-modal-subtext {
+    font-size: 14px;
+    color: #6b7280 !important;
+}
+
+.admin-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 16px 24px;
+    background: #f9fafb;
+    border-top: 1px solid #e5e7eb;
+}
+
+.admin-modal-cancel-btn,
+.admin-modal-confirm-btn {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.admin-modal-cancel-btn {
+    background: white;
+    color: #6b7280;
+    border: 1px solid #d1d5db;
+}
+
+.admin-modal-cancel-btn:hover {
+    background: #f9fafb;
+}
+
+.admin-modal-confirm-btn {
+    background: #020508;
+    color: white;
+}
+
+.admin-modal-confirm-btn:hover {
+    background: #2563eb;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .admin-programme-form-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .admin-create-programme-content {
+        margin-left: 0;
+        max-width: 100%;
+        padding: 24px 20px;
+    }
+}
+
+@media (max-width: 768px) {
+    .admin-create-programme-content {
+        padding: 16px;
+        margin-top: 60px;
+    }
+    
+    .admin-page-header {
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .admin-page-header-left h1 {
+        font-size: 24px;
+    }
+    
+    .admin-form-main {
+        padding: 20px;
+    }
+    
+    .admin-calendar-dropdown {
+        width: 280px;
+        left: -16px;
+    }
+    
+    .admin-duration-container {
+        flex-direction: column;
+    }
+    
+    .admin-form-sidebar {
+        gap: 16px;
+    }
+
+    .admin-action-buttons {
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+    .admin-cancel-btn,
+    .admin-save-draft-btn,
+    .admin-publish-btn {
+        flex: 1 1 auto;
+    }
+}

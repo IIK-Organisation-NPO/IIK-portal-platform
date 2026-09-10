@@ -20,8 +20,8 @@ import EmailComposerModal from '../pages/Admin_Screens/EmailComposerModal';
 import AdminAnalytics from '../pages/Admin_Screens/Admin_Analytics';
 import LearnerCertificates from '../pages/Learner_Screens/Learner_Certificates';
 import Admin_AccountSettings from '../pages/Admin_Screens/Admin_AccountSettings';
-
-import AdminAnalytics from '../pages/Admin_Screens/Admin_Analytics';
+import AdminProgrammes from '../pages/Admin_Screens/Admin_Programmes';
+import Admin_CreateProgramme from '../pages/Admin_Screens/Admin_CreateProgramme';
 const AppRoutes = () => {
   return (
     <Router>
@@ -51,8 +51,8 @@ const AppRoutes = () => {
         <Route path="/admin-emailComposerModal" element={<EmailComposerModal />} />
         <Route path="/admin-analytics" element={<AdminAnalytics />} />
         <Route path="/admin/settings" element={<Admin_AccountSettings />} />
-        
-        <Route path="/admin/analytics" element={<AdminAnalytics />} />
+        <Route path="/admin/programmes" element={<AdminProgrammes />} />
+        <Route path="/admin/create-programme" element={<Admin_CreateProgramme />} />
       </Routes>
     </Router>
   );
