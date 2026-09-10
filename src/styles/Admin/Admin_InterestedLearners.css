@@ -362,14 +362,17 @@
   margin-right: 0;
 }
 
-/* ---- Pagination ---- */
+/* ---- Pagination with Back Button ---- */
 .admin-interested-pagination {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 0;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
-.pagination-btn.next-only {
+.pagination-btn {
   background: #ffffff;
   border: 1px solid #cccccc;
   border-radius: 6px;
@@ -378,11 +381,39 @@
   font-weight: 500;
   color: #333333;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.2s, border-color 0.2s;
+  font-family: inherit;
 }
 
-.pagination-btn.next-only:hover {
+.pagination-btn:hover {
   background: #f0f0f0;
+}
+
+.pagination-btn.back-btn {
+  border-color: #000000;
+  color: #000000;
+  background: transparent;
+}
+
+.pagination-btn.back-btn:hover {
+  background: #000000;
+  color: #ffffff;
+}
+
+/* Mobile Responsive for Pagination */
+@media (max-width: 480px) {
+  .admin-interested-pagination {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .pagination-btn {
+    padding: 6px 16px;
+    font-size: 12px;
+    width: 100%;
+    text-align: center;
+  }
 }
 
 /* ---- Mobile Responsive ---- */
@@ -669,4 +700,138 @@
 
 .modal-btn.confirm-btn:hover {
   background: #2a2a2a;
+}
+
+/* ============================================
+   FIX 1: "Interested Learners — Digital Marketing ˅" heading
+   Replace the existing .admin-interested-top-row .header-left-group h1,
+   .programme-dropdown and .dropdown-arrow rules with these.
+   ============================================ */
+
+.admin-interested-top-row .header-left-group h1 {
+  font-size: 28px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.3px;
+  margin: 0 0 4px 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  /* was "wrap" — this let the select drop to its own line */
+  gap: 4px;
+  white-space: nowrap;
+}
+
+/* High-specificity + explicit display/width so this wins over any
+   global "select { width:100% }" reset elsewhere in the project. */
+.admin-interested-top-row .header-left-group h1 .programme-dropdown {
+  display: inline-flex;
+  align-items: center;
+  width: auto;
+  max-width: none;
+  min-width: 0;
+  flex: 0 0 auto;
+  font-size: 28px;
+  font-weight: 800;
+  color: #0f172a;
+  background: transparent;
+  border: none;
+  padding: 0 2px;
+  cursor: pointer;
+  font-family: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+.admin-interested-top-row .header-left-group h1 .programme-dropdown:focus {
+  outline: none;
+}
+
+.admin-interested-top-row .header-left-group h1 .dropdown-arrow {
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 15px;
+  color: #0f172a;
+  margin-left: -2px;
+  pointer-events: none;
+}
+
+
+/* ============================================
+   FIX 2: "Digital Centre: All" + Search row in the toolbar
+   Replace the existing .admin-interested-toolbar .toolbar-filters,
+   .admin-interested-toolbar .filter-select and
+   .admin-interested-toolbar .search-input rules with these.
+   ============================================ */
+
+.admin-interested-toolbar .toolbar-filters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: nowrap;
+}
+
+.admin-interested-toolbar .toolbar-filters .filter-select,
+.admin-interested-toolbar .toolbar-filters .search-input {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  /* never grow/shrink to fill the row */
+  min-width: 0;
+}
+
+.admin-interested-toolbar .toolbar-filters .filter-select {
+  width: 170px;
+  padding: 7px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  background: #ffffff;
+  color: #333333;
+  cursor: pointer;
+}
+
+.admin-interested-toolbar .toolbar-filters .search-input {
+  width: 230px;
+  padding: 7px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  background: #ffffff;
+  color: #333333;
+}
+
+.admin-interested-toolbar .toolbar-filters .filter-select:focus,
+.admin-interested-toolbar .toolbar-filters .search-input:focus {
+  outline: none;
+  border-color: #0f172a;
+}
+
+.admin-interested-toolbar .toolbar-filters .search-input::placeholder {
+  color: #aaaaaa;
+}
+
+/* ---- Mobile: let both groups drop to full width & stack ---- */
+@media (max-width: 768px) {
+  .admin-interested-top-row .header-left-group h1 {
+    flex-wrap: wrap;
+    white-space: normal;
+  }
+
+  .admin-interested-top-row .header-left-group h1 .programme-dropdown {
+    width: auto;
+    max-width: 100%;
+  }
+
+  .admin-interested-toolbar .toolbar-filters {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .admin-interested-toolbar .toolbar-filters .filter-select,
+  .admin-interested-toolbar .toolbar-filters .search-input {
+    width: 100%;
+  }
 }

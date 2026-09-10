@@ -605,3 +605,182 @@
 .btn-bulk-upload i {
     font-size: 16px;
 }
+
+/* ---- Confirmation Modal ---- */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.modal-content {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 32px 40px;
+    max-width: 480px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-content h2 {
+    font-size: 22px;
+    font-weight: 700;
+    color: #000;
+    margin: 0 0 8px 0;
+}
+
+.modal-content p {
+    font-size: 15px;
+    color: #666;
+    margin: 0 0 20px 0;
+}
+
+.modal-details {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+}
+
+.detail-row {
+    display: flex;
+    padding: 6px 0;
+    border-bottom: 1px solid #eaeaea;
+}
+
+.detail-row:last-child {
+    border-bottom: none;
+}
+
+.detail-label {
+    font-weight: 600;
+    color: #333;
+    width: 120px;
+    flex-shrink: 0;
+}
+
+.detail-value {
+    color: #1a1a1a;
+    word-break: break-word;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.modal-btn {
+    padding: 10px 28px;
+    border: none;
+    border-radius: 40px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+}
+
+.modal-btn:hover {
+    transform: scale(1.02);
+}
+
+.modal-btn:active {
+    transform: scale(0.98);
+}
+
+.modal-btn.cancel-btn {
+    background: #f3f4f6;
+    color: #1F2937;
+}
+
+.modal-btn.cancel-btn:hover {
+    background: #e5e7eb;
+}
+
+.modal-btn.confirm-btn {
+    background: #000000;
+    color: #ffffff;
+}
+
+.modal-btn.confirm-btn:hover {
+    background: #2a2a2a;
+}
+
+@media (max-width: 480px) {
+    .modal-content {
+        padding: 24px 20px;
+    }
+
+    .detail-row {
+        flex-direction: column;
+        padding: 8px 0;
+    }
+
+    .detail-label {
+        width: auto;
+        margin-bottom: 2px;
+    }
+
+    .modal-actions {
+        flex-direction: column;
+    }
+
+    .modal-btn {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+/* ---- Modal Inputs ---- */
+.modal-input {
+    border: 1.5px solid #d0d5dd;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 14px;
+    width: 100%;
+    box-sizing: border-box;
+    background: #fafafa;
+    transition: border-color 0.2s;
+}
+
+.modal-input:focus {
+    outline: none;
+    border-color: #000;
+    background: #ffffff;
+}
+
+.detail-row .modal-input {
+    flex: 1;
+    margin-left: 4px;
+}

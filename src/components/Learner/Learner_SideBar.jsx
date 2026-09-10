@@ -8,7 +8,7 @@ const Learner_SideBar = ({ active = 'dashboard', isMobileOpen, onClose }) => {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: 'fa-th-large', path: '/learner-dashboard' },
     { id: 'programmes', label: 'Programmes', icon: 'fa-book-open', path: '/learner/programmes' },
-    { id: 'certificates', label: 'Certificates', icon: 'fa-certificate', path: '/learner/certificates' },
+    { id: 'certificates', label: 'Certificates', icon: 'fa-certificate', path: '/learner-certificates' },
     { id: 'profile', label: 'Profile', icon: 'fa-user', path: '/learner/profile' },
     { id: 'settings', label: 'Settings', icon: 'fa-cog', path: '/learner/settings' },
     { id: 'logout', label: 'Logout', icon: 'fa-sign-out-alt', path: '#', isLogout: true },
@@ -25,10 +25,10 @@ const Learner_SideBar = ({ active = 'dashboard', isMobileOpen, onClose }) => {
       {isMobileOpen && (
         <div className="sidebar-overlay" onClick={onClose}></div>
       )}
-      
+
       <aside className={`learner-sidebar ${isMobileOpen ? 'mobile-open' : ''}`}>
         <div className="sidebar-menu-label">Portal Menu</div>
-        
+
         <nav className="sidebar-nav">
           {navItems.map((item) => {
             if (item.isLogout) {
@@ -53,16 +53,14 @@ const Learner_SideBar = ({ active = 'dashboard', isMobileOpen, onClose }) => {
                 className={active === item.id ? 'active' : ''}
                 onClick={onClose}
               >
-                <i className={`fas ${item.icon}`}></i> 
+                <i className={`fas ${item.icon}`}></i>
                 <span>{item.label}</span>
               </Link>
             );
           })}
         </nav>
 
-        <div className="sidebar-version">
-          <small>v2.0.0</small>
-        </div>
+
       </aside>
     </>
   );

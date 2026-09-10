@@ -24,6 +24,9 @@ const Admin_Learners = () => {
   // State for deactivate confirmation modal
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
   const [deactivateTarget, setDeactivateTarget] = useState(null); // Stores the index of learner to deactivate
+  
+  // State to track which learner is being deactivated (for visual feedback)
+  const [deactivatingIndex, setDeactivatingIndex] = useState(null);
 
   // Sample learner data
   const [learners, setLearners] = useState([
@@ -161,17 +164,31 @@ const Admin_Learners = () => {
     setShowDeactivateModal(true);
   };
 
-  // Confirm deactivation - actually deactivates the learner
+  // Confirm deactivation - changes status to Inactive, shows visual feedback, then removes after 3 seconds
   const confirmDeactivate = () => {
     if (deactivateTarget !== null) {
+      // First, update the status to Inactive
       const updatedLearners = [...learners];
       updatedLearners[deactivateTarget] = {
         ...updatedLearners[deactivateTarget],
-        status: "Inactive" // Change status to Inactive
+        status: "Inactive"
       };
       setLearners(updatedLearners);
+      
+      // Set the deactivating index to show visual feedback (row will highlight)
+      setDeactivatingIndex(deactivateTarget);
+      
+      // Close the modal
       setShowDeactivateModal(false);
-      setDeactivateTarget(null);
+      
+      // After 3 seconds, remove the deactivated learner from the list
+      setTimeout(() => {
+        // Filter out the deactivated learner
+        const filteredLearners = learners.filter((_, index) => index !== deactivateTarget);
+        setLearners(filteredLearners);
+        setDeactivatingIndex(null); // Clear the deactivating state
+        setDeactivateTarget(null); // Clear the target
+      }, 3000); // 3 seconds delay
     }
   };
 
@@ -263,7 +280,10 @@ const Admin_Learners = () => {
               </thead>
               <tbody>
                 {learners.map((learner, index) => (
-                  <tr key={index}>
+                  <tr 
+                    key={index} 
+                    className={deactivatingIndex === index ? "deactivating-row" : ""}
+                  >
                     {/* Name column - editable when in edit mode */}
                     <td>
                       {editingIndex === index ? (
@@ -352,8 +372,9 @@ const Admin_Learners = () => {
                           <button 
                             className="action-btn deactivate" 
                             onClick={() => handleDeactivateClick(index)}
+                            disabled={deactivatingIndex === index}
                           >
-                            Deactivate
+                            {deactivatingIndex === index ? "Deactivating..." : "Deactivate"}
                           </button>
                         </>
                       )}
@@ -393,7 +414,7 @@ const Admin_Learners = () => {
             <h2>Confirm Deactivation</h2>
             <p>Are you sure you want to deactivate this student?</p>
             <p className="modal-warning">
-              This action will change the student's status to "Inactive".
+              This action will change the student's status to "Inactive" and remove them from the list after 3 seconds.
             </p>
             <div className="modal-actions">
               <button className="modal-btn cancel-btn" onClick={cancelDeactivate}>

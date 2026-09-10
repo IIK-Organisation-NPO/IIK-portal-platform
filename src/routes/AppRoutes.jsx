@@ -1,9 +1,10 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Login from '../components/auth/Login';
+import Signup from '../components/auth/Signup';
 import Homepage from '../pages/Home/Homepage';
 import About from '../pages/Home/About'; // ✅ Fixed: changed from './pages/Home/About' to '../pages/Home/About'
-import Signup from '../components/auth/Signup';
+import Blog from '../pages/Home/Blog';
 import ForgotPassword from '../components/auth/ForgotPassword';
 import VerifyOTP from '../components/auth/VerifyOTP';
 import ResetPassword from '../components/auth/ResetPassword';
@@ -16,6 +17,10 @@ import Admin_Certificates from '../pages/Admin_Screens/Admin_Certificates';
 import Admin_BulkUpload from '../pages/Admin_Screens/Admin_BulkCertificates';
 import VerifyEmail from '../components/auth/VerifyEmail'; // ✅ Fixed: changed from './components/auth/VerifyEmail' to '../components/auth/VerifyEmail'
 import EmailComposerModal from '../pages/Admin_Screens/EmailComposerModal';
+import AdminAnalytics from '../pages/Admin_Screens/Admin_Analytics';
+import LearnerCertificates from '../pages/Learner_Screens/Learner_Certificates';
+import Admin_AccountSettings from '../pages/Admin_Screens/Admin_AccountSettings';
+
 import AdminAnalytics from '../pages/Admin_Screens/Admin_Analytics';
 const AppRoutes = () => {
   return (
@@ -31,9 +36,11 @@ const AppRoutes = () => {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/homepage" element={<Homepage />} />
         <Route path="/about" element={<About />} />
+        <Route path="/blog" element={<Blog />} />
         {/* Learner routes */}
         <Route path="/learner-dashboard" element={<LearnerDashBoard />} />
         <Route path="/learner/profile" element={<LearnerProfile />} />
+        <Route path="/learner-certificates" element={<LearnerCertificates />} />
 
         {/* ===== NEW ADMIN ROUTES ===== */}
         <Route path="/admin-dashboard" element={<AdminDashboard />} />
@@ -42,6 +49,9 @@ const AppRoutes = () => {
         <Route path="/admin-certificates" element={<Admin_Certificates />} />
         <Route path="/admin-bulkCertificates" element={<Admin_BulkUpload />} />
         <Route path="/admin-emailComposerModal" element={<EmailComposerModal />} />
+        <Route path="/admin-analytics" element={<AdminAnalytics />} />
+        <Route path="/admin/settings" element={<Admin_AccountSettings />} />
+        
         <Route path="/admin/analytics" element={<AdminAnalytics />} />
       </Routes>
     </Router>
