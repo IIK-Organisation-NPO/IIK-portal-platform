@@ -19,6 +19,7 @@ import VerifyEmail from '../components/auth/VerifyEmail'; // ✅ Fixed: changed 
 import EmailComposerModal from '../pages/Admin_Screens/EmailComposerModal';
 import AdminAnalytics from '../pages/Admin_Screens/Admin_Analytics';
 import LearnerCertificates from '../pages/Learner_Screens/Learner_Certificates';
+import Admin_AccountSettings from '../pages/Admin_Screens/Admin_AccountSettings';
 
 const AppRoutes = () => {
   return (
@@ -48,6 +49,8 @@ const AppRoutes = () => {
         <Route path="/admin-bulkCertificates" element={<Admin_BulkUpload />} />
         <Route path="/admin-emailComposerModal" element={<EmailComposerModal />} />
         <Route path="/admin-analytics" element={<AdminAnalytics />} />
+        <Route path="/admin/settings" element={<Admin_AccountSettings />} />
+        
       </Routes>
     </Router>
   );
