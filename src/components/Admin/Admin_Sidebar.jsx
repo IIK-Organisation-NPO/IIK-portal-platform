@@ -15,7 +15,7 @@ const Admin_Sidebar = ({ active = 'dashboard', isMobileOpen, onClose }) => {
         { id: 'learners', label: 'Learners', icon: 'fa-users', path: '/admin/learners' },
         { id: 'certificates', label: 'Certificates', icon: 'fa-certificate', path: '/admin-certificates' },
         { id: 'programmes', label: 'Programmes', icon: 'fa-book-open', path: '/admin/programmes' },
-        { id: 'blog', label: 'Blog & News', icon: 'fa-newspaper', path: '/admin/blog' },
+        { id: 'blog', label: 'Blog & News', icon: 'fa-newspaper', path: '/admin/blog-management' },
         { id: 'staff', label: 'Staff Management', icon: 'fa-user-cog', path: '/admin/staff' },
         { id: 'settings', label: 'Settings', icon: 'fa-cog', path: '/admin/settings' },
         { id: 'logout', label: 'Logout', icon: 'fa-sign-out-alt', path: '#', isLogout: true },
