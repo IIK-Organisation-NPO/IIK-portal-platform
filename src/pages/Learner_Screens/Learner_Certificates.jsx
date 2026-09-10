@@ -1,7 +1,7 @@
 // src/pages/Learner_Screens/Learner_Certificates.jsx
 import React, { useState } from "react";
 import { FaDownload } from "react-icons/fa";
-import Learner_Sidebar from "../../components/Learner/Learner_Sidebar";
+import Learner_Sidebar from "../../components/Learner/Learner_SideBar";
 import Learner_Header from "../../components/Learner/Learner_Header";
 import "../../styles/Learner/Learner_Certificates.css";
 

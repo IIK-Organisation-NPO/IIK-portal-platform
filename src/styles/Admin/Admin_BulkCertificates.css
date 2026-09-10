@@ -1,4 +1,4 @@
-/* src/styles/Admin/Admin_BulkCertificates.css */
+/* src/styles/pages/admin_bulkupload.css */
 
 /* ---- Layout ---- */
 .admin-bulkupload-layout {
@@ -221,8 +221,6 @@
     align-items: center;
     padding: 18px 24px;
     border-bottom: 1px solid #eaeaea;
-    flex-wrap: wrap;
-    gap: 12px;
 }
 
 .preview-header h3 {
@@ -232,58 +230,13 @@
     margin: 0;
 }
 
-.preview-actions {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-}
-
 .selected-count {
-    background: #000000;
-    color: #ffffff;
+    background: #f0f0f0;
     padding: 4px 14px;
     border-radius: 20px;
     font-size: 14px;
     font-weight: 600;
-}
-
-.btn-select-all {
-    padding: 6px 16px;
-    background: #e3f5e9;
-    color: #0a6b3b;
-    border: none;
-    border-radius: 20px;
-    font-weight: 600;
-    font-size: 13px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    transition: background 0.2s;
-}
-
-.btn-select-all:hover {
-    background: #c8e6d9;
-}
-
-.btn-deselect-all {
-    padding: 6px 16px;
-    background: #fde8e8;
-    color: #b33c3c;
-    border: none;
-    border-radius: 20px;
-    font-weight: 600;
-    font-size: 13px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    transition: background 0.2s;
-}
-
-.btn-deselect-all:hover {
-    background: #f5d0d0;
+    color: #333333;
 }
 
 .table-responsive {
@@ -382,7 +335,6 @@
 .bulk-actions-right {
     display: flex;
     gap: 12px;
-    flex-wrap: wrap;
 }
 
 .btn-back {
@@ -444,148 +396,6 @@
     background: #2a2a2a;
 }
 
-/* ============================================================
-   MODALS - Added for Preview & Confirmation
-   ============================================================ */
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-    animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-
-    to {
-        opacity: 1;
-    }
-}
-
-.modal-content {
-    background: #ffffff;
-    border-radius: 16px;
-    padding: 32px 40px;
-    max-width: 600px;
-    width: 90%;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-    animation: slideUp 0.3s ease;
-}
-
-@keyframes slideUp {
-    from {
-        transform: translateY(20px);
-        opacity: 0;
-    }
-
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
-
-.modal-content h2 {
-    font-size: 22px;
-    font-weight: 700;
-    color: #000;
-    margin: 0 0 8px 0;
-}
-
-.modal-content p {
-    font-size: 15px;
-    color: #666;
-    margin: 0 0 20px 0;
-}
-
-.modal-details {
-    background: #f8f9fa;
-    border-radius: 10px;
-    padding: 16px 20px;
-    margin-bottom: 24px;
-}
-
-.modal-details table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 14px;
-}
-
-.modal-details thead th {
-    font-weight: 600;
-    color: #333;
-    padding: 6px 8px;
-    border-bottom: 1px solid #eaeaea;
-    text-align: left;
-}
-
-.modal-details tbody td {
-    padding: 6px 8px;
-    border-bottom: 1px solid #f0f0f0;
-    color: #1a1a1a;
-}
-
-.modal-details tbody tr:last-child td {
-    border-bottom: none;
-}
-
-.modal-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-}
-
-.modal-btn {
-    padding: 10px 28px;
-    border: none;
-    border-radius: 40px;
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.2s, transform 0.1s;
-}
-
-.modal-btn:hover {
-    transform: scale(1.02);
-}
-
-.modal-btn:active {
-    transform: scale(0.98);
-}
-
-.modal-btn.cancel-btn {
-    background: #f3f4f6;
-    color: #1F2937;
-}
-
-.modal-btn.cancel-btn:hover {
-    background: #e5e7eb;
-}
-
-.modal-btn.confirm-btn {
-    background: #000000;
-    color: #ffffff;
-}
-
-.modal-btn.confirm-btn:hover {
-    background: #2a2a2a;
-}
-
-/* ---- Table Checkbox Column ---- */
-.recipient-table th:first-child,
-.recipient-table td:first-child {
-    width: 40px;
-    text-align: center;
-}
-
 /* ---- Mobile Responsive ---- */
 @media (max-width: 992px) {
     .admin-bulkupload-content {
@@ -641,11 +451,8 @@
 
     .preview-header {
         flex-direction: column;
-        align-items: stretch;
-    }
-
-    .preview-actions {
-        justify-content: flex-start;
+        align-items: flex-start;
+        gap: 8px;
     }
 
     .bulk-actions {
@@ -662,20 +469,6 @@
     .btn-issue-bulk {
         width: 100%;
         justify-content: center;
-    }
-
-    .modal-content {
-        padding: 24px 20px;
-        max-width: 95%;
-    }
-
-    .modal-actions {
-        flex-direction: column;
-    }
-
-    .modal-btn {
-        width: 100%;
-        text-align: center;
     }
 }
 
@@ -701,19 +494,90 @@
     .bulk-upload-section {
         padding: 14px 12px;
     }
+}
 
-    .preview-actions {
-        gap: 8px;
-    }
+/* ---- Preview Header Actions ---- */
+.preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 24px;
+    border-bottom: 1px solid #eaeaea;
+    flex-wrap: wrap;
+    gap: 12px;
+}
 
-    .selected-count {
-        font-size: 12px;
-        padding: 3px 10px;
-    }
+.preview-header h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #000000;
+    margin: 0;
+}
 
-    .btn-select-all,
-    .btn-deselect-all {
-        font-size: 12px;
-        padding: 4px 12px;
-    }
+.preview-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.selected-count {
+    background: #000000;
+    color: #ffffff;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.btn-select-all {
+    padding: 6px 16px;
+    background: #e3f5e9;
+    color: #0a6b3b;
+    border: none;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.2s;
+}
+
+.btn-select-all:hover {
+    background: #c8e6d9;
+}
+
+.btn-deselect-all {
+    padding: 6px 16px;
+    background: #fde8e8;
+    color: #b33c3c;
+    border: none;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.2s;
+}
+
+.btn-deselect-all:hover {
+    background: #f5d0d0;
+}
+
+/* ---- Table Checkbox Column ---- */
+.recipient-table th:first-child,
+.recipient-table td:first-child {
+    width: 40px;
+    text-align: center;
+}
+
+.recipient-table input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #000000;
+    cursor: pointer;
 }

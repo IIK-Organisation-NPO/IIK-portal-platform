@@ -1,271 +1,617 @@
 // src/pages/Admin_Screens/Admin_Certificates.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Admin_Header from '../../components/Admin/Admin_Header';
 import Admin_Sidebar from '../../components/Admin/Admin_Sidebar';
 import '../../styles/Admin/Admin_Certificates.css';
+import api from '../../services/api';
 
 const Admin_Certificates = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+    const [successMessage, setSuccessMessage] = useState('');
+    const [adminName, setAdminName] = useState('Admin');
 
-    // Certificate Form State (for issuance)
+    // Certificate Form State
     const [certificateForm, setCertificateForm] = useState({
-        learner: '',
-        programme: '',
+        learner_id: '',
+        programme_id: '',
+        learner_name: '',
+        programme_name: '',
         issueDate: '',
         expiryDate: '',
         neverExpires: false,
         certificateFile: null,
     });
 
-    // Confirmation modal for issuance
-    const [showConfirmModal, setShowConfirmModal] = useState(false);
-    const [confirmData, setConfirmData] = useState(null);
-
-    // ---- Edit Modal State ----
+    // Certificate data from database
+    const [certificates, setCertificates] = useState([]);
+    const [learners, setLearners] = useState([]);
+    const [programmes, setProgrammes] = useState([]);
+    const [submitting, setSubmitting] = useState(false);
+    const [selectedCertificate, setSelectedCertificate] = useState(null);
+    const [showViewModal, setShowViewModal] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
-    const [editingCert, setEditingCert] = useState(null);
-    const [editFormData, setEditFormData] = useState({
-        learner: '',
-        programme: '',
-        issueDate: '',
-        expiryDate: '',
-        neverExpires: false,
-    });
-
-    // ---- Delete Modal State ----
     const [showDeleteModal, setShowDeleteModal] = useState(false);
-    const [deletingCert, setDeletingCert] = useState(null);
+    const [deletingCertificate, setDeletingCertificate] = useState(null);
+    const [viewPdfUrl, setViewPdfUrl] = useState('');
 
-    // Programmes list (reusable)
-    const programmes = [
-        'Digital Literacy',
-        'Microsoft 365',
-        'Digital Marketing',
-        'Risk & Compliance Excellence',
-        'Data Analytics',
-    ];
-
-    // Sample certificate data
-    const [certificates, setCertificates] = useState([
-        {
-            id: 'CERT-2026-9024',
-            learner: 'Sibusiso Ndlovu',
-            programme: 'Digital Marketing',
-            issueDate: 'Jan 12, 2026',
-            status: 'Issued',
-        },
-        {
-            id: 'CERT-2026-8199',
-            learner: 'Chantel Fourie',
-            programme: 'Digital Literacy',
-            issueDate: 'Jan 15, 2026',
-            status: 'Pending',
-        },
-        {
-            id: 'CERT-2026-7243',
-            learner: 'Lindiwe Khumalo',
-            programme: 'Microsoft 365',
-            issueDate: 'Feb 02, 2026',
-            status: 'Issued',
-        },
-        {
-            id: 'CERT-2026-6122',
-            learner: 'Thabo Mokoena',
-            programme: 'Microsoft 365',
-            issueDate: 'Feb 22, 2026',
-            status: 'Issued',
-        },
-        {
-            id: 'CERT-2026-5512',
-            learner: 'Zanele Dlamini',
-            programme: 'Digital Marketing',
-            issueDate: 'Mar 01, 2026',
-            status: 'Issued',
-        },
-    ]);
-
-    const adminName = 'Admin User';
     const navigate = useNavigate();
 
-    // ---- Helper: format date for display ----
-    const formatDateForDisplay = (dateStr) => {
-        if (!dateStr) return '';
-        const d = new Date(dateStr + 'T00:00:00');
-        if (isNaN(d)) return dateStr;
-        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const toggleMobileMenu = () => {
+        setIsMobileMenuOpen(!isMobileMenuOpen);
     };
 
-    // ---- Helper: parse display date to YYYY-MM-DD ----
-    const parseDateForInput = (displayDate) => {
-        if (!displayDate) return '';
-        const d = new Date(displayDate);
-        if (isNaN(d)) return '';
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
+    const closeMobileMenu = () => {
+        setIsMobileMenuOpen(false);
     };
 
-    // ---- Toggle mobile ----
-    const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
-    const closeMobileMenu = () => setIsMobileMenuOpen(false);
+    // Get user data from localStorage
+    const getUserData = () => {
+        try {
+            const userData = localStorage.getItem('user');
+            if (userData) {
+                const user = JSON.parse(userData);
+                if (user.name) {
+                    const fullName = `${user.name} ${user.surname || ''}`.trim();
+                    setAdminName(fullName || 'Admin');
+                }
+            }
+        } catch (error) {
+            console.error('Error parsing user data:', error);
+        }
+    };
 
-    // ---- Issuance Handlers ----
+    // ============================================
+    // FORMAT DATE - FIXED
+    // ============================================
+    const formatDate = (dateString) => {
+        if (!dateString) {
+            return 'N/A';
+        }
+        
+        try {
+            if (typeof dateString === 'string' && dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                const parts = dateString.split('-');
+                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                const month = months[parseInt(parts[1]) - 1];
+                const day = parseInt(parts[2]);
+                const year = parseInt(parts[0]);
+                return `${month} ${day}, ${year}`;
+            }
+            
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) {
+                return 'N/A';
+            }
+            
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+        } catch (error) {
+            console.error('Date formatting error:', error);
+            return 'N/A';
+        }
+    };
+
+    // ============================================
+    // FORMAT DATE FOR INPUT (YYYY-MM-DD)
+    // ============================================
+    const formatDateForInput = (dateString) => {
+        if (!dateString) return '';
+        try {
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return '';
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        } catch (error) {
+            return '';
+        }
+    };
+
+    // ============================================
+    // FETCH CERTIFICATES FROM DATABASE
+    // ============================================
+    const fetchCertificates = async () => {
+        try {
+            const response = await api.get('/admin/certificates');
+            if (response.data.success) {
+                const formattedCerts = response.data.data.map((cert) => {
+                    let formattedDate = 'N/A';
+                    if (cert.Date_issued) {
+                        formattedDate = formatDate(cert.Date_issued);
+                    }
+                    
+                    return {
+                        ...cert,
+                        formattedDate: formattedDate,
+                        certificateNumber: cert.Certificate_id || 'N/A',
+                        status: 'Active'
+                    };
+                });
+                setCertificates(formattedCerts);
+            }
+        } catch (err) {
+            console.error('Error fetching certificates:', err);
+        }
+    };
+
+    // ============================================
+    // FETCH LEARNERS FROM DATABASE
+    // ============================================
+    const fetchLearners = async () => {
+        try {
+            const response = await api.get('/admin/learners?limit=1000');
+            if (response.data.success) {
+                setLearners(response.data.data || []);
+            }
+        } catch (err) {
+            console.error('Error fetching learners:', err);
+        }
+    };
+
+    // ============================================
+    // FETCH PROGRAMMES FROM DATABASE
+    // ============================================
+    const fetchProgrammes = async () => {
+        try {
+            const response = await api.get('/admin/programmes');
+            if (response.data.success) {
+                setProgrammes(response.data.data || []);
+            }
+        } catch (err) {
+            console.error('Error fetching programmes:', err);
+        }
+    };
+
+    // ============================================
+    // FETCH ALL DATA
+    // ============================================
+    const fetchAllData = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            await Promise.all([
+                fetchCertificates(),
+                fetchLearners(),
+                fetchProgrammes()
+            ]);
+            setLoading(false);
+        } catch (err) {
+            console.error('Error fetching data:', err);
+            setError('Failed to load data. Please try again.');
+            setLoading(false);
+        }
+    };
+
+    // ============================================
+    // UPLOAD CERTIFICATE WITH FILE
+    // ============================================
+    const uploadCertificate = async (formData) => {
+        try {
+            const response = await api.post('/admin/certificates/upload', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+            return response.data;
+        } catch (err) {
+            console.error('Error uploading certificate:', err);
+            throw err;
+        }
+    };
+
+    // ============================================
+    // HANDLE FORM CHANGE
+    // ============================================
     const handleFormChange = (e) => {
         const { name, value, type, checked } = e.target;
-        setCertificateForm({
-            ...certificateForm,
-            [name]: type === 'checkbox' ? checked : value,
-        });
+        
+        if (name === 'learner_id') {
+            const selectedLearner = learners.find(l => l.id === parseInt(value));
+            setCertificateForm({
+                ...certificateForm,
+                learner_id: value,
+                learner_name: selectedLearner ? `${selectedLearner.name} ${selectedLearner.surname}` : ''
+            });
+        } else if (name === 'programme_id') {
+            const selectedProgramme = programmes.find(p => p.Programme_id === parseInt(value));
+            setCertificateForm({
+                ...certificateForm,
+                programme_id: value,
+                programme_name: selectedProgramme ? selectedProgramme.Programme_name : ''
+            });
+        } else if (name === 'neverExpires') {
+            setCertificateForm({
+                ...certificateForm,
+                [name]: checked,
+                expiryDate: checked ? '' : certificateForm.expiryDate
+            });
+        } else {
+            setCertificateForm({
+                ...certificateForm,
+                [name]: type === 'checkbox' ? checked : value,
+            });
+        }
     };
 
+    // ============================================
+    // HANDLE FILE CHANGE
+    // ============================================
     const handleFileChange = (e) => {
         const file = e.target.files[0];
-        if (file) setCertificateForm({ ...certificateForm, certificateFile: file });
+        if (file) {
+            const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+            if (!validTypes.includes(file.type)) {
+                setError('Please upload a PDF, JPEG, or PNG file');
+                setTimeout(() => setError(null), 5000);
+                return;
+            }
+            if (file.size > 10 * 1024 * 1024) {
+                setError('File size must be less than 10MB');
+                setTimeout(() => setError(null), 5000);
+                return;
+            }
+            setCertificateForm({
+                ...certificateForm,
+                certificateFile: file,
+            });
+        }
     };
 
+    // ============================================
+    // HANDLE DROP
+    // ============================================
     const handleDrop = (e) => {
         e.preventDefault();
         const file = e.dataTransfer.files[0];
-        if (file) setCertificateForm({ ...certificateForm, certificateFile: file });
+        if (file) {
+            const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+            if (!validTypes.includes(file.type)) {
+                setError('Please upload a PDF, JPEG, or PNG file');
+                setTimeout(() => setError(null), 5000);
+                return;
+            }
+            if (file.size > 10 * 1024 * 1024) {
+                setError('File size must be less than 10MB');
+                setTimeout(() => setError(null), 5000);
+                return;
+            }
+            setCertificateForm({
+                ...certificateForm,
+                certificateFile: file,
+            });
+        }
     };
 
-    const handleDragOver = (e) => e.preventDefault();
-
-    const handleSubmit = (e) => {
+    const handleDragOver = (e) => {
         e.preventDefault();
-        if (!certificateForm.learner || !certificateForm.programme || !certificateForm.issueDate) {
-            alert('Please fill in all required fields.');
+    };
+
+    // ============================================
+    // HANDLE SUBMIT CERTIFICATE
+    // ============================================
+    const handleSubmitCertificate = async (e) => {
+        e.preventDefault();
+        
+        if (!certificateForm.learner_id) {
+            setError('Please select a learner');
+            setTimeout(() => setError(null), 5000);
             return;
         }
-        setConfirmData({ ...certificateForm });
-        setShowConfirmModal(true);
+        if (!certificateForm.programme_id) {
+            setError('Please select a programme');
+            setTimeout(() => setError(null), 5000);
+            return;
+        }
+        if (!certificateForm.issueDate) {
+            setError('Please select an issue date');
+            setTimeout(() => setError(null), 5000);
+            return;
+        }
+        if (!certificateForm.certificateFile) {
+            setError('Please upload a certificate file (PDF, JPEG, or PNG)');
+            setTimeout(() => setError(null), 5000);
+            return;
+        }
+
+        try {
+            setSubmitting(true);
+            
+            const formData = new FormData();
+            formData.append('user_id', certificateForm.learner_id);
+            formData.append('programme_id', certificateForm.programme_id);
+            formData.append('issue_date', certificateForm.issueDate);
+            formData.append('expiry_date', certificateForm.neverExpires ? '' : certificateForm.expiryDate);
+            formData.append('certificateFile', certificateForm.certificateFile);
+
+            const result = await uploadCertificate(formData);
+            
+            if (result.success) {
+                setSuccessMessage('Certificate issued and uploaded successfully!');
+                setTimeout(() => setSuccessMessage(''), 5000);
+                
+                setCertificateForm({
+                    learner_id: '',
+                    programme_id: '',
+                    learner_name: '',
+                    programme_name: '',
+                    issueDate: '',
+                    expiryDate: '',
+                    neverExpires: false,
+                    certificateFile: null,
+                });
+                
+                const fileInput = document.getElementById('fileInput');
+                if (fileInput) fileInput.value = '';
+                
+                await fetchCertificates();
+            } else {
+                setError(result.message || 'Failed to issue certificate');
+                setTimeout(() => setError(null), 5000);
+            }
+        } catch (err) {
+            console.error('Error issuing certificate:', err);
+            setError(err.response?.data?.message || 'Failed to issue certificate');
+            setTimeout(() => setError(null), 5000);
+        } finally {
+            setSubmitting(false);
+        }
     };
 
-    const handleConfirmIssue = () => {
-        const newCert = {
-            id: `CERT-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-            learner: confirmData.learner,
-            programme: confirmData.programme,
-            issueDate: formatDateForDisplay(confirmData.issueDate),
-            status: 'Issued',
-        };
-        setCertificates([newCert, ...certificates]);
-        setCertificateForm({
-            learner: '',
-            programme: '',
-            issueDate: '',
-            expiryDate: '',
-            neverExpires: false,
-            certificateFile: null,
-        });
-        setShowConfirmModal(false);
-        setConfirmData(null);
-        alert('Certificate issued successfully!');
-    };
-
-    const handleCancelIssue = () => {
-        setShowConfirmModal(false);
-        setConfirmData(null);
-    };
-
-    // ---- Edit Handlers ----
-    const handleEditClick = (cert) => {
-        setEditingCert(cert);
-        const issueDateInput = parseDateForInput(cert.issueDate);
-        const expiryDateInput = cert.expiryDate ? parseDateForInput(cert.expiryDate) : '';
-        setEditFormData({
-            learner: cert.learner,
-            programme: cert.programme,
-            issueDate: issueDateInput,
-            expiryDate: expiryDateInput,
-            neverExpires: cert.neverExpires || false,
-        });
-        setShowEditModal(true);
-    };
-
-    const handleEditFormChange = (e) => {
-        const { name, value, type, checked } = e.target;
-        setEditFormData({
-            ...editFormData,
-            [name]: type === 'checkbox' ? checked : value,
-        });
-    };
-
-    const handleEditSave = () => {
-        const issueDisplay = formatDateForDisplay(editFormData.issueDate);
-        const expiryDisplay = editFormData.neverExpires ? 'Never' : formatDateForDisplay(editFormData.expiryDate) || 'Not set';
-
-        const updatedCertificates = certificates.map(cert =>
-            cert.id === editingCert.id
-                ? {
-                    ...cert,
-                    learner: editFormData.learner,
-                    programme: editFormData.programme,
-                    issueDate: issueDisplay,
-                    expiryDate: expiryDisplay,
-                    neverExpires: editFormData.neverExpires,
-                }
-                : cert
-        );
-        setCertificates(updatedCertificates);
-        setShowEditModal(false);
-        setEditingCert(null);
-        alert('Certificate updated successfully!');
-    };
-
-    const handleEditCancel = () => {
-        setShowEditModal(false);
-        setEditingCert(null);
-    };
-
-    // ---- Delete Handlers ----
+    // ============================================
+    // HANDLE DELETE CERTIFICATE - Opens Confirmation Modal
+    // ============================================
     const handleDeleteClick = (cert) => {
-        setDeletingCert(cert);
+        setDeletingCertificate(cert);
         setShowDeleteModal(true);
     };
 
-    const handleDeleteConfirm = () => {
-        setCertificates(certificates.filter(cert => cert.id !== deletingCert.id));
-        setShowDeleteModal(false);
-        setDeletingCert(null);
-        alert('Certificate deleted successfully!');
+    const handleDeleteConfirm = async () => {
+        if (!deletingCertificate) return;
+        
+        try {
+            const result = await api.delete(`/admin/certificates/${deletingCertificate.Certificate_id}`);
+            if (result.data.success) {
+                setSuccessMessage('Certificate deleted successfully!');
+                setTimeout(() => setSuccessMessage(''), 5000);
+                setShowDeleteModal(false);
+                setDeletingCertificate(null);
+                await fetchCertificates();
+            } else {
+                setError(result.data.message || 'Failed to delete certificate');
+                setTimeout(() => setError(null), 5000);
+                setShowDeleteModal(false);
+                setDeletingCertificate(null);
+            }
+        } catch (err) {
+            console.error('Error deleting certificate:', err);
+            setError('Failed to delete certificate');
+            setTimeout(() => setError(null), 5000);
+            setShowDeleteModal(false);
+            setDeletingCertificate(null);
+        }
     };
 
     const handleDeleteCancel = () => {
         setShowDeleteModal(false);
-        setDeletingCert(null);
+        setDeletingCertificate(null);
     };
 
-    // ---- Filter ----
+    // ============================================
+    // HANDLE VIEW CERTIFICATE
+    // ============================================
+    const handleViewCertificate = (cert) => {
+        setSelectedCertificate(cert);
+        const url = `${api.defaults.baseURL}/admin/certificates/view/${cert.Certificate_id}`;
+        setViewPdfUrl(url);
+        setShowViewModal(true);
+    };
+
+    // ============================================
+    // HANDLE EDIT CERTIFICATE - Opens Edit Modal
+    // ============================================
+    const handleEditCertificate = (cert) => {
+        setSelectedCertificate(cert);
+        setShowEditModal(true);
+    };
+
+// ============================================
+// HANDLE UPDATE CERTIFICATE - FIXED
+// ============================================
+const handleUpdateCertificate = async (e) => {
+    e.preventDefault();
+    
+    //  DEBUG: See what's being sent
+    console.log('🔍 selectedCertificate:', selectedCertificate);
+    console.log('🔍 Certificate_id:', selectedCertificate?.Certificate_id);
+    console.log('🔍 Programme_id:', selectedCertificate?.Programme_id);
+    console.log('🔍 Expire_date:', selectedCertificate?.Expire_date);
+    
+    try {
+        //  FIXED: Include Programme_id in the update data
+        const updateData = {
+            Programme_id: selectedCertificate.Programme_id,
+            Expire_date: selectedCertificate.neverExpires ? null : selectedCertificate.Expire_date,
+            neverExpires: selectedCertificate.neverExpires || false
+        };
+
+        console.log('📤 Sending to backend:', updateData);
+        console.log('📤 URL:', `/admin/certificates/${selectedCertificate.Certificate_id}`);
+
+        const response = await api.put(
+            `/admin/certificates/${selectedCertificate.Certificate_id}`, 
+            updateData
+        );
+        
+        console.log('📥 Backend response:', response.data);
+        
+        if (response.data.success) {
+            setSuccessMessage('Certificate updated successfully!');
+            setTimeout(() => setSuccessMessage(''), 5000);
+            setShowEditModal(false);
+            setSelectedCertificate(null);
+            await fetchCertificates();
+        }
+    } catch (err) {
+        console.error(' Error updating certificate:', err);
+        console.error(' Error response:', err.response?.data);
+        setError(err.response?.data?.message || 'Failed to update certificate');
+        setTimeout(() => setError(null), 5000);
+    }
+};
+
+    // ============================================
+    // LOAD DATA ON MOUNT
+    // ============================================
+    useEffect(() => {
+        getUserData();
+        fetchAllData();
+    }, []);
+
+    // ============================================
+    // GET STATUS CLASS
+    // ============================================
+    const getStatusClass = (status) => {
+        if (!status) return 'active';
+        const statusLower = status.toLowerCase();
+        if (statusLower === 'issued' || statusLower === 'active') return 'issued';
+        if (statusLower === 'pending') return 'pending';
+        if (statusLower === 'revoked') return 'revoked';
+        if (statusLower === 'expired') return 'expired';
+        return 'active';
+    };
+
+    // ============================================
+    // GET STATUS LABEL
+    // ============================================
+    const getStatusLabel = (status) => {
+        if (!status) return 'Active';
+        const statusLower = status.toLowerCase();
+        if (statusLower === 'issued' || statusLower === 'active') return 'Issued';
+        if (statusLower === 'pending') return 'Pending';
+        if (statusLower === 'revoked') return 'Revoked';
+        if (statusLower === 'expired') return 'Expired';
+        return status;
+    };
+
+    // ============================================
+    // FILTER CERTIFICATES
+    // ============================================
     const filteredCertificates = certificates.filter(cert => {
-        const matchesSearch = cert.learner.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            cert.id.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesStatus = statusFilter === 'all' || cert.status.toLowerCase() === statusFilter.toLowerCase();
+        const learnerName = `${cert.learner_name || ''} ${cert.learner_surname || ''}`.toLowerCase();
+        const matchesSearch = learnerName.includes(searchTerm.toLowerCase()) ||
+            (cert.certificateNumber && String(cert.certificateNumber).toLowerCase().includes(searchTerm.toLowerCase()));
+        
+        let matchesStatus = true;
+        if (statusFilter !== 'all') {
+            const certStatus = (cert.status || 'Active').toLowerCase();
+            matchesStatus = certStatus === statusFilter.toLowerCase() ||
+                            (statusFilter === 'issued' && certStatus === 'active') ||
+                            (statusFilter === 'active' && certStatus === 'issued');
+        }
+        
         return matchesSearch && matchesStatus;
     });
 
+    // Loading state
+    if (loading && certificates.length === 0) {
+        return (
+            <div className="admin-certificates-layout">
+                <Admin_Header
+                    adminName={adminName}
+                    onMenuToggle={toggleMobileMenu}
+                    isMobileMenuOpen={isMobileMenuOpen}
+                    notificationCount={0}
+                />
+                <div className="admin-certificates-body">
+                    <Admin_Sidebar
+                        active="certificates"
+                        isMobileOpen={isMobileMenuOpen}
+                        onClose={closeMobileMenu}
+                    />
+                    <main className="admin-certificates-content">
+                        <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+                            <div className="loading-spinner" style={{ 
+                                width: '40px', 
+                                height: '40px', 
+                                border: '4px solid #f3f3f3', 
+                                borderTop: '4px solid #000', 
+                                borderRadius: '50%', 
+                                animation: 'spin 1s linear infinite',
+                                margin: '0 auto 20px'
+                            }}></div>
+                            <p>Loading certificates...</p>
+                        </div>
+                    </main>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="admin-certificates-layout">
+            {/* Header */}
             <Admin_Header
                 adminName={adminName}
                 onMenuToggle={toggleMobileMenu}
                 isMobileMenuOpen={isMobileMenuOpen}
-                notificationCount={3}
+                notificationCount={0}
             />
 
             <div className="admin-certificates-body">
+                {/* Sidebar */}
                 <Admin_Sidebar
                     active="certificates"
                     isMobileOpen={isMobileMenuOpen}
                     onClose={closeMobileMenu}
                 />
 
+                {/* Main Content */}
                 <main className="admin-certificates-content">
-                    {/* Page Header */}
+                    {/* Success Message */}
+                    {successMessage && (
+                        <div className="success-toast" style={{
+                            position: 'fixed',
+                            top: '80px',
+                            right: '20px',
+                            backgroundColor: '#d4edda',
+                            color: '#155724',
+                            padding: '15px 25px',
+                            borderRadius: '8px',
+                            border: '1px solid #c3e6cb',
+                            zIndex: 9999,
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                            animation: 'slideIn 0.3s ease-out'
+                        }}>
+                             {successMessage}
+                        </div>
+                    )}
+
+                    {/* Error Message */}
+                    {error && (
+                        <div className="error-toast" style={{
+                            position: 'fixed',
+                            top: '80px',
+                            right: '20px',
+                            backgroundColor: '#f8d7da',
+                            color: '#721c24',
+                            padding: '15px 25px',
+                            borderRadius: '8px',
+                            border: '1px solid #f5c6cb',
+                            zIndex: 9999,
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                            animation: 'slideIn 0.3s ease-out'
+                        }}>
+                             {error}
+                        </div>
+                    )}
+
+                    {/* 1. Page Header with Action Buttons */}
                     <div className="certificates-page-header">
                         <div className="page-header-left">
                             <h1>Certificate Management</h1>
@@ -281,8 +627,9 @@ const Admin_Certificates = () => {
                         </div>
                     </div>
 
-                    {/* Upload & Assign - Side by Side */}
+                    {/* 2. Upload & Assign - Side by Side */}
                     <div className="certificates-two-column">
+                        {/* Left: Upload Area */}
                         <div className="upload-column">
                             <div
                                 className={`file-upload-area ${certificateForm.certificateFile ? 'has-file' : ''}`}
@@ -308,51 +655,55 @@ const Admin_Certificates = () => {
                                 ) : (
                                     <>
                                         <i className="fas fa-cloud-upload-alt"></i>
-                                        <p>Drag and drop certificate PDF</p>
-                                        <span className="file-upload-hint">or click to browse (Max 10MB)</span>
+                                        <p>Drag and drop certificate file</p>
+                                        <span className="file-upload-hint">PDF, JPEG, PNG (Max 10MB)</span>
                                     </>
                                 )}
                                 <input
                                     type="file"
                                     id="fileInput"
-                                    accept=".pdf"
+                                    accept=".pdf,.jpg,.jpeg,.png"
                                     onChange={handleFileChange}
                                     style={{ display: 'none' }}
                                 />
                             </div>
                         </div>
 
+                        {/* Right: Assign Certificate Details */}
                         <div className="assign-column">
                             <h3 className="assign-section-title">2. Assign Certificate Details</h3>
-                            <form onSubmit={handleSubmit}>
+
+                            <form onSubmit={handleSubmitCertificate}>
                                 <div className="assign-form-group">
                                     <label>Select Learner Profile</label>
                                     <select
-                                        name="learner"
-                                        value={certificateForm.learner}
+                                        name="learner_id"
+                                        value={certificateForm.learner_id}
                                         onChange={handleFormChange}
                                         required
                                     >
-                                        <option value="">Enter name, email or Learner ID...</option>
-                                        <option value="Sibusiso Ndlovu">Sibusiso Ndlovu</option>
-                                        <option value="Chantel Fourie">Chantel Fourie</option>
-                                        <option value="Lindiwe Khumalo">Lindiwe Khumalo</option>
-                                        <option value="Thabo Mokoena">Thabo Mokoena</option>
-                                        <option value="Zanele Dlamini">Zanele Dlamini</option>
+                                        <option value="">Select a learner...</option>
+                                        {learners.map((learner) => (
+                                            <option key={learner.id} value={learner.id}>
+                                                {learner.name} {learner.surname} - {learner.email}
+                                            </option>
+                                        ))}
                                     </select>
                                 </div>
 
                                 <div className="assign-form-group">
                                     <label>Academic Programme</label>
                                     <select
-                                        name="programme"
-                                        value={certificateForm.programme}
+                                        name="programme_id"
+                                        value={certificateForm.programme_id}
                                         onChange={handleFormChange}
                                         required
                                     >
-                                        <option value="">e.g. Risk & Compliance Excellence</option>
-                                        {programmes.map((prog) => (
-                                            <option key={prog} value={prog}>{prog}</option>
+                                        <option value="">Select a programme...</option>
+                                        {programmes.map((programme) => (
+                                            <option key={programme.Programme_id} value={programme.Programme_id}>
+                                                {programme.Programme_name}
+                                            </option>
                                         ))}
                                     </select>
                                 </div>
@@ -368,6 +719,7 @@ const Admin_Certificates = () => {
                                             required
                                         />
                                     </div>
+
                                     <div className="assign-form-group">
                                         <label>Expiry Date (Optional)</label>
                                         <input
@@ -392,17 +744,32 @@ const Admin_Certificates = () => {
                                     </label>
                                 </div>
 
-                                <button type="submit" className="btn-assign-certificate">
-                                    <i className="fas fa-certificate"></i> Assign & Issue Certificate
+                                <button 
+                                    type="submit" 
+                                    className="btn-assign-certificate"
+                                    disabled={submitting}
+                                >
+                                    <i className="fas fa-certificate"></i> 
+                                    {submitting ? 'Issuing...' : 'Assign & Issue Certificate'}
                                 </button>
                             </form>
                         </div>
                     </div>
 
-                    {/* Recently Issued Certificates Table */}
+                    {/* 3. Recently Issued Certificates Table */}
                     <div className="certificates-table-wrapper">
                         <div className="table-header">
-                            <h3>Recently Issued Certificates</h3>
+                            <h3>
+                                Recently Issued Certificates 
+                                <span style={{ 
+                                    fontSize: '14px', 
+                                    fontWeight: 'normal', 
+                                    color: '#666',
+                                    marginLeft: '10px'
+                                }}>
+                                    ({filteredCertificates.length} {filteredCertificates.length === 1 ? 'certificate' : 'certificates'})
+                                </span>
+                            </h3>
                             <div className="table-filters">
                                 <select
                                     className="filter-select"
@@ -438,30 +805,64 @@ const Admin_Certificates = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filteredCertificates.map((cert) => (
-                                        <tr key={cert.id}>
-                                            <td className="certificate-no">{cert.id}</td>
-                                            <td className="certificate-learner">{cert.learner}</td>
-                                            <td className="certificate-programme">{cert.programme}</td>
-                                            <td className="certificate-date">{cert.issueDate}</td>
-                                            <td>
-                                                <span className={`status-badge status-${cert.status.toLowerCase()}`}>
-                                                    {cert.status}
-                                                </span>
-                                            </td>
-                                            <td className="certificate-actions">
-                                                <button className="action-btn view-btn" title="View" onClick={() => alert(`View ${cert.id}`)}>
-                                                    <i className="fas fa-eye"></i>
-                                                </button>
-                                                <button className="action-btn edit-btn" title="Edit" onClick={() => handleEditClick(cert)}>
-                                                    <i className="fas fa-edit"></i>
-                                                </button>
-                                                <button className="action-btn delete-btn" title="Delete" onClick={() => handleDeleteClick(cert)}>
-                                                    <i className="fas fa-trash"></i>
-                                                </button>
+                                    {filteredCertificates.length > 0 ? (
+                                        filteredCertificates.map((cert) => {
+                                            const statusDisplay = getStatusLabel(cert.status);
+                                            const statusClass = getStatusClass(cert.status);
+                                            
+                                            return (
+                                                <tr key={cert.Certificate_id}>
+                                                    <td className="certificate-no">
+                                                        {cert.certificateNumber || cert.Certificate_id || 'N/A'}
+                                                    </td>
+                                                    <td className="certificate-learner">
+                                                        {cert.learner_name || ''} {cert.learner_surname || ''}
+                                                    </td>
+                                                    <td className="certificate-programme">
+                                                        {cert.Programme_name || cert.programme_name || 'N/A'}
+                                                    </td>
+                                                    <td className="certificate-date">
+                                                        {cert.formattedDate}
+                                                    </td>
+                                                    <td>
+                                                        <span className={`status-badge status-${statusClass}`}>
+                                                            {statusDisplay}
+                                                        </span>
+                                                    </td>
+                                                    <td className="certificate-actions">
+                                                        <button 
+                                                            className="action-btn view-btn" 
+                                                            title="View Certificate"
+                                                            onClick={() => handleViewCertificate(cert)}
+                                                        >
+                                                            <i className="fas fa-eye"></i>
+                                                        </button>
+                                                        <button 
+                                                            className="action-btn edit-btn" 
+                                                            title="Edit"
+                                                            onClick={() => handleEditCertificate(cert)}
+                                                        >
+                                                            <i className="fas fa-edit"></i>
+                                                        </button>
+                                                        <button 
+                                                            className="action-btn delete-btn" 
+                                                            title="Delete"
+                                                            onClick={() => handleDeleteClick(cert)}
+                                                        >
+                                                            <i className="fas fa-trash"></i>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })
+                                    ) : (
+                                        <tr>
+                                            <td colSpan="6" className="no-results">
+                                                <i className="fas fa-search"></i>
+                                                <p>No certificates found</p>
                                             </td>
                                         </tr>
-                                    ))}
+                                    )}
                                 </tbody>
                             </table>
                         </div>
@@ -469,157 +870,279 @@ const Admin_Certificates = () => {
                 </main>
             </div>
 
-            {/* === ISSUANCE CONFIRMATION MODAL === */}
-            {showConfirmModal && confirmData && (
-                <div className="modal-overlay" onClick={handleCancelIssue}>
-                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                        <h2>Confirm Certificate Issuance</h2>
-                        <p>Please review the details below before issuing the certificate.</p>
-                        <div className="modal-details">
-                            <div className="detail-row">
-                                <span className="detail-label">Learner:</span>
-                                <span className="detail-value">{confirmData.learner}</span>
-                            </div>
-                            <div className="detail-row">
-                                <span className="detail-label">Programme:</span>
-                                <span className="detail-value">{confirmData.programme}</span>
-                            </div>
-                            <div className="detail-row">
-                                <span className="detail-label">Date of Issue:</span>
-                                <span className="detail-value">{formatDateForDisplay(confirmData.issueDate)}</span>
-                            </div>
-                            <div className="detail-row">
-                                <span className="detail-label">Expiry Date:</span>
-                                <span className="detail-value">
-                                    {confirmData.neverExpires ? 'Never Expires' : formatDateForDisplay(confirmData.expiryDate) || 'Not set'}
-                                </span>
-                            </div>
-                            {confirmData.certificateFile && (
-                                <div className="detail-row">
-                                    <span className="detail-label">Certificate File:</span>
-                                    <span className="detail-value">{confirmData.certificateFile.name}</span>
-                                </div>
-                            )}
+            {/* ===== VIEW CERTIFICATE MODAL ===== */}
+            {showViewModal && selectedCertificate && (
+                <div className="modal-overlay" onClick={() => setShowViewModal(false)}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '900px', width: '95%' }}>
+                        <h2 style={{ marginBottom: '8px' }}>
+                            <i className="fas fa-file-pdf" style={{ color: '#dc3545', marginRight: '10px' }}></i>
+                            Certificate - {selectedCertificate.certificateNumber}
+                        </h2>
+                        <p>{selectedCertificate.learner_name} {selectedCertificate.learner_surname || ''}</p>
+                        
+                        <div style={{ 
+                            width: '100%', 
+                            height: '500px', 
+                            marginBottom: '20px',
+                            borderRadius: '8px',
+                            overflow: 'hidden',
+                            backgroundColor: '#f5f5f5'
+                        }}>
+                            <iframe
+                                src={viewPdfUrl}
+                                style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    border: 'none'
+                                }}
+                                title="Certificate PDF"
+                            />
                         </div>
+
                         <div className="modal-actions">
-                            <button className="modal-btn cancel-btn" onClick={handleCancelIssue}>Cancel</button>
-                            <button className="modal-btn confirm-btn" onClick={handleConfirmIssue}>Confirm & Issue</button>
+                            <button 
+                                className="modal-btn cancel-btn" 
+                                onClick={() => window.open(viewPdfUrl, '_blank')}
+                            >
+                                <i className="fas fa-download"></i> Download
+                            </button>
+                            <button 
+                                className="modal-btn confirm-btn" 
+                                onClick={() => setShowViewModal(false)}
+                            >
+                                Close
+                            </button>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* === EDIT MODAL === */}
-            {showEditModal && editingCert && (
-                <div className="modal-overlay" onClick={handleEditCancel}>
-                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                        <h2>Edit Certificate</h2>
-                        <p>Update the certificate details below.</p>
-                        <div className="modal-details">
-                            <div className="detail-row">
-                                <span className="detail-label">Certificate No:</span>
-                                <span className="detail-value">{editingCert.id}</span>
-                            </div>
-                            <div className="detail-row">
-                                <span className="detail-label">Learner:</span>
-                                <input
-                                    type="text"
-                                    name="learner"
-                                    value={editFormData.learner}
-                                    onChange={handleEditFormChange}
-                                    className="modal-input"
-                                />
-                            </div>
-                            <div className="detail-row">
-                                <span className="detail-label">Programme:</span>
-                                <select
-                                    name="programme"
-                                    value={editFormData.programme}
-                                    onChange={handleEditFormChange}
-                                    className="modal-input"
-                                >
-                                    {programmes.map((prog) => (
-                                        <option key={prog} value={prog}>{prog}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="detail-row">
-                                <span className="detail-label">Issue Date:</span>
-                                <input
-                                    type="date"
-                                    name="issueDate"
-                                    value={editFormData.issueDate}
-                                    onChange={handleEditFormChange}
-                                    className="modal-input"
-                                />
-                            </div>
-                            <div className="detail-row">
-                                <span className="detail-label">Expiry Date:</span>
-                                <input
-                                    type="date"
-                                    name="expiryDate"
-                                    value={editFormData.expiryDate}
-                                    onChange={handleEditFormChange}
-                                    className="modal-input"
-                                    disabled={editFormData.neverExpires}
-                                />
-                            </div>
-                            <div className="detail-row" style={{ borderBottom: 'none' }}>
-                                <span className="detail-label"></span>
-                                <label className="checkbox-label" style={{ marginLeft: '4px' }}>
-                                    <input
-                                        type="checkbox"
-                                        name="neverExpires"
-                                        checked={editFormData.neverExpires}
-                                        onChange={handleEditFormChange}
-                                    />
-                                    Never Expires
-                                </label>
-                            </div>
-                        </div>
-                        <div className="modal-actions">
-                            <button className="modal-btn cancel-btn" onClick={handleEditCancel}>Cancel</button>
-                            <button className="modal-btn confirm-btn" onClick={handleEditSave}>Save Changes</button>
-                        </div>
-                    </div>
+            {/* ===== EDIT CERTIFICATE MODAL - WITH FULL EDIT FORM ===== */}
+{showEditModal && selectedCertificate && (
+    <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
+        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h2>Edit Certificate</h2>
+            <p>Update the certificate details below.</p>
+            
+            <div className="modal-details">
+                <div className="detail-row">
+                    <span className="detail-label">Certificate No:</span>
+                    <span className="detail-value">{selectedCertificate.certificateNumber}</span>
                 </div>
-            )}
+                <div className="detail-row">
+                    <span className="detail-label">Learner:</span>
+                    <input
+                        type="text"
+                        value={selectedCertificate.learner_name 
+                            ? `${selectedCertificate.learner_name} ${selectedCertificate.learner_surname || ''}`.trim() 
+                            : ''}
+                        className="modal-input"
+                        onChange={(e) => {
+                            const [firstName, ...rest] = e.target.value.split(' ');
+                            setSelectedCertificate({
+                                ...selectedCertificate,
+                                learner_name: firstName || '',
+                                learner_surname: rest.join(' ') || ''
+                            });
+                        }}
+                    />
+                </div>
+                <div className="detail-row">
+    <span className="detail-label">Programme:</span>
+    <select
+        value={selectedCertificate.Programme_id || ''}
+        className="modal-input"
+        onChange={(e) => {
+            const selectedProg = programmes.find(
+                p => p.Programme_id === parseInt(e.target.value)
+            );
+            setSelectedCertificate({
+                ...selectedCertificate,
+                Programme_id: selectedProg ? selectedProg.Programme_id : '',
+                Programme_name: selectedProg ? selectedProg.Programme_name : ''
+            });
+        }}
+    >
+        <option value="">Select a programme...</option>
+        {programmes.map((programme) => (
+            <option key={programme.Programme_id} value={programme.Programme_id}>
+                {programme.Programme_name}
+            </option>
+        ))}
+    </select>
+</div>
+                <div className="detail-row">
+                    <span className="detail-label">Issue Date:</span>
+                    <input
+                        type="date"
+                        value={selectedCertificate.Date_issued ? formatDateForInput(selectedCertificate.Date_issued) : ''}
+                        className="modal-input"
+                        onChange={(e) => setSelectedCertificate({
+                            ...selectedCertificate,
+                            Date_issued: e.target.value
+                        })}
+                    />
+                </div>
+                <div className="detail-row">
+                    <span className="detail-label">Expiry Date:</span>
+                    <input
+                        type="date"
+                        value={selectedCertificate.Expire_date ? formatDateForInput(selectedCertificate.Expire_date) : ''}
+                        className="modal-input"
+                        onChange={(e) => setSelectedCertificate({
+                            ...selectedCertificate,
+                            Expire_date: e.target.value
+                        })}
+                        disabled={selectedCertificate.neverExpires}
+                    />
+                </div>
+                <div className="detail-row" style={{ borderBottom: 'none', justifyContent: 'flex-end' }}>
+                    <label className="checkbox-label">
+                        <input
+                            type="checkbox"
+                            checked={selectedCertificate.neverExpires || false}
+                            onChange={(e) => setSelectedCertificate({
+                                ...selectedCertificate,
+                                neverExpires: e.target.checked,
+                                Expire_date: e.target.checked ? '' : selectedCertificate.Expire_date
+                            })}
+                        />
+                        Never Expires
+                    </label>
+                </div>
+            </div>
 
-            {/* === DELETE CONFIRMATION MODAL === */}
-            {showDeleteModal && deletingCert && (
+            <div className="modal-actions">
+                <button 
+                    className="modal-btn cancel-btn" 
+                    onClick={() => setShowEditModal(false)}
+                >
+                    Cancel
+                </button>
+                <button 
+                    className="modal-btn confirm-btn" 
+                    onClick={handleUpdateCertificate}
+                >
+                    Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+)}
+            {/* ===== DELETE CONFIRMATION MODAL - NEW DESIGN ===== */}
+            {showDeleteModal && deletingCertificate && (
                 <div className="modal-overlay" onClick={handleDeleteCancel}>
                     <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                         <h2>Confirm Deletion</h2>
                         <p>Are you sure you want to delete this certificate?</p>
+                        
                         <div className="modal-details">
                             <div className="detail-row">
                                 <span className="detail-label">Certificate No:</span>
-                                <span className="detail-value">{deletingCert.id}</span>
+                                <span className="detail-value">{deletingCertificate.certificateNumber}</span>
                             </div>
                             <div className="detail-row">
                                 <span className="detail-label">Learner:</span>
-                                <span className="detail-value">{deletingCert.learner}</span>
+                                <span className="detail-value">
+                                    {deletingCertificate.learner_name} {deletingCertificate.learner_surname || ''}
+                                </span>
                             </div>
                             <div className="detail-row">
                                 <span className="detail-label">Programme:</span>
-                                <span className="detail-value">{deletingCert.programme}</span>
+                                <span className="detail-value">
+                                    {deletingCertificate.Programme_name || deletingCertificate.programme_name || 'N/A'}
+                                </span>
                             </div>
                             <div className="detail-row">
                                 <span className="detail-label">Issue Date:</span>
-                                <span className="detail-value">{deletingCert.issueDate}</span>
+                                <span className="detail-value">{deletingCertificate.formattedDate}</span>
                             </div>
-                            <div className="detail-row">
+                            <div className="detail-row" style={{ borderBottom: 'none' }}>
                                 <span className="detail-label">Status:</span>
-                                <span className="detail-value">{deletingCert.status}</span>
+                                <span className="detail-value">{getStatusLabel(deletingCertificate.status)}</span>
                             </div>
                         </div>
+
                         <div className="modal-actions">
-                            <button className="modal-btn cancel-btn" onClick={handleDeleteCancel}>Cancel</button>
-                            <button className="modal-btn confirm-btn" onClick={handleDeleteConfirm}>Yes, Delete</button>
+                            <button 
+                                className="modal-btn cancel-btn" 
+                                onClick={handleDeleteCancel}
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                className="modal-btn confirm-btn" 
+                                onClick={handleDeleteConfirm}
+                            >
+                                Yes, Delete
+                            </button>
                         </div>
                     </div>
                 </div>
             )}
+
+            <style>{`
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+                @keyframes slideIn {
+                    from {
+                        transform: translateX(100%);
+                        opacity: 0;
+                    }
+                    to {
+                        transform: translateX(0);
+                        opacity: 1;
+                    }
+                }
+                .status-badge.status-issued {
+                    background: #d4edda;
+                    color: #155724;
+                }
+                .status-badge.status-active {
+                    background: #d4edda;
+                    color: #155724;
+                }
+                .status-badge.status-pending {
+                    background: #fff3cd;
+                    color: #856404;
+                }
+                .status-badge.status-revoked {
+                    background: #f8d7da;
+                    color: #721c24;
+                }
+                .status-badge.status-expired {
+                    background: #f8d7da;
+                    color: #721c24;
+                }
+                .action-btn {
+                    background: none;
+                    border: none;
+                    cursor: pointer;
+                    padding: 5px 8px;
+                    border-radius: 4px;
+                    transition: all 0.2s;
+                }
+                .action-btn.view-btn {
+                    color: #17a2b8;
+                }
+                .action-btn.view-btn:hover {
+                    background: #e2f0f2;
+                }
+                .action-btn.edit-btn {
+                    color: #ffc107;
+                }
+                .action-btn.edit-btn:hover {
+                    background: #fff3cd;
+                }
+                .action-btn.delete-btn {
+                    color: #dc3545;
+                }
+                .action-btn.delete-btn:hover {
+                    background: #f8d7da;
+                }
+            `}</style>
         </div>
     );
 };

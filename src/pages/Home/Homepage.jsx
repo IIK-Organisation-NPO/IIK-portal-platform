@@ -1,45 +1,12 @@
 // src/pages/learner/Homepage.jsx
-import React, { useState, useEffect, useCallback } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
-import { FaChevronRight, FaArrowUp } from "react-icons/fa";
+import { FaChevronRight } from "react-icons/fa";
 import Footer from "../../components/common/Footer";
 import "../../styles/pages/learner.css";
 import logo from "../../assets/images/small Mki.png"; // Change to your actual filename
 
 const Homepage = () => {
-  const [isVisible, setIsVisible] = useState(false);
-
-  // Show button when page is scrolled down
-  const toggleVisibility = useCallback(() => {
-    if (window.scrollY > 300) {
-      setIsVisible(true);
-    } else {
-      setIsVisible(false);
-    }
-  }, []);
-
-  // Set the top coordinate to 0
-  // Make scrolling smooth
-  const scrollToTop = () => {
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
-  };
-
-  useEffect(() => {
-    // Add scroll event listener
-    window.addEventListener("scroll", toggleVisibility);
-
-    // Check initial scroll position
-    toggleVisibility();
-
-    // Cleanup event listener
-    return () => {
-      window.removeEventListener("scroll", toggleVisibility);
-    };
-  }, [toggleVisibility]);
-
   return (
     <div className="learner-home">
       {/* Header */}
@@ -58,8 +25,8 @@ const Homepage = () => {
             >
               Contact
             </a>
-            <Link to="/about">About</Link>
             <Link to="/blog">Blog</Link>
+            <Link to="/about">About</Link>
             <div className="nav-actions">
               <Link to="/login" className="btn-login">
                 Login
@@ -87,14 +54,9 @@ const Homepage = () => {
             <Link to="/signup" className="btn-hero-primary">
               Get Started
             </Link>
-            <a
-              href="https://www.iik.co.za/About-Us"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-hero-secondary"
-            >
+            <Link to="/learn-more" className="btn-hero-secondary">
               Learn More
-            </a>
+            </Link>
           </div>
         </div>
       </section>
@@ -186,7 +148,7 @@ const Homepage = () => {
         </div>
       </section>
 
-      {/* Ready to start (CTA Section) */}
+      {/* Ready to start(CTA Section)*/}
       <section className="cta-section">
         <div
           className="container"
@@ -199,23 +161,6 @@ const Homepage = () => {
           </Link>
         </div>
       </section>
-
-      {/* Scroll to Top Button - Rendered outside main content but within component */}
-      <div
-        className={`scroll-to-top ${isVisible ? "visible" : ""}`}
-        onClick={scrollToTop}
-        role="button"
-        tabIndex={0}
-        aria-label="Scroll to top"
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            scrollToTop();
-          }
-        }}
-      >
-        <FaArrowUp />
-      </div>
 
       <Footer />
     </div>
