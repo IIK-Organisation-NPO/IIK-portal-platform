@@ -20,7 +20,7 @@ const Admin_BulkUpload = () => {
             name: 'Sibusiso Ndlovu',
             email: 'sibundlovu@example.com',
             completionDate: '24 Feb 2026',
-            certNumber: 'CERT-2026-9024',
+
             status: 'Completed',
             selected: true,
         },
@@ -29,7 +29,7 @@ const Admin_BulkUpload = () => {
             name: 'Chantel Fourie',
             email: 'chantel.f@outlook.com',
             completionDate: '23 Feb 2026',
-            certNumber: 'CERT-2026-1213',
+
             status: 'Completed',
             selected: true,
         },
@@ -38,7 +38,7 @@ const Admin_BulkUpload = () => {
             name: 'Lindiwe Khumalo',
             email: 'lindi.khumalo@mweb.co.za',
             completionDate: '25 Feb 2026',
-            certNumber: 'CERT-2026-6534',
+
             status: 'Completed',
             selected: true,
         },
@@ -47,7 +47,7 @@ const Admin_BulkUpload = () => {
             name: 'Pieter de Wet',
             email: 'pieter.dewet@telkomsa.net',
             completionDate: '22 Feb 2026',
-            certNumber: 'CERT-2026-9876',
+
             status: 'Completed',
             selected: true,
         },
@@ -56,7 +56,7 @@ const Admin_BulkUpload = () => {
             name: 'Fatima Patel',
             email: 'fatima.p@gmail.com',
             completionDate: '25 Feb 2026',
-            certNumber: 'CERT-2026-6530',
+
             status: 'Completed',
             selected: true,
         },
@@ -316,7 +316,6 @@ const Admin_BulkUpload = () => {
                                         <th>Learner Name</th>
                                         <th>Email</th>
                                         <th>Completion Date</th>
-                                        <th>Certificate Number</th>
                                         <th>Status</th>
                                     </tr>
                                 </thead>
@@ -333,7 +332,6 @@ const Admin_BulkUpload = () => {
                                             <td className="learner-name">{learner.name}</td>
                                             <td className="learner-email">{learner.email}</td>
                                             <td>{learner.completionDate}</td>
-                                            <td className="cert-number">{learner.certNumber}</td>
                                             <td>
                                                 <span className="status-badge status-completed">
                                                     {learner.status}
