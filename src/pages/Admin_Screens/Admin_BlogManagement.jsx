@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import Admin_Sidebar from '../../components/Admin/Admin_Sidebar';
 import Admin_Header from '../../components/Admin/Admin_Header';
 import '../../styles/Admin/Admin_BlogManagement.css';
+import { useNavigate } from 'react-router-dom';
 
 const formatDateForInput = (dateValue) => {
   const date = new Date(dateValue);
@@ -16,6 +17,7 @@ const formatDateForDisplay = (dateValue) => {
 };
 
 const AdminBlogManagement = () => {
+  const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
@@ -159,7 +161,13 @@ const AdminBlogManagement = () => {
                 <h1>Blog &amp; Content Management</h1>
                 <p className="hero-subtitle">Create and manage blog posts, news updates, and organisation events.</p>
               </div>
-              <button type="button" className="create-post-button">Create New Post</button>
+              <button 
+                type="button" 
+                className="create-post-button"
+                onClick={() => navigate('/admin/blog-create')}
+              >
+                Create New Post
+              </button>
             </div>
           </section>
 

@@ -25,6 +25,7 @@ import Admin_CreateProgramme from '../pages/Admin_Screens/Admin_CreateProgramme'
 import Admin_BlogManagement from '../pages/Admin_Screens/Admin_BlogManagement';
 import SettingsPage from '../pages/Learner_Screens/Learner _Settings';
 import LearnerProgrammes from '../pages/Learner_Screens/Learner_Programmes';
+import AdminBlogCreate from '../pages/Admin_Screens/Admin_blogCreate';
 
 const AppRoutes = () => {
   return (
@@ -61,6 +62,7 @@ const AppRoutes = () => {
         <Route path="/admin/programmes" element={<AdminProgrammes />} />
         <Route path="/admin/create-programme" element={<Admin_CreateProgramme />} />
         <Route path="/admin/blog-management" element={<Admin_BlogManagement />} />
+        <Route path="/admin/blog-create" element={<AdminBlogCreate />} />
       </Routes>
     </Router>
   );

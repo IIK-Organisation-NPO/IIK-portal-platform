@@ -1,0 +1,817 @@
+/* ============================================
+   Admin_BlogCreate.css - CREATE NEW POST STYLES
+   Only styles for the main content area
+   (Header & Sidebar come from imported components)
+   Font: INTER
+   ============================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* ===== CSS VARIABLES ===== */
+:root {
+  --primary-dark: #111827;
+  --black: #000000;
+  --white: #ffffff;
+  --sidebar-bg: #f8fafc;
+  --page-bg: #ffffff;
+  --text-primary: #111827;
+  --text-secondary: #64748b;
+  --border: #d1d5db;
+  --input-bg: #ffffff;
+  --danger: #dc2626;
+
+  --font-regular: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+}
+
+/* ==========================================
+   PAGE LAYOUT
+   ========================================== */
+.admin-blogcreate-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  width: 100%;
+  background: var(--white);
+}
+
+.admin-blogcreate-body {
+  display: flex;
+  flex: 1;
+  width: 100%;
+  min-height: calc(100vh - 72px);
+}
+
+.admin-blogcreate-content {
+  flex: 1;
+  min-width: 0;                /* prevents overflow inside flex */
+  padding: 32px 40px 48px;
+  overflow-y: auto;
+  background: var(--white);
+}
+
+/* ==========================================
+   PAGE HEADER
+   ========================================== */
+.blogcreate-page-header {
+  margin-bottom: 28px;
+  max-width: 900px;
+}
+
+.blogcreate-page-header h1 {
+  font-family: 'Inter', sans-serif;
+  font-size: clamp(20px, 2.2vw, 26px);
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
+  margin: 0 0 6px 0;
+  letter-spacing: -0.3px;
+  line-height: 1.2;
+}
+
+.blogcreate-page-header p {
+  font-family: 'Inter', sans-serif;
+  font-size: clamp(13px, 1.1vw, 14px);
+  font-weight: var(--font-regular);
+  color: var(--text-secondary);
+  line-height: 1.55;
+  margin: 0;
+}
+
+/* ==========================================
+   TWO-COLUMN GRID
+   ========================================== */
+.blogcreate-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 28px;
+  align-items: start;
+  width: 100%;
+}
+
+.blogcreate-left {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.blogcreate-right {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+/* ==========================================
+   CARDS
+   ========================================== */
+.blogcreate-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.blogcreate-card .card-title {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  margin: 0 0 14px 0;
+}
+
+.conditional-badge {
+  font-family: 'Inter', sans-serif;
+  font-weight: var(--font-regular);
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+/* ==========================================
+   FORM GROUPS
+   ========================================== */
+.form-group {
+  margin-bottom: 20px;
+  min-width: 0;
+}
+
+.form-group label {
+  display: block;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: var(--font-semibold);
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: var(--font-regular);
+  background: var(--input-bg);
+  color: var(--text-primary);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  line-height: 1.4;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--primary-dark);
+  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.06);
+}
+
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+  font-family: 'Inter', sans-serif;
+  font-weight: var(--font-regular);
+  color: var(--text-secondary);
+}
+
+.author-field {
+  background: var(--sidebar-bg);
+  color: var(--text-secondary);
+  cursor: not-allowed;
+}
+
+/* ==========================================
+   SELECT WRAPPER
+   ========================================== */
+.select-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.select-wrapper select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 38px;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  font-weight: var(--font-regular);
+}
+
+.select-wrapper .select-arrow {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
+  color: var(--text-secondary);
+  pointer-events: none;
+}
+
+/* ==========================================
+   FORM ROW (side by side)
+   ========================================== */
+.form-row {
+  display: flex;
+  gap: 16px;
+  width: 100%;
+}
+
+.form-row .form-group {
+  flex: 1;
+  min-width: 0;
+  margin-bottom: 20px;
+}
+
+.half {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ==========================================
+   RICH TEXT TOOLBAR
+   ========================================== */
+.rich-text-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--sidebar-bg);
+  padding: 6px 10px;
+  border: 1.5px solid var(--border);
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  flex-wrap: wrap;
+}
+
+.toolbar-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: var(--font-semibold);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.toolbar-btn:hover {
+  background: #e5e7eb;
+  color: var(--text-primary);
+}
+
+.toolbar-divider {
+  color: var(--border);
+  margin: 0 4px;
+  user-select: none;
+}
+
+.toolbar-btn.menu-btn {
+  margin-left: auto;
+  font-size: 16px;
+  font-weight: var(--font-regular);
+}
+
+.form-group textarea {
+  border-radius: 0 0 6px 6px;
+  border-top: none;
+  min-height: 180px;
+  resize: vertical;
+  line-height: 1.6;
+  font-family: 'Inter', sans-serif;
+  font-weight: var(--font-regular);
+}
+
+.form-group textarea:focus {
+  border-top: 1.5px solid var(--primary-dark);
+}
+
+/* ==========================================
+   FILE UPLOAD
+   ========================================== */
+.upload-area {
+  border: 2px dashed var(--border);
+  border-radius: 6px;
+  padding: 24px 16px;
+  text-align: center;
+  background: var(--sidebar-bg);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.upload-area:hover {
+  border-color: var(--primary-dark);
+  background: #f1f5f9;
+}
+
+.upload-label {
+  display: block;
+  cursor: pointer;
+}
+
+.upload-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.upload-icon {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.upload-content p {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: var(--font-regular);
+  color: var(--text-secondary);
+  margin: 0;
+  text-align: center;
+  word-break: break-word;
+}
+
+.uploaded-file {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: var(--font-regular);
+  background: #e5e7eb;
+  padding: 3px 14px;
+  border-radius: 12px;
+  color: var(--text-primary);
+  margin-top: 4px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ==========================================
+   EVENT CARD (Conditional)
+   ========================================== */
+.event-card {
+  transition: opacity 0.3s ease;
+}
+
+.event-card.hidden {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.event-card.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.event-fields {
+  display: flex;
+  flex-direction: column;
+}
+
+.event-fields .form-group:last-child {
+  margin-bottom: 0;
+}
+
+/* ==========================================
+   FORM ACTIONS
+   ========================================== */
+.blogcreate-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding-top: 24px;
+  margin-top: 32px;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.blogcreate-actions-right {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.btn-back,
+.btn-cancel,
+.btn-draft,
+.btn-publish {
+  padding: 10px 24px;
+  border-radius: 6px;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: var(--font-semibold);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1.5px solid transparent;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Back button */
+.btn-back {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1.5px solid var(--border);
+}
+
+.btn-back:hover {
+  background: var(--sidebar-bg);
+  color: var(--text-primary);
+}
+
+/* Cancel */
+.btn-cancel {
+  background: var(--white);
+  color: var(--text-secondary);
+  border: 1.5px solid var(--border);
+}
+
+.btn-cancel:hover {
+  background: var(--sidebar-bg);
+  border-color: #9ca3af;
+}
+
+/* Save Draft */
+.btn-draft {
+  background: var(--white);
+  color: var(--text-primary);
+  border: 1.5px solid var(--primary-dark);
+}
+
+.btn-draft:hover {
+  background: var(--primary-dark);
+  color: var(--white);
+}
+
+/* Publish */
+.btn-publish {
+  background: var(--primary-dark);
+  color: var(--white);
+  border: 1.5px solid var(--primary-dark);
+  padding: 10px 32px;
+}
+
+.btn-publish:hover {
+  background: #1f2937;
+  border-color: #1f2937;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* ==========================================
+   RESPONSIVE - LARGE TABLETS
+   ========================================== */
+@media (max-width: 1200px) {
+  .admin-blogcreate-content {
+    padding: 28px 28px 40px;
+  }
+
+  .blogcreate-grid {
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 22px;
+  }
+}
+
+/* ==========================================
+   RESPONSIVE - TABLETS
+   ========================================== */
+@media (max-width: 992px) {
+  .admin-blogcreate-content {
+    padding: 24px 22px 36px;
+  }
+
+  .blogcreate-grid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  /* Move right column below the left on tablets */
+  .blogcreate-right {
+    order: 2;
+  }
+
+  .blogcreate-left {
+    order: 1;
+  }
+
+  .blogcreate-page-header {
+    margin-bottom: 22px;
+  }
+}
+
+/* ==========================================
+   RESPONSIVE - MOBILE LANDSCAPE / SMALL TABLETS
+   ========================================== */
+@media (max-width: 768px) {
+  .admin-blogcreate-content {
+    padding: 20px 18px 32px;
+  }
+
+  .blogcreate-page-header {
+    margin-bottom: 20px;
+  }
+
+  .blogcreate-page-header h1 {
+    font-size: 20px;
+  }
+
+  .blogcreate-page-header p {
+    font-size: 13px;
+  }
+
+  .form-row {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .form-row .form-group {
+    margin-bottom: 20px;
+  }
+
+  .blogcreate-card {
+    padding: 16px;
+  }
+
+  .form-group textarea {
+    min-height: 150px;
+  }
+
+  .blogcreate-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .blogcreate-actions-right {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .btn-back,
+  .btn-cancel,
+  .btn-draft,
+  .btn-publish {
+    width: 100%;
+    justify-content: center;
+    padding: 12px 20px;
+  }
+}
+
+/* ==========================================
+   RESPONSIVE - SMALL PHONES
+   ========================================== */
+@media (max-width: 480px) {
+  .admin-blogcreate-content {
+    padding: 16px 14px 28px;
+  }
+
+  .blogcreate-page-header h1 {
+    font-size: 18px;
+  }
+
+  .blogcreate-page-header p {
+    font-size: 12.5px;
+  }
+
+  .blogcreate-card {
+    padding: 14px;
+  }
+
+  .form-group {
+    margin-bottom: 16px;
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    padding: 10px 12px;
+    font-size: 13.5px;
+  }
+
+  .form-group label {
+    font-size: 12.5px;
+  }
+
+  .form-group textarea {
+    min-height: 130px;
+  }
+
+  .upload-area {
+    padding: 18px 12px;
+  }
+
+  .upload-icon {
+    font-size: 26px;
+  }
+
+  .upload-content p {
+    font-size: 13px;
+  }
+
+  .rich-text-toolbar {
+    padding: 5px 8px;
+    gap: 2px;
+  }
+
+  .toolbar-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+  }
+
+  .btn-back,
+  .btn-cancel,
+  .btn-draft,
+  .btn-publish {
+    padding: 11px 16px;
+    font-size: 12.5px;
+  }
+}
+
+/* ==========================================
+   RESPONSIVE - EXTRA SMALL DEVICES
+   ========================================== */
+@media (max-width: 360px) {
+  .admin-blogcreate-content {
+    padding: 14px 12px 24px;
+  }
+
+  .blogcreate-page-header h1 {
+    font-size: 17px;
+  }
+
+  .toolbar-btn {
+    width: 26px;
+    height: 26px;
+  }
+}
+
+/* ==========================================
+   SCROLLBAR
+   ========================================== */
+.admin-blogcreate-content::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.admin-blogcreate-content::-webkit-scrollbar-track {
+  background: #f0f0f0;
+}
+
+.admin-blogcreate-content::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+.admin-blogcreate-content::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/* ==========================================
+   INLINE VALIDATION
+   ========================================== */
+.field-error {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #dc2626;
+}
+
+.input-error {
+  border-color: #dc2626 !important;
+  background-color: #fef2f2;
+}
+
+.input-error:focus {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12) !important;
+}
+
+/* ==========================================
+   EVENT DATE INPUT — matches Certificate page style
+   ========================================== */
+.event-fields .date-input {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: var(--font-regular);
+  color: var(--text-primary);
+  background: var(--input-bg);
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+
+.event-fields .date-input:focus {
+  border-color: var(--primary-dark);
+  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.06);
+}
+
+/* Keep the calendar icon visible and clickable */
+.event-fields .date-input::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.65;
+  transition: opacity 0.15s ease;
+}
+
+.event-fields .date-input::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+/* ==========================================
+   RICH TEXT EDITOR (contentEditable)
+   Replaces the textarea visually — same
+   border-radius, padding, and focus ring.
+   ========================================== */
+.rich-text-editor {
+  width: 100%;
+  min-height: 180px;
+  max-height: 480px;
+  overflow-y: auto;
+  padding: 12px 14px;
+  border: 1.5px solid var(--border);
+  border-top: none;                       /* sits under toolbar */
+  border-radius: 0 0 6px 6px;
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: var(--font-regular);
+  line-height: 1.6;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.rich-text-editor:focus {
+  border-color: var(--primary-dark);
+  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.06);
+  border-top: 1.5px solid var(--primary-dark);
+}
+
+.rich-text-editor.input-error {
+  border-color: #dc2626 !important;
+  background-color: #fef2f2;
+}
+
+.rich-text-editor.input-error:focus {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12) !important;
+}
+
+/* Placeholder — only visible when the editor is empty */
+.rich-text-editor:empty::before {
+  content: attr(data-placeholder);
+  color: var(--text-secondary);
+  pointer-events: none;
+  display: block;
+}
+
+/* Formatting inside the editor */
+.rich-text-editor b,
+.rich-text-editor strong {
+  font-weight: 700;
+}
+
+.rich-text-editor i,
+.rich-text-editor em {
+  font-style: italic;
+}
+
+.rich-text-editor u {
+  text-decoration: underline;
+}
+
+.rich-text-editor ul,
+.rich-text-editor ol {
+  padding-left: 22px;
+  margin: 6px 0;
+}
+
+.rich-text-editor li {
+  margin-bottom: 4px;
+}
+
+.rich-text-editor a {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+/* Toolbar buttons already have styling — make sure they can't be
+   selected as text when the user clicks them (nice UX touch) */
+.rich-text-toolbar .toolbar-btn {
+  user-select: none;
+}
