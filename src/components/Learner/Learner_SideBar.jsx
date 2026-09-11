@@ -9,7 +9,7 @@ const Learner_SideBar = ({ active = 'dashboard', isMobileOpen, onClose }) => {
     { id: 'dashboard', label: 'Dashboard', icon: 'fa-th-large', path: '/learner-dashboard' },
     { id: 'programmes', label: 'Programmes', icon: 'fa-book-open', path: '/learner-programmes' },
     { id: 'certificates', label: 'Certificates', icon: 'fa-certificate', path: '/learner-certificates' },
-    { id: 'profile', label: 'Profile', icon: 'fa-user', path: '/learner-profile' },
+    { id: 'profile', label: 'Profile', icon: 'fa-user', path: '/learner/profile' },
     { id: 'settings', label: 'Settings', icon: 'fa-cog', path: '/learner/settings' },
     { id: 'logout', label: 'Logout', icon: 'fa-sign-out-alt', path: '#', isLogout: true },
   ];

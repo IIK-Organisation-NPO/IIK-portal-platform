@@ -20,10 +20,11 @@ import EmailComposerModal from '../pages/Admin_Screens/EmailComposerModal';
 import AdminAnalytics from '../pages/Admin_Screens/Admin_Analytics';
 import LearnerCertificates from '../pages/Learner_Screens/Learner_Certificates';
 import Admin_AccountSettings from '../pages/Admin_Screens/Admin_AccountSettings';
-import Admin_BlogManagement  from '../pages/Admin_Screens/Admin_BlogManagement'; 
-import LearnerSettings from '../pages/Learner_Screens/Learner _Settings'; 
+import AdminProgrammes from '../pages/Admin_Screens/Admin_Programmes';
+import Admin_CreateProgramme from '../pages/Admin_Screens/Admin_CreateProgramme';
+import Admin_BlogManagement from '../pages/Admin_Screens/Admin_BlogManagement';
+import SettingsPage from '../pages/Learner_Screens/Learner _Settings';
 import LearnerProgrammes from '../pages/Learner_Screens/Learner_Programmes';
-
 
 const AppRoutes = () => {
   return (
@@ -44,7 +45,7 @@ const AppRoutes = () => {
         <Route path="/learner-dashboard" element={<LearnerDashBoard />} />
         <Route path="/learner/profile" element={<LearnerProfile />} />
         <Route path="/learner-certificates" element={<LearnerCertificates />} />
-        <Route path="/learner/settings" element={<LearnerSettings />} />
+        <Route path="/learner/settings" element={<SettingsPage />} />
         <Route path="/learner-programmes" element={<LearnerProgrammes />} />
 
         {/* ===== NEW ADMIN ROUTES ===== */}
@@ -56,8 +57,9 @@ const AppRoutes = () => {
         <Route path="/admin-emailComposerModal" element={<EmailComposerModal />} />
         <Route path="/admin-analytics" element={<AdminAnalytics />} />
         <Route path="/admin/settings" element={<Admin_AccountSettings />} />
+        <Route path="/admin/programmes" element={<AdminProgrammes />} />
+        <Route path="/admin/create-programme" element={<Admin_CreateProgramme />} />
         <Route path="/admin/blog-management" element={<Admin_BlogManagement />} />
-        
       </Routes>
     </Router>
   );
