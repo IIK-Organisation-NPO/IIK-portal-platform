@@ -362,17 +362,14 @@
   margin-right: 0;
 }
 
-/* ---- Pagination with Back Button ---- */
+/* ---- Pagination ---- */
 .admin-interested-pagination {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  justify-content: flex-end;
   margin-bottom: 0;
-  gap: 12px;
-  flex-wrap: wrap;
 }
 
-.pagination-btn {
+.pagination-btn.next-only {
   background: #ffffff;
   border: 1px solid #cccccc;
   border-radius: 6px;
@@ -381,39 +378,11 @@
   font-weight: 500;
   color: #333333;
   cursor: pointer;
-  transition: background 0.2s, border-color 0.2s;
-  font-family: inherit;
+  transition: background 0.2s;
 }
 
-.pagination-btn:hover {
+.pagination-btn.next-only:hover {
   background: #f0f0f0;
-}
-
-.pagination-btn.back-btn {
-  border-color: #000000;
-  color: #000000;
-  background: transparent;
-}
-
-.pagination-btn.back-btn:hover {
-  background: #000000;
-  color: #ffffff;
-}
-
-/* Mobile Responsive for Pagination */
-@media (max-width: 480px) {
-  .admin-interested-pagination {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-  }
-
-  .pagination-btn {
-    padding: 6px 16px;
-    font-size: 12px;
-    width: 100%;
-    text-align: center;
-  }
 }
 
 /* ---- Mobile Responsive ---- */
@@ -585,253 +554,5 @@
     font-size: 12px;
     width: 100%;
     text-align: center;
-  }
-}
-
-/* ---- Enroll Confirmation Modal ---- */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
-}
-
-.modal-content {
-  background: #ffffff;
-  border-radius: 16px;
-  padding: 32px 40px;
-  max-width: 440px;
-  width: 90%;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-  animation: slideUp 0.3s ease;
-}
-
-@keyframes slideUp {
-  from {
-    transform: translateY(20px);
-    opacity: 0;
-  }
-
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-.modal-content h2 {
-  font-size: 22px;
-  font-weight: 700;
-  color: #000000;
-  margin: 0 0 12px 0;
-  letter-spacing: -0.3px;
-}
-
-.modal-content p {
-  font-size: 16px;
-  color: #4B5563;
-  margin: 0 0 8px 0;
-  line-height: 1.5;
-}
-
-.modal-content .modal-warning {
-  font-size: 14px;
-  color: #ef4444;
-  background: #fef2f2;
-  padding: 10px 14px;
-  border-radius: 8px;
-  margin: 12px 0 20px 0;
-  border-left: 4px solid #ef4444;
-}
-
-.modal-actions {
-  display: flex;
-  gap: 12px;
-  justify-content: flex-end;
-}
-
-.modal-btn {
-  padding: 10px 24px;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s, transform 0.1s;
-}
-
-.modal-btn:hover {
-  transform: scale(1.02);
-}
-
-.modal-btn:active {
-  transform: scale(0.98);
-}
-
-.modal-btn.cancel-btn {
-  background: #f3f4f6;
-  color: #1F2937;
-}
-
-.modal-btn.cancel-btn:hover {
-  background: #e5e7eb;
-}
-
-.modal-btn.confirm-btn {
-  background: #000000;
-  color: #ffffff;
-}
-
-.modal-btn.confirm-btn:hover {
-  background: #2a2a2a;
-}
-
-/* ============================================
-   FIX 1: "Interested Learners — Digital Marketing ˅" heading
-   Replace the existing .admin-interested-top-row .header-left-group h1,
-   .programme-dropdown and .dropdown-arrow rules with these.
-   ============================================ */
-
-.admin-interested-top-row .header-left-group h1 {
-  font-size: 28px;
-  font-weight: 800;
-  color: #0f172a;
-  letter-spacing: -0.3px;
-  margin: 0 0 4px 0;
-  display: flex;
-  align-items: center;
-  flex-wrap: nowrap;
-  /* was "wrap" — this let the select drop to its own line */
-  gap: 4px;
-  white-space: nowrap;
-}
-
-/* High-specificity + explicit display/width so this wins over any
-   global "select { width:100% }" reset elsewhere in the project. */
-.admin-interested-top-row .header-left-group h1 .programme-dropdown {
-  display: inline-flex;
-  align-items: center;
-  width: auto;
-  max-width: none;
-  min-width: 0;
-  flex: 0 0 auto;
-  font-size: 28px;
-  font-weight: 800;
-  color: #0f172a;
-  background: transparent;
-  border: none;
-  padding: 0 2px;
-  cursor: pointer;
-  font-family: inherit;
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-}
-
-.admin-interested-top-row .header-left-group h1 .programme-dropdown:focus {
-  outline: none;
-}
-
-.admin-interested-top-row .header-left-group h1 .dropdown-arrow {
-  display: inline-flex;
-  flex: 0 0 auto;
-  font-size: 15px;
-  color: #0f172a;
-  margin-left: -2px;
-  pointer-events: none;
-}
-
-
-/* ============================================
-   FIX 2: "Digital Centre: All" + Search row in the toolbar
-   Replace the existing .admin-interested-toolbar .toolbar-filters,
-   .admin-interested-toolbar .filter-select and
-   .admin-interested-toolbar .search-input rules with these.
-   ============================================ */
-
-.admin-interested-toolbar .toolbar-filters {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: nowrap;
-}
-
-.admin-interested-toolbar .toolbar-filters .filter-select,
-.admin-interested-toolbar .toolbar-filters .search-input {
-  display: inline-flex;
-  align-items: center;
-  flex: 0 0 auto;
-  /* never grow/shrink to fill the row */
-  min-width: 0;
-}
-
-.admin-interested-toolbar .toolbar-filters .filter-select {
-  width: 170px;
-  padding: 7px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 13px;
-  background: #ffffff;
-  color: #333333;
-  cursor: pointer;
-}
-
-.admin-interested-toolbar .toolbar-filters .search-input {
-  width: 230px;
-  padding: 7px 14px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 14px;
-  background: #ffffff;
-  color: #333333;
-}
-
-.admin-interested-toolbar .toolbar-filters .filter-select:focus,
-.admin-interested-toolbar .toolbar-filters .search-input:focus {
-  outline: none;
-  border-color: #0f172a;
-}
-
-.admin-interested-toolbar .toolbar-filters .search-input::placeholder {
-  color: #aaaaaa;
-}
-
-/* ---- Mobile: let both groups drop to full width & stack ---- */
-@media (max-width: 768px) {
-  .admin-interested-top-row .header-left-group h1 {
-    flex-wrap: wrap;
-    white-space: normal;
-  }
-
-  .admin-interested-top-row .header-left-group h1 .programme-dropdown {
-    width: auto;
-    max-width: 100%;
-  }
-
-  .admin-interested-toolbar .toolbar-filters {
-    flex-direction: column;
-    align-items: stretch;
-    width: 100%;
-  }
-
-  .admin-interested-toolbar .toolbar-filters .filter-select,
-  .admin-interested-toolbar .toolbar-filters .search-input {
-    width: 100%;
   }
 }

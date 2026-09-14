@@ -1,45 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { FaArrowUp } from 'react-icons/fa';
 import logo from "../../assets/images/small Mki.png";
 import missionImage from "../../assets/images/download.jfif";
 import Footer from "../../components/common/Footer";
 import "../../styles/pages/About.css";
 
 const About = () => {
-  const [isVisible, setIsVisible] = useState(false);
-
-  // Show button when page is scrolled down
-  const toggleVisibility = useCallback(() => {
-    if (window.scrollY > 300) {
-      setIsVisible(true);
-    } else {
-      setIsVisible(false);
-    }
-  }, []);
-
-  // Set the top coordinate to 0
-  // Make scrolling smooth
-  const scrollToTop = () => {
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth"
-    });
-  };
-
-  useEffect(() => {
-    // Add scroll event listener
-    window.addEventListener("scroll", toggleVisibility);
-    
-    // Check initial scroll position
-    toggleVisibility();
-    
-    // Cleanup event listener
-    return () => {
-      window.removeEventListener("scroll", toggleVisibility);
-    };
-  }, [toggleVisibility]);
-
   return (
     <div className="about-page">
       {/* Header */}
@@ -220,25 +186,9 @@ const About = () => {
         </div>
       </section>
 
-      {/* Scroll to Top Button */}
-      <div 
-        className={`scroll-to-top ${isVisible ? "visible" : ""}`}
-        onClick={scrollToTop}
-        role="button"
-        tabIndex={0}
-        aria-label="Scroll to top"
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            scrollToTop();
-          }
-        }}
-      >
-        <FaArrowUp />
-      </div>
+      {/* Bottom Info Section - Acts as Footer */}
+        <Footer />
 
-      {/* Footer */}
-      <Footer />
     </div>
   );
 };

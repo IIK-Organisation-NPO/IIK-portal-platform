@@ -25,10 +25,10 @@ const Learner_SideBar = ({ active = 'dashboard', isMobileOpen, onClose }) => {
       {isMobileOpen && (
         <div className="sidebar-overlay" onClick={onClose}></div>
       )}
-
+      
       <aside className={`learner-sidebar ${isMobileOpen ? 'mobile-open' : ''}`}>
         <div className="sidebar-menu-label">Portal Menu</div>
-
+        
         <nav className="sidebar-nav">
           {navItems.map((item) => {
             if (item.isLogout) {
@@ -53,14 +53,16 @@ const Learner_SideBar = ({ active = 'dashboard', isMobileOpen, onClose }) => {
                 className={active === item.id ? 'active' : ''}
                 onClick={onClose}
               >
-                <i className={`fas ${item.icon}`}></i>
+                <i className={`fas ${item.icon}`}></i> 
                 <span>{item.label}</span>
               </Link>
             );
           })}
         </nav>
 
-
+        <div className="sidebar-version">
+          <small>v2.0.0</small>
+        </div>
       </aside>
     </>
   );
