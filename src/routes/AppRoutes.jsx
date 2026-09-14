@@ -26,6 +26,7 @@ import Admin_Certificates from '../pages/Admin_Screens/Admin_Certificates';
 import Admin_BulkUpload from '../pages/Admin_Screens/Admin_BulkCertificates';
 import VerifyEmail from '../components/auth/VerifyEmail'; 
 import EmailComposerModal from '../pages/Admin_Screens/EmailComposerModal';
+import AdminStaffManagement from '../pages/Admin_Screens/Admin_StaffManagement';
 const AppRoutes = () => {
   return (
     <Router>
@@ -62,6 +63,7 @@ const AppRoutes = () => {
         <Route path="/admin/create-programme" element={<Admin_CreateProgramme />} />
         <Route path="/admin/blog-management" element={<Admin_BlogManagement />} />
         <Route path="/admin/blog-create" element={<AdminBlogCreate />} />
+        <Route path="/admin/staff" element={<AdminStaffManagement />} />
       </Routes>
     </Router>
   );
