@@ -27,6 +27,8 @@ import Admin_BulkUpload from '../pages/Admin_Screens/Admin_BulkCertificates';
 import VerifyEmail from '../components/auth/VerifyEmail'; 
 import EmailComposerModal from '../pages/Admin_Screens/EmailComposerModal';
 import AdminStaffManagement from '../pages/Admin_Screens/Admin_StaffManagement';
+import LocateCenter from '../pages/Learner_Screens/Locate_Center';
+
 const AppRoutes = () => {
   return (
     <Router>
@@ -49,6 +51,8 @@ const AppRoutes = () => {
         <Route path="/learner-certificates" element={<LearnerCertificates />} />
         <Route path="/learner/settings" element={<SettingsPage />} />
         <Route path="/learner-programmes" element={<LearnerProgrammes />} />
+        <Route path="/locate-center" element={<LocateCenter />} />
+        
 
         {/* ===== NEW ADMIN ROUTES ===== */}
         <Route path="/admin-dashboard" element={<AdminDashboard />} />

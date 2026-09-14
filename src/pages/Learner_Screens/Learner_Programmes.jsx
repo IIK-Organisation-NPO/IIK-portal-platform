@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import Learner_Header from '../../components/Learner/Learner_Header';
+import { useNavigate } from 'react-router-dom';
 import Learner_SideBar from '../../components/Learner/Learner_SideBar';
 import '../../styles/Learner/Learner_Programmes.css';
 
 const ProgrammesPage = () => {
+    const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
@@ -92,6 +94,7 @@ const ProgrammesPage = () => {
     } else {
       setInterestedProgrammes([...interestedProgrammes, programmeId]);
     }
+    navigate('/locate-center');
   };
 
   const filteredProgrammes = programmes.filter(programme => {

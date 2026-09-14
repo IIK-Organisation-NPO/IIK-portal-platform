@@ -340,11 +340,7 @@ const Learner_DashBoard = () => {
                   <div className="programme-duration">
                     <i className="far fa-clock"></i> Duration: {prog.duration}
                   </div>
-                  <button 
-                    className="btn-interest"
-                    data-programme={prog.id}
-                    onClick={() => handleInterest(prog.id)}
-                  >
+                  <button className="btn-interest" onClick={() => navigate('/locate-center')}>
                     I'm Interested
                   </button>
                 </div>
