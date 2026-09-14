@@ -1,10 +1,10 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Login from '../components/auth/Login';
-import Signup from '../components/auth/Signup';
 import Homepage from '../pages/Home/Homepage';
-import About from '../pages/Home/About'; // ✅ Fixed: changed from './pages/Home/About' to '../pages/Home/About'
-import Blog from '../pages/Home/Blog';
+import Login from '../components/auth/Login';
+import About from '../pages/Home/About'; 
+import BlogPage from '../pages/Home/Blog';
+import Signup from '../components/auth/Signup';
 import ForgotPassword from '../components/auth/ForgotPassword';
 import VerifyOTP from '../components/auth/VerifyOTP';
 import ResetPassword from '../components/auth/ResetPassword';
@@ -13,10 +13,6 @@ import LearnerProfile from '../pages/Learner_Screens/Learner_Profile';
 import AdminDashboard from '../pages/Admin_Screens/Admin_Dashboard';
 import AdminLearners from '../pages/Admin_Screens/Admin_Learners';
 import AdminInterestedLearners from '../pages/Admin_Screens/Admin_InterestedLearners';
-import Admin_Certificates from '../pages/Admin_Screens/Admin_Certificates';
-import Admin_BulkUpload from '../pages/Admin_Screens/Admin_BulkCertificates';
-import VerifyEmail from '../components/auth/VerifyEmail'; // ✅ Fixed: changed from './components/auth/VerifyEmail' to '../components/auth/VerifyEmail'
-import EmailComposerModal from '../pages/Admin_Screens/EmailComposerModal';
 import AdminAnalytics from '../pages/Admin_Screens/Admin_Analytics';
 import LearnerCertificates from '../pages/Learner_Screens/Learner_Certificates';
 import Admin_AccountSettings from '../pages/Admin_Screens/Admin_AccountSettings';
@@ -26,23 +22,26 @@ import Admin_BlogManagement from '../pages/Admin_Screens/Admin_BlogManagement';
 import SettingsPage from '../pages/Learner_Screens/Learner _Settings';
 import LearnerProgrammes from '../pages/Learner_Screens/Learner_Programmes';
 import AdminBlogCreate from '../pages/Admin_Screens/Admin_blogCreate';
-
+import Admin_Certificates from '../pages/Admin_Screens/Admin_Certificates';
+import Admin_BulkUpload from '../pages/Admin_Screens/Admin_BulkCertificates';
+import VerifyEmail from '../components/auth/VerifyEmail'; 
+import EmailComposerModal from '../pages/Admin_Screens/EmailComposerModal';
 const AppRoutes = () => {
   return (
     <Router>
       <Routes>
         {/* Public routes */}
-        {/* Public routes */}
-        <Route path="/" element={<Login />} />
+        
+        <Route path="/" element={<Homepage />} />
+        <Route path="/homepage" element={<Homepage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/verify-otp" element={<VerifyOTP />} />
         <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/homepage" element={<Homepage />} />
         <Route path="/about" element={<About />} />
-        <Route path="/blog" element={<Blog />} />
+        <Route path="/BlogPage" element={<BlogPage />} />
         {/* Learner routes */}
         <Route path="/learner-dashboard" element={<LearnerDashBoard />} />
         <Route path="/learner/profile" element={<LearnerProfile />} />

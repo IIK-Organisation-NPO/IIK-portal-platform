@@ -1,13 +1,31 @@
 // src/components/Admin/Admin_Header.jsx
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import '../../styles/Admin/Admin_Header.css';
 import logo from '../../assets/images/small Mki.png'; // Adjust path as needed
 
 const Admin_Header = ({ 
-  userName = 'Admin Workspace', 
+  userName: propUserName, 
   onMenuToggle, 
   isMobileMenuOpen 
 }) => {
+  const [userName, setUserName] = useState(propUserName || 'Admin Workspace');
+
+  // Get user data from localStorage on mount
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      try {
+        const user = JSON.parse(userData);
+        if (user.name) {
+          const fullName = `${user.name} ${user.surname || ''}`.trim();
+          setUserName(fullName || 'Admin Workspace');
+        }
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+      }
+    }
+  }, [propUserName]);
+
   // Get initials from user name
   const getInitials = (name) => {
     if (!name) return 'A';

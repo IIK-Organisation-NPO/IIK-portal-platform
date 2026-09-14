@@ -143,3 +143,130 @@
     font-size: 12px;
   }
 }
+/* src/styles/Admin/Admin_Header.css */
+
+.admin-user-menu {
+  position: relative;
+}
+
+.admin-user-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px 4px 4px;
+  border-radius: 30px;
+  transition: background 0.2s;
+}
+
+.admin-user-profile:hover {
+  background: #f5f5f5;
+}
+
+.admin-user-profile .fa-chevron-down {
+  font-size: 12px;
+  color: #999;
+  transition: transform 0.3s ease;
+}
+
+.admin-user-profile .fa-chevron-down.rotated {
+  transform: rotate(180deg);
+}
+
+.admin-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+  min-width: 220px;
+  padding: 8px 0;
+  z-index: 1000;
+  border: 1px solid #f0f0f0;
+}
+
+.admin-dropdown-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px 12px;
+}
+
+.admin-dropdown-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #000;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 18px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.admin-dropdown-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.admin-dropdown-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.admin-dropdown-role {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: 12px;
+  background: #e3f2fd;
+  color: #1565c0;
+  display: inline-block;
+  width: fit-content;
+}
+
+.admin-dropdown-divider {
+  height: 1px;
+  background: #f0f0f0;
+  margin: 4px 12px;
+}
+
+.admin-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 10px 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: #333;
+  transition: background 0.15s;
+  text-align: left;
+}
+
+.admin-dropdown-item:hover {
+  background: #f8f9fa;
+}
+
+.admin-dropdown-item i {
+  width: 18px;
+  color: #666;
+}
+
+.admin-dropdown-item:last-child {
+  color: #dc3545;
+}
+
+.admin-dropdown-item:last-child i {
+  color: #dc3545;
+}
