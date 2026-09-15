@@ -368,16 +368,17 @@ const AdminProgrammes = () => {
 
           {programmeToArchive && (
             <div className="modal-overlay">
-              <div className="modal" role="dialog" aria-modal="true" aria-labelledby="archive-modal-title">
+              <div className="modal archive-confirmation-modal" role="dialog" aria-modal="true" aria-labelledby="archive-modal-title">
                 <h2 id="archive-modal-title">Archive Programme?</h2>
                 <div className="modal-content">
-                  <p>Are you sure you want to archive <strong>{programmeToArchive.name}</strong>?</p>
+                  <p className="archive-confirmation-question">Are you sure you want to archive <strong>{programmeToArchive.name}</strong>?</p>
+                  <p className="archive-modal-warning">This action will move the programme to the archived list.</p>
                 </div>
                 <div className="modal-actions">
-                  <button className="btn-secondary" onClick={() => setProgrammeToArchive(null)}>
+                  <button className="archive-modal-cancel" onClick={() => setProgrammeToArchive(null)}>
                     Cancel
                   </button>
-                  <button className="btn-archive" onClick={() => handleArchive(programmeToArchive.id)}>
+                  <button className="archive-modal-confirm" onClick={() => handleArchive(programmeToArchive.id)}>
                     Archive Programme
                   </button>
                 </div>

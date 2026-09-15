@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Admin_Sidebar from '../../components/Admin/Admin_Sidebar';
 import Admin_Header from '../../components/Admin/Admin_Header';
 import '../../styles/Admin/Admin_BlogManagement.css';
@@ -299,20 +299,20 @@ const AdminBlogManagement = () => {
 
           {modal && (
             <div className="admin-blog-modal-overlay" onClick={closeModal}>
-              <div className="admin-blog-modal" onClick={(event) => event.stopPropagation()}>
+              <div className={`admin-blog-modal ${modal.type === 'delete' ? 'admin-blog-delete-modal' : ''}`} onClick={(event) => event.stopPropagation()}>
                 {modal.type === 'delete' ? (
                   <>
-                    <div className="admin-blog-modal-header">
+                    <div className="admin-blog-delete-header">
                       <h2>Delete Post</h2>
-                      <button type="button" className="modal-close-button" onClick={closeModal} aria-label="Close">&times;</button>
+                      <button type="button" className="admin-blog-delete-close" onClick={closeModal} aria-label="Close">&times;</button>
                     </div>
-                    <div className="admin-blog-modal-body">
-                      <p>Are you sure you want to delete this post?</p>
-                      <p className="delete-post-title">{modal.title}</p>
+                    <div className="admin-blog-delete-body">
+                      <p className="admin-blog-delete-question">Are you sure you want to delete this post?</p>
+                      <p className="admin-blog-delete-warning">{modal.title}<br />This action will permanently delete the post.</p>
                     </div>
-                    <div className="admin-blog-modal-actions">
-                      <button type="button" className="modal-cancel-button" onClick={closeModal}>Cancel</button>
-                      <button type="button" className="modal-confirm-delete-button" onClick={confirmDelete}>Delete Post</button>
+                    <div className="admin-blog-delete-actions">
+                      <button type="button" className="admin-blog-delete-cancel" onClick={closeModal}>Cancel</button>
+                      <button type="button" className="admin-blog-delete-confirm" onClick={confirmDelete}>Delete Post</button>
                     </div>
                   </>
                 ) : (

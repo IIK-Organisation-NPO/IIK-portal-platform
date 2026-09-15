@@ -365,7 +365,7 @@ const Admin_CreateProgramme = () => {
                     {/* Draft Confirmation Modal */}
                     {showDraftConfirmation && (
                         <div className="admin-modal-overlay">
-                            <div className="admin-modal">
+                            <div className="admin-modal confirmation-modal">
                                 <div className="admin-modal-header">
                                     <h3>Save as Draft</h3>
                                     <button 
@@ -376,7 +376,7 @@ const Admin_CreateProgramme = () => {
                                     </button>
                                 </div>
                                 <div className="admin-modal-body">
-                                    <p>Are you sure you want to save this programme as a draft?</p>
+                                    <p className="confirmation-message confirmation-question">Are you sure you want to save this programme as a draft?</p>
                                     <p className="admin-modal-subtext">
                                         Programme will be saved with status "Draft" in the Programme Management page.
                                     </p>
@@ -401,7 +401,7 @@ const Admin_CreateProgramme = () => {
 
                     {showPublishConfirmation && (
                         <div className="admin-modal-overlay">
-                            <div className="admin-modal">
+                            <div className="admin-modal confirmation-modal">
                                 <div className="admin-modal-header">
                                     <h3>Publish Programme</h3>
                                     <button className="admin-modal-close" onClick={cancelPublishProgramme}>
@@ -409,7 +409,7 @@ const Admin_CreateProgramme = () => {
                                     </button>
                                 </div>
                                 <div className="admin-modal-body">
-                                    <p>Are you sure you want to publish this programme?</p>
+                                    <p className="confirmation-message confirmation-question">Are you sure you want to publish this programme?</p>
                                     <p className="admin-modal-subtext">
                                         It will be added to Programme Management as an active programme.
                                     </p>

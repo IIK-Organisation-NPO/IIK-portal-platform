@@ -1,6 +1,6 @@
 // src/pages/Admin_Screens/Admin_InterestedLearners.jsx
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Admin_Sidebar from '../../components/Admin/Admin_Sidebar';
 import Admin_Header from '../../components/Admin/Admin_Header';
@@ -13,6 +13,7 @@ const Admin_InterestedLearners = () => {
   const [activeNav] = useState('learners');
   const [selectedProgramme, setSelectedProgramme] = useState('Digital Marketing');
   const [selectedCentre, setSelectedCentre] = useState('All');
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Modal state for email composer
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -85,6 +86,38 @@ const Admin_InterestedLearners = () => {
 
   const centres = ['All', ...new Set(interestedLearners.map((l) => l.center))];
   const programmes = ['Digital Marketing', 'Digital Literacy', 'Microsoft 365'];
+  const filteredLearners = interestedLearners.filter((learner) => {
+    const matchesName = learner.name.toLowerCase().includes(searchTerm.trim().toLowerCase());
+    const matchesCentre = selectedCentre === 'All' || learner.center === selectedCentre;
+
+    return matchesName && matchesCentre;
+  });
+
+  const handleExportCsv = () => {
+    const escapeCsvValue = (value) => `"${String(value).replace(/"/g, '""')}"`;
+    const headers = ['Name', 'Email', 'Phone', 'Digital Centre', 'Date', 'Status'];
+    const rows = filteredLearners.map((learner) => [
+      learner.name,
+      learner.email,
+      learner.phone,
+      learner.center,
+      learner.date,
+      learner.status,
+    ]);
+    const csvContent = [headers, ...rows]
+      .map((row) => row.map(escapeCsvValue).join(','))
+      .join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const downloadLink = document.createElement('a');
+
+    downloadLink.href = url;
+    downloadLink.download = 'interested-learners.csv';
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+    window.URL.revokeObjectURL(url);
+  };
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -226,9 +259,9 @@ const Admin_InterestedLearners = () => {
           </div>
 
           {/* TOOLBAR */}
-          <div className="admin-interested-toolbar">
+            <div className="admin-interested-toolbar">
             <div className="toolbar-left">
-              <button className="btn-outline">Export to CSV</button>
+              <button className="btn-outline" onClick={handleExportCsv}>Export to CSV</button>
               <button className="btn-outline btn-contact-selected" onClick={openModalForSelected}>
                 Send Bulk Email ({selectedIds.length})
               </button>
@@ -248,8 +281,11 @@ const Admin_InterestedLearners = () => {
                 </select>
                 <input
                   type="text"
-                  placeholder="Search by name or email..."
+                    placeholder="Search by learner name..."
                   className="search-input"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    aria-label="Search learners by name"
                 />
               </div>
             </div>
@@ -280,7 +316,7 @@ const Admin_InterestedLearners = () => {
                 </tr>
               </thead>
               <tbody>
-                {interestedLearners.map((learner) => (
+                {filteredLearners.map((learner) => (
                   <tr key={learner.id}>
                     <td>
                       <input
@@ -339,10 +375,10 @@ const Admin_InterestedLearners = () => {
       {/* ===== ENROLLMENT CONFIRMATION MODAL ===== */}
       {showEnrollModal && (
         <div className="modal-overlay">
-          <div className="modal-content">
+          <div className="modal-content confirmation-modal">
             <h2>Confirm Enrollment</h2>
-            <p>Are you sure you want to Enroll this student?</p>
-            <p className="modal-warning">
+            <p className="confirmation-message confirmation-question">Are you sure you want to Enroll this student?</p>
+            <p className="modal-warning confirmation-message">
               This action will change the student's status to "Enrolled".
             </p>
             <div className="modal-actions">

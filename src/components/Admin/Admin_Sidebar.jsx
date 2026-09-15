@@ -94,7 +94,7 @@ const Admin_Sidebar = ({ active = 'dashboard', isMobileOpen, onClose }) => {
             {/* Logout Confirmation Modal */}
             {showLogoutModal && (
                 <div className="logout-modal-overlay" onClick={cancelLogout}>
-                    <div className="logout-modal-content" onClick={(e) => e.stopPropagation()}>
+                    <div className="logout-modal-content confirmation-modal" onClick={(e) => e.stopPropagation()}>
                         {/* Modal Header */}
                         <div className="logout-modal-header">
                             <h2>Confirm Logout</h2>
@@ -105,8 +105,8 @@ const Admin_Sidebar = ({ active = 'dashboard', isMobileOpen, onClose }) => {
                         
                         {/* Modal Body */}
                         <div className="logout-modal-body">
-                            <p>Are you sure you want to logout?</p>
-                            <p className="logout-modal-warning">
+                            <p className="confirmation-message confirmation-question">Are you sure you want to logout?</p>
+                            <p className="logout-modal-warning confirmation-message">
                                 You will be redirected to the login page and will need to sign in again to access the admin panel.
                             </p>
                         </div>

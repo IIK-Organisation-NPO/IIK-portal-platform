@@ -556,14 +556,14 @@ const Admin_AccountSettings = () => {
       {/* ==================== PROFILE MODAL ==================== */}
       {showProfileModal && (
         <div className="logout-modal-overlay" onClick={() => setShowProfileModal(false)}>
-          <div className="logout-modal-content" onClick={(e) => e.stopPropagation()}>
+          <div className="logout-modal-content confirmation-modal" onClick={(e) => e.stopPropagation()}>
             <div className="logout-modal-header">
               <h2>Confirm Changes</h2>
               <button className="logout-modal-close" onClick={() => setShowProfileModal(false)}>×</button>
             </div>
             <div className="logout-modal-body">
-              <p>Are you sure you want to save changes to your profile?</p>
-              <p className="logout-modal-warning">Your name and surname will be updated across the system.</p>
+              <p className="confirmation-message confirmation-question">Are you sure you want to save changes to your profile?</p>
+              <p className="logout-modal-warning confirmation-message">Your name and surname will be updated across the system.</p>
             </div>
             <div className="logout-modal-actions">
               <button className="logout-modal-btn cancel-btn" onClick={() => setShowProfileModal(false)}>No, Stay</button>
@@ -576,14 +576,14 @@ const Admin_AccountSettings = () => {
       {/* ==================== PASSWORD MODAL ==================== */}
       {showPasswordModal && (
         <div className="logout-modal-overlay" onClick={() => setShowPasswordModal(false)}>
-          <div className="logout-modal-content" onClick={(e) => e.stopPropagation()}>
+          <div className="logout-modal-content confirmation-modal" onClick={(e) => e.stopPropagation()}>
             <div className="logout-modal-header">
               <h2>Confirm Password Update</h2>
               <button className="logout-modal-close" onClick={() => setShowPasswordModal(false)}>×</button>
             </div>
             <div className="logout-modal-body">
-              <p>Are you sure you want to modify this password?</p>
-              <p className="logout-modal-warning">Continuing will result in use of the new password.</p>
+              <p className="confirmation-message confirmation-question">Are you sure you want to modify this password?</p>
+              <p className="logout-modal-warning confirmation-message">Continuing will result in use of the new password.</p>
             </div>
             <div className="logout-modal-actions">
               <button className="logout-modal-btn cancel-btn" onClick={() => setShowPasswordModal(false)}>No, Cancel</button>
@@ -596,14 +596,14 @@ const Admin_AccountSettings = () => {
       {/* ==================== BACKUP MODAL ==================== */}
       {showBackupModal && (
         <div className="logout-modal-overlay" onClick={cancelBackup}>
-          <div className="logout-modal-content" onClick={(e) => e.stopPropagation()}>
+          <div className="logout-modal-content confirmation-modal" onClick={(e) => e.stopPropagation()}>
             <div className="logout-modal-header">
               <h2>Confirm Backup</h2>
               <button className="logout-modal-close" onClick={cancelBackup}>×</button>
             </div>
             <div className="logout-modal-body">
-              <p>Are you sure you want to backup?</p>
-              <p className="logout-modal-warning">This will create a new backup of your system data.</p>
+              <p className="confirmation-message confirmation-question">Are you sure you want to backup?</p>
+              <p className="logout-modal-warning confirmation-message">This will create a new backup of your system data.</p>
             </div>
             <div className="logout-modal-actions">
               <button className="logout-modal-btn cancel-btn" onClick={cancelBackup}>No, Cancel</button>
@@ -616,14 +616,14 @@ const Admin_AccountSettings = () => {
       {/* ==================== RESTORE MODAL ==================== */}
       {showRestoreModal && (
         <div className="logout-modal-overlay" onClick={cancelRestore}>
-          <div className="logout-modal-content" onClick={(e) => e.stopPropagation()}>
+          <div className="logout-modal-content confirmation-modal" onClick={(e) => e.stopPropagation()}>
             <div className="logout-modal-header">
               <h2>Confirm Restore</h2>
               <button className="logout-modal-close" onClick={cancelRestore}>×</button>
             </div>
             <div className="logout-modal-body">
-              <p>Are you sure you want to restore data from this date?</p>
-              <p className="logout-modal-warning">Restore point: {selectedRestorePoint}</p>
+              <p className="confirmation-message confirmation-question">Are you sure you want to restore data from this date?</p>
+              <p className="logout-modal-warning confirmation-message">Restore point: {selectedRestorePoint}</p>
             </div>
             <div className="logout-modal-actions">
               <button className="logout-modal-btn cancel-btn" onClick={cancelRestore}>No, Cancel</button>

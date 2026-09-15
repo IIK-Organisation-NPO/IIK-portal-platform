@@ -52,3 +52,74 @@ button {
 input, textarea, select {
   font-family: inherit;
 }
+
+/* Shared confirmation card treatment across admin pages. */
+.confirmation-modal {
+  border-radius: 16px;
+}
+
+.logout-modal-content.confirmation-modal,
+.admin-blog-modal.confirmation-modal {
+  border-radius: 16px;
+}
+
+.confirmation-modal .confirmation-message {
+  color: #dc2626;
+}
+
+.confirmation-modal .confirmation-question {
+  color: #000000;
+  background: transparent;
+  border-left: none;
+  padding: 0;
+}
+
+.confirmation-modal .modal-warning,
+.confirmation-modal .admin-modal-subtext {
+  color: #dc2626;
+  background: #fef2f2;
+  border-left: 4px solid #ef4444;
+  padding: 10px 14px;
+  border-radius: 8px;
+}
+
+.confirmation-modal .admin-modal-confirm-btn {
+  background: #000000;
+  border-color: #000000;
+}
+
+.confirmation-modal .admin-modal-confirm-btn:hover {
+  background: #2a2a2a;
+  border-color: #2a2a2a;
+}
+
+.confirmation-modal .modal-btn.confirm-btn,
+.confirmation-modal .btn-archive {
+  background: #000000;
+  border-color: #000000;
+  color: #ffffff;
+}
+
+.confirmation-modal .modal-btn.confirm-btn:hover,
+.confirmation-modal .btn-archive:hover {
+  background: #2a2a2a;
+  border-color: #2a2a2a;
+}
+
+.confirmation-modal .logout-modal-warning {
+  color: #dc2626;
+  background: #fef2f2;
+  border-left: 4px solid #ef4444;
+}
+
+.confirmation-modal .logout-modal-btn.confirm-btn,
+.confirmation-modal .modal-confirm-delete-button {
+  background: #000000;
+  border-color: #000000;
+}
+
+.confirmation-modal .logout-modal-btn.confirm-btn:hover,
+.confirmation-modal .modal-confirm-delete-button:hover {
+  background: #2a2a2a;
+  border-color: #2a2a2a;
+}

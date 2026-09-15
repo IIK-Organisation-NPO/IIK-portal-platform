@@ -85,6 +85,11 @@
   padding: 16px 20px;
 }
 
+.admin-learners-toolbar .toolbar-left,
+.admin-learners-toolbar .toolbar-right {
+  min-width: 0;
+}
+
 .toolbar-left {
   display: flex;
   gap: 10px;
@@ -124,10 +129,12 @@
   background: #ffffff;
   color: #333333;
   min-width: 130px;
+  max-width: 100%;
 }
 
 .search-input {
   min-width: 200px;
+  flex: 1 1 200px;
 }
 
 .search-input::placeholder {
@@ -239,9 +246,9 @@
 
 /* (for "Interested Learners") */
 .btn-solid {
-  background: #888888;
+  background: #000000;
   color: #ffffff;
-  border: 1px solid #888888;
+  border: 1px solid #000000;
   padding: 6px 16px;
   border-radius: 6px;
   font-size: 13px;
@@ -251,8 +258,8 @@
 }
 
 .btn-solid:hover {
-  background: #666666;
-  border-color: #666666;
+  background: #2a2a2a;
+  border-color: #2a2a2a;
 }
 
 /* Pagination */
@@ -365,6 +372,94 @@
   border-color: #dc2626;
 }
 
+/* ---- Learner Edit Modal ---- */
+.learner-edit-modal {
+  max-width: 520px;
+  padding: 0;
+}
+
+.learner-edit-modal-header,
+.learner-edit-modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.learner-edit-modal-header h2 {
+  margin: 0;
+  font-size: 20px;
+  color: #000000;
+}
+
+.learner-modal-close {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  background: transparent;
+  color: #000000;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.learner-edit-form {
+  display: grid;
+  gap: 16px;
+  padding: 24px;
+}
+
+.learner-edit-form label {
+  display: grid;
+  gap: 6px;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.learner-edit-form input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 0;
+  background: #ffffff;
+  color: #0f172a;
+  font: inherit;
+  font-weight: 400;
+}
+
+.learner-edit-form input:focus {
+  outline: 2px solid #000000;
+  outline-offset: -1px;
+}
+
+.learner-edit-modal-actions {
+  justify-content: flex-end;
+  gap: 12px;
+  border-bottom: 0;
+}
+
+.learner-modal-cancel,
+.learner-modal-save {
+  padding: 10px 16px;
+  border: 1px solid #000000;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.learner-modal-cancel {
+  background: #ffffff;
+  color: #000000;
+}
+
+.learner-modal-save {
+  background: #000000;
+  color: #ffffff;
+}
+
 /* ---- Deactivate Confirmation Modal ---- */
 .modal-overlay {
   position: fixed;
@@ -435,6 +530,10 @@
   border-radius: 8px;
   margin: 12px 0 20px 0;
   border-left: 4px solid #ef4444;
+}
+
+.confirmation-modal {
+  border-radius: 16px;
 }
 
 .modal-actions {
@@ -528,7 +627,14 @@
 
   .toolbar-left,
   .toolbar-right {
+    width: 100%;
     flex-wrap: wrap;
+  }
+
+  .toolbar-left > button,
+  .toolbar-right > * {
+    flex: 1 1 180px;
+    min-width: 0;
   }
 
   .toolbar-right {
@@ -572,6 +678,16 @@
 
   .admin-learners-header p {
     font-size: 14px;
+  }
+
+  .admin-learners-toolbar .toolbar-left {
+    flex-direction: column;
+  }
+
+  .admin-learners-toolbar .toolbar-left > button,
+  .admin-learners-toolbar .toolbar-right > * {
+    width: 100%;
+    flex-basis: auto;
   }
 
   .admin-learners-stats {
@@ -684,7 +800,7 @@
   align-items: center;
   gap: 10px;
   flex-wrap: nowrap;
-  /* keep everything on one line on desktop */
+  max-width: 100%;
 }
 
 /* Dedicated wrapper for the three filter controls so they always
@@ -695,6 +811,7 @@
   align-items: center;
   gap: 10px;
   flex-wrap: nowrap;
+  max-width: 100%;
 }
 
 /* High-specificity + explicit display/width so this wins over any
@@ -714,7 +831,7 @@
 }
 
 .admin-learners-toolbar .toolbar-filters .search-input {
-  width: 230px;
+  width: clamp(160px, 22vw, 230px);
   min-width: 0;
 }
 
@@ -735,5 +852,10 @@
   .admin-learners-toolbar .toolbar-filters .filter-select,
   .admin-learners-toolbar .toolbar-filters .search-input {
     width: 100%;
+  }
+
+  .admin-learners-toolbar .toolbar-right .search-input {
+    width: 100%;
+    min-width: 0;
   }
 }

@@ -1,5 +1,5 @@
 // src/pages/Admin_Screens/Admin_Learners.jsx
-import React, { useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Admin_Sidebar from "../../components/Admin/Admin_Sidebar";
 import Admin_Header from "../../components/Admin/Admin_Header";
@@ -27,6 +27,10 @@ const Admin_Learners = () => {
   
   // State to track which learner is being deactivated (for visual feedback)
   const [deactivatingIndex, setDeactivatingIndex] = useState(null);
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedProgramme, setSelectedProgramme] = useState('All');
+  const [selectedStatus, setSelectedStatus] = useState('All');
 
   // Sample learner data
   const [learners, setLearners] = useState([
@@ -109,6 +113,17 @@ const Admin_Learners = () => {
     { label: "Active Enrolments", value: learners.filter(l => l.status === "Active").length },
     { label: "Completed Programmes", value: learners.filter(l => l.status === "Completed").length },
   ];
+
+  const filteredLearners = learners.filter((learner) => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+    const matchesSearch = !normalizedSearch ||
+      learner.name.toLowerCase().includes(normalizedSearch) ||
+      learner.email.toLowerCase().includes(normalizedSearch);
+    const matchesProgramme = selectedProgramme === 'All' || learner.programme === selectedProgramme;
+    const matchesStatus = selectedStatus === 'All' || learner.status === selectedStatus;
+
+    return matchesSearch && matchesProgramme && matchesStatus;
+  });
 
   // Handle Edit button click - enables editing mode for a specific row
   const handleEditClick = (index) => {
@@ -244,23 +259,38 @@ const Admin_Learners = () => {
               </button>
             </div>
             <div className="toolbar-right">
-              <select className="filter-select">
-                <option>Prog: All</option>
-                <option>Digital Literacy</option>
-                <option>Microsoft 365</option>
-                <option>Digital Marketing</option>
-              </select>
-              <select className="filter-select">
-                <option>Status: All</option>
-                <option>Active</option>
-                <option>Completed</option>
-                <option>Inactive</option>
-              </select>
-              <input
-                type="text"
-                placeholder="Search name or email..."
-                className="search-input"
-              />
+              <div className="toolbar-filters">
+                <select
+                  className="filter-select"
+                  value={selectedProgramme}
+                  onChange={(event) => setSelectedProgramme(event.target.value)}
+                  aria-label="Filter learners by programme"
+                >
+                  <option value="All">Prog: All</option>
+                  <option>Digital Literacy</option>
+                  <option>Microsoft 365</option>
+                  <option>Digital Marketing</option>
+                </select>
+                <select
+                  className="filter-select"
+                  value={selectedStatus}
+                  onChange={(event) => setSelectedStatus(event.target.value)}
+                  aria-label="Filter learners by status"
+                >
+                  <option value="All">Status: All</option>
+                  <option>Active</option>
+                  <option>Completed</option>
+                  <option>Inactive</option>
+                </select>
+                <input
+                  type="text"
+                  placeholder="Search name or email..."
+                  className="search-input"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  aria-label="Search learners by name or email"
+                />
+              </div>
             </div>
           </div>
 
@@ -279,58 +309,17 @@ const Admin_Learners = () => {
                 </tr>
               </thead>
               <tbody>
-                {learners.map((learner, index) => (
+                {filteredLearners.map((learner) => {
+                  const learnerIndex = learners.indexOf(learner);
+
+                  return (
                   <tr 
-                    key={index} 
-                    className={deactivatingIndex === index ? "deactivating-row" : ""}
+                    key={learnerIndex} 
+                    className={deactivatingIndex === learnerIndex ? "deactivating-row" : ""}
                   >
-                    {/* Name column - editable when in edit mode */}
-                    <td>
-                      {editingIndex === index ? (
-                        <input
-                          type="text"
-                          name="name"
-                          value={editedLearner.name}
-                          onChange={handleInputChange}
-                          className="edit-input"
-                          placeholder="Enter name"
-                        />
-                      ) : (
-                        learner.name
-                      )}
-                    </td>
-                    
-                    {/* Email column - editable when in edit mode */}
-                    <td>
-                      {editingIndex === index ? (
-                        <input
-                          type="email"
-                          name="email"
-                          value={editedLearner.email}
-                          onChange={handleInputChange}
-                          className="edit-input"
-                          placeholder="Enter email"
-                        />
-                      ) : (
-                        learner.email
-                      )}
-                    </td>
-                    
-                    {/* Phone column - editable when in edit mode */}
-                    <td>
-                      {editingIndex === index ? (
-                        <input
-                          type="text"
-                          name="phone"
-                          value={editedLearner.phone}
-                          onChange={handleInputChange}
-                          className="edit-input"
-                          placeholder="Enter phone"
-                        />
-                      ) : (
-                        learner.phone
-                      )}
-                    </td>
+                    <td>{learner.name}</td>
+                    <td>{learner.email}</td>
+                    <td>{learner.phone}</td>
                     
                     <td>{learner.programme}</td>
                     <td>{learner.date}</td>
@@ -342,45 +331,29 @@ const Admin_Learners = () => {
                       </span>
                     </td>
                     
-                    {/* Actions column - shows different buttons based on edit mode */}
                     <td>
-                      {editingIndex === index ? (
-                        // Show Save and Cancel buttons when in edit mode
-                        <>
-                          <button 
-                            className="action-btn save" 
-                            onClick={() => handleSaveEdit(index)}
-                          >
-                            Save
-                          </button>
-                          <button 
-                            className="action-btn cancel" 
-                            onClick={handleCancelEdit}
-                          >
-                            ✕
-                          </button>
-                        </>
-                      ) : (
-                        // Show Edit and Deactivate buttons when not in edit mode
-                        <>
-                          <button 
-                            className="action-btn edit" 
-                            onClick={() => handleEditClick(index)}
-                          >
-                            Edit
-                          </button>
-                          <button 
-                            className="action-btn deactivate" 
-                            onClick={() => handleDeactivateClick(index)}
-                            disabled={deactivatingIndex === index}
-                          >
-                            {deactivatingIndex === index ? "Deactivating..." : "Deactivate"}
-                          </button>
-                        </>
-                      )}
+                      <button 
+                        className="action-btn edit" 
+                        onClick={() => handleEditClick(learnerIndex)}
+                      >
+                        Edit
+                      </button>
+                      <button 
+                        className="action-btn deactivate" 
+                        onClick={() => handleDeactivateClick(learnerIndex)}
+                        disabled={deactivatingIndex === learnerIndex}
+                      >
+                        {deactivatingIndex === learnerIndex ? "Deactivating..." : "Deactivate"}
+                      </button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
+                {filteredLearners.length === 0 && (
+                  <tr>
+                    <td colSpan="7" className="no-results">No learners match your search or filters.</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -407,13 +380,44 @@ const Admin_Learners = () => {
         </div>
       </div>
 
+      {editingIndex !== null && (
+        <div className="modal-overlay" onClick={handleCancelEdit}>
+          <div className="modal-content learner-edit-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="learner-edit-modal-header">
+              <h2>Edit Learner</h2>
+              <button type="button" className="learner-modal-close" onClick={handleCancelEdit} aria-label="Close">&times;</button>
+            </div>
+            <form onSubmit={(event) => { event.preventDefault(); handleSaveEdit(editingIndex); }}>
+              <div className="learner-edit-form">
+                <label>
+                  Name
+                  <input type="text" name="name" value={editedLearner.name} onChange={handleInputChange} required />
+                </label>
+                <label>
+                  Email
+                  <input type="email" name="email" value={editedLearner.email} onChange={handleInputChange} required />
+                </label>
+                <label>
+                  Phone Number
+                  <input type="text" name="phone" value={editedLearner.phone} onChange={handleInputChange} required />
+                </label>
+              </div>
+              <div className="learner-edit-modal-actions">
+                <button type="button" className="learner-modal-cancel" onClick={handleCancelEdit}>Cancel</button>
+                <button type="submit" className="learner-modal-save">Save Learner</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Deactivate Confirmation Modal */}
       {showDeactivateModal && (
         <div className="modal-overlay">
-          <div className="modal-content">
+          <div className="modal-content confirmation-modal">
             <h2>Confirm Deactivation</h2>
-            <p>Are you sure you want to deactivate this student?</p>
-            <p className="modal-warning">
+            <p className="confirmation-message confirmation-question">Are you sure you want to deactivate this student?</p>
+            <p className="modal-warning confirmation-message">
               This action will change the student's status to "Inactive" and remove them from the list after 3 seconds.
             </p>
             <div className="modal-actions">

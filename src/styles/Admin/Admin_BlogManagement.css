@@ -62,7 +62,7 @@
   flex-shrink: 0;
   padding: 0.7rem 1.25rem;
   border: 2px solid #000000;
-  border-radius: 0;
+  border-radius: 4px;
   background: #000000;
   color: #ffffff;
   font-size: 0.85rem;
@@ -108,7 +108,7 @@
   font-weight: 500;
   color: #64748b;
   cursor: pointer;
-  border-radius: 0;
+  border-radius: 4px;
   transition: all 0.2s ease;
   font-family: 'Geist', sans-serif;
   white-space: nowrap;
@@ -273,7 +273,7 @@
 .action-buttons .btn-delete {
   padding: 0.25rem 0.75rem;
   border: none;
-  border-radius: 0;
+  border-radius: 4px;
   font-size: 0.75rem;
   font-weight: 500;
   cursor: pointer;
@@ -349,6 +349,7 @@
   color: #0f172a;
   font-size: 1.5rem;
   cursor: pointer;
+  border-radius: 4px;
 }
 
 .admin-blog-modal-body {
@@ -405,7 +406,7 @@
 .modal-save-button {
   padding: 0.65rem 1rem;
   border: 1px solid #000000;
-  border-radius: 0;
+  border-radius: 4px;
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
@@ -421,6 +422,93 @@
 .modal-save-button {
   background: #000000;
   color: #ffffff;
+}
+
+.admin-blog-delete-modal {
+  border-radius: 16px;
+  padding: 32px 40px;
+  max-width: 440px;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.15);
+}
+
+.admin-blog-delete-header,
+.admin-blog-delete-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.admin-blog-delete-header h2 {
+  margin: 0 0 12px 0;
+  color: #000000;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.admin-blog-delete-close {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  background: transparent;
+  color: #000000;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.admin-blog-delete-body {
+  margin-bottom: 20px;
+}
+
+.admin-blog-delete-question {
+  margin: 0 0 8px 0;
+  color: #4b5563;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.admin-blog-delete-warning {
+  margin: 12px 0 20px 0;
+  padding: 10px 14px;
+  border-left: 4px solid #ef4444;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #ef4444;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.admin-blog-delete-actions {
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.admin-blog-delete-cancel,
+.admin-blog-delete-confirm {
+  padding: 10px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.admin-blog-delete-cancel {
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+.admin-blog-delete-cancel:hover {
+  background: #e5e7eb;
+}
+
+.admin-blog-delete-confirm {
+  background: #000000;
+  color: #ffffff;
+}
+
+.admin-blog-delete-confirm:hover {
+  background: #333333;
 }
 
 /* ===== Table Footer ===== */

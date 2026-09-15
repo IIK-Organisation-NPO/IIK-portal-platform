@@ -472,9 +472,9 @@ const Admin_Certificates = () => {
             {/* === ISSUANCE CONFIRMATION MODAL === */}
             {showConfirmModal && confirmData && (
                 <div className="modal-overlay" onClick={handleCancelIssue}>
-                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                    <div className="modal-content confirmation-modal" onClick={(e) => e.stopPropagation()}>
                         <h2>Confirm Certificate Issuance</h2>
-                        <p>Please review the details below before issuing the certificate.</p>
+                        <p className="confirmation-message confirmation-question">Please review the details below before issuing the certificate.</p>
                         <div className="modal-details">
                             <div className="detail-row">
                                 <span className="detail-label">Learner:</span>
@@ -588,9 +588,9 @@ const Admin_Certificates = () => {
             {/* === DELETE CONFIRMATION MODAL === */}
             {showDeleteModal && deletingCert && (
                 <div className="modal-overlay" onClick={handleDeleteCancel}>
-                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                    <div className="modal-content confirmation-modal" onClick={(e) => e.stopPropagation()}>
                         <h2>Confirm Deletion</h2>
-                        <p>Are you sure you want to delete this certificate?</p>
+                        <p className="confirmation-message confirmation-question">Are you sure you want to delete this certificate?</p>
                         <div className="modal-details">
                             <div className="detail-row">
                                 <span className="detail-label">Certificate No:</span>

@@ -400,9 +400,9 @@ const Admin_BulkUpload = () => {
             {/* ===== ISSUE CONFIRMATION MODAL ===== */}
             {showIssueConfirmModal && (
                 <div className="modal-overlay" onClick={cancelIssue}>
-                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                    <div className="modal-content confirmation-modal" onClick={(e) => e.stopPropagation()}>
                         <h2>Confirm Bulk Issuance</h2>
-                        <p>You are about to issue certificates to <strong>{selectedCount}</strong> learner(s).</p>
+                        <p className="confirmation-message confirmation-question">You are about to issue certificates to <strong>{selectedCount}</strong> learner(s).</p>
                         <div className="modal-details" style={{ maxHeight: '200px', overflowY: 'auto' }}>
                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
                                 <thead>
@@ -421,7 +421,7 @@ const Admin_BulkUpload = () => {
                                 </tbody>
                             </table>
                         </div>
-                        <p style={{ marginTop: '12px', color: '#555' }}>This action cannot be undone. Proceed?</p>
+                        <p className="confirmation-message" style={{ marginTop: '12px' }}>This action cannot be undone. Proceed?</p>
                         <div className="modal-actions">
                             <button className="modal-btn cancel-btn" onClick={cancelIssue}>Cancel</button>
                             <button className="modal-btn confirm-btn" onClick={confirmIssue}>Yes, Issue Certificates</button>

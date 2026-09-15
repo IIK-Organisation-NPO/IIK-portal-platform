@@ -405,7 +405,7 @@
 .btn-draft,
 .btn-publish {
   padding: 10px 24px;
-  border-radius: 6px;
+  border-radius: 4px;
   font-family: 'Inter', sans-serif;
   font-size: 13px;
   font-weight: var(--font-semibold);

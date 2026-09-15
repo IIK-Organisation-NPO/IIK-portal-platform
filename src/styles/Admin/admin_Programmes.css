@@ -395,6 +395,72 @@
   gap: 12px;
 }
 
+.archive-confirmation-modal {
+  border-radius: 16px;
+  padding: 32px 40px;
+  max-width: 440px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+}
+
+.archive-confirmation-modal h2 {
+  margin: 0 0 12px 0;
+  color: #000000;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.archive-confirmation-modal .modal-content {
+  margin-bottom: 20px;
+  padding: 0;
+}
+
+.archive-confirmation-question {
+  margin: 0 0 8px 0;
+  color: #4b5563;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.archive-modal-warning {
+  margin: 12px 0 20px 0;
+  padding: 10px 14px;
+  border-left: 4px solid #ef4444;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #ef4444;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.archive-modal-cancel,
+.archive-modal-confirm {
+  padding: 10px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.archive-modal-cancel {
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+.archive-modal-cancel:hover {
+  background: #e5e7eb;
+}
+
+.archive-modal-confirm {
+  background: #000000;
+  color: #ffffff;
+}
+
+.archive-modal-confirm:hover {
+  background: #333333;
+}
+
 /* POPIA Notice */
 .popia-notice {
   margin-top: 24px;
