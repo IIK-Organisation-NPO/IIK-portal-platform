@@ -10,8 +10,8 @@ const Admin_BulkUpload = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [selectedProgramme, setSelectedProgramme] = useState('Digital Marketing');
     const [selectedStatus, setSelectedStatus] = useState('Completed');
-    const [selectedDateRange, setSelectedDateRange] = useState('Last 30 Days');
     const [selectedFiles, setSelectedFiles] = useState([]);
+    const [issueDate, setIssueDate] = useState('');
 
     // selected property to each learner
     const [selectedLearners, setSelectedLearners] = useState([
@@ -20,7 +20,6 @@ const Admin_BulkUpload = () => {
             name: 'Sibusiso Ndlovu',
             email: 'sibundlovu@example.com',
             completionDate: '24 Feb 2026',
-
             status: 'Completed',
             selected: true,
         },
@@ -29,7 +28,6 @@ const Admin_BulkUpload = () => {
             name: 'Chantel Fourie',
             email: 'chantel.f@outlook.com',
             completionDate: '23 Feb 2026',
-
             status: 'Completed',
             selected: true,
         },
@@ -38,7 +36,6 @@ const Admin_BulkUpload = () => {
             name: 'Lindiwe Khumalo',
             email: 'lindi.khumalo@mweb.co.za',
             completionDate: '25 Feb 2026',
-
             status: 'Completed',
             selected: true,
         },
@@ -47,7 +44,6 @@ const Admin_BulkUpload = () => {
             name: 'Pieter de Wet',
             email: 'pieter.dewet@telkomsa.net',
             completionDate: '22 Feb 2026',
-
             status: 'Completed',
             selected: true,
         },
@@ -56,13 +52,12 @@ const Admin_BulkUpload = () => {
             name: 'Fatima Patel',
             email: 'fatima.p@gmail.com',
             completionDate: '25 Feb 2026',
-
             status: 'Completed',
-            selected: true,
+            selected: false,
         },
     ]);
 
-    const [allSelected, setAllSelected] = useState(true);
+    const [allSelected, setAllSelected] = useState(false);
 
     // ---- Modal States ----
     const [showPreviewModal, setShowPreviewModal] = useState(false);
@@ -151,11 +146,10 @@ const Admin_BulkUpload = () => {
     };
 
     const confirmIssue = () => {
-        // Here you would call your API to issue certificates
         console.log('Issuing certificates for:', selectedLearners.filter(l => l.selected));
+        console.log('Issue date:', issueDate);
         alert(`Certificates issued to ${selectedCount} learner(s)!`);
         setShowIssueConfirmModal(false);
-        // Optionally navigate back to certificates page
         navigate('/admin/certificates');
     };
 
@@ -169,7 +163,6 @@ const Admin_BulkUpload = () => {
 
     const programmes = ['Digital Literacy', 'Microsoft 365', 'Digital Marketing', 'Risk & Compliance Excellence', 'Data Analytics'];
     const statusOptions = ['All', 'Completed', 'In Progress', 'Pending', 'Not Started'];
-    const dateRanges = ['Last 7 Days', 'Last 30 Days', 'Last 90 Days', 'Last 6 Months', 'Last Year'];
 
     return (
         <div className="admin-bulkupload-layout">
@@ -193,11 +186,11 @@ const Admin_BulkUpload = () => {
                 <main className="admin-bulkupload-content">
                     {/* Page Header */}
                     <div className="bulkupload-page-header">
-                        <h1>Bulk Certificate Issuance – By Course</h1>
+                        <h1>Bulk Certificate Issuance — By Course</h1>
                         <p>Select a programme and configure status filters to identify eligible learners. Match, preview, and dispatch standard credentials in mass.</p>
                     </div>
 
-                    {/* Filter Section */}
+                    {/* Filter Section - Only Course and Status */}
                     <div className="filter-section">
                         <div className="filter-row">
                             <div className="filter-group">
@@ -224,21 +217,9 @@ const Admin_BulkUpload = () => {
                                 </select>
                             </div>
 
-                            <div className="filter-group">
-                                <label>Date Range</label>
-                                <select
-                                    value={selectedDateRange}
-                                    onChange={(e) => setSelectedDateRange(e.target.value)}
-                                >
-                                    {dateRanges.map((range) => (
-                                        <option key={range} value={range}>{range}</option>
-                                    ))}
-                                </select>
-                            </div>
-
                             <div className="filter-group filter-actions">
                                 <button className="btn-apply-filters">
-                                    <i className="fas fa-filter"></i> Apply Filters
+                                    Apply Filters
                                 </button>
                             </div>
                         </div>
@@ -252,12 +233,28 @@ const Admin_BulkUpload = () => {
                             className="bulk-file-upload-area"
                             onClick={() => document.getElementById('bulkFileInput').click()}
                         >
-                            <i className="fas fa-cloud-upload-alt"></i>
+                            {/* Empty outlined document icon */}
+                            <svg
+                                className="upload-doc-icon"
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="#888888"
+                                strokeWidth="1.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            >
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                <polyline points="14 2 14 8 20 8" />
+                                <line x1="9" y1="13" x2="15" y2="13" />
+                                <line x1="9" y1="17" x2="15" y2="17" />
+                            </svg>
+
                             <p>Upload certificate PDF files</p>
                             <span className="upload-hint">Max 50 files, 10MB each.</span>
-                            <span className="upload-hint">Filename must match recipient emails.</span>
+                            <span className="upload-hint">Filenames must match recipient emails.</span>
                             <button className="btn-select-files">
-                                <i className="fas fa-file-pdf"></i> Select PDF Files
+                                Select PDF Files
                             </button>
                             <input
                                 type="file"
@@ -276,28 +273,42 @@ const Admin_BulkUpload = () => {
                             </div>
                         )}
 
-                        <div className="supported-formats">
-                            Supported formats: Standard PDF/A versions
+                        {/* Bottom row: Supported formats + Issue date */}
+                        <div className="bulk-upload-footer">
+                            <div className="supported-formats">
+                                Supported formats: Standard PDF/A versions
+                            </div>
+                            <div className="issue-date-wrapper">
+                                <span className="issue-date-label">Issue date</span>
+                                <input
+                                    type="date"
+                                    value={issueDate}
+                                    onChange={(e) => setIssueDate(e.target.value)}
+                                    className="issue-date-input"
+                                />
+                            </div>
                         </div>
                     </div>
 
                     {/* Filtered Recipient Preview */}
                     <div className="recipient-preview-section">
                         <div className="preview-header">
-                            <h3>Filtered Recipient Preview & Verification</h3>
-                            <div className="preview-actions">
+                            <div className="preview-header-left">
+                                <h3>Filtered Recipient Preview & Verification</h3>
                                 <span className="selected-count">{selectedCount} Selected</span>
+                            </div>
+                            <div className="preview-actions">
                                 <button
                                     className="btn-select-all"
                                     onClick={handleSelectAllEligible}
                                 >
-                                    <i className="fas fa-check-double"></i> Select All Eligible
+                                    Select All Eligible
                                 </button>
                                 <button
                                     className="btn-deselect-all"
                                     onClick={handleDeselectAll}
                                 >
-                                    <i className="fas fa-times"></i> Deselect All
+                                    Deselect All
                                 </button>
                             </div>
                         </div>
@@ -348,16 +359,16 @@ const Admin_BulkUpload = () => {
                     <div className="bulk-actions">
                         <button
                             className="btn-back"
-                            onClick={() => navigate('/admin-certificates')}
+                            onClick={() => navigate('/admin/certificates')}
                         >
-                            <i className="fas fa-arrow-left"></i> Back to Certificates
+                            Back to Certificates
                         </button>
                         <div className="bulk-actions-right">
                             <button className="btn-preview" onClick={handlePreviewSelected}>
-                                <i className="fas fa-eye"></i> Preview Selected ({selectedCount})
+                                Preview Selected ({selectedCount})
                             </button>
                             <button className="btn-issue-bulk" onClick={handleIssueCertificates}>
-                                <i className="fas fa-certificate"></i> Issue Certificates ({selectedCount})
+                                Issue Certificates ({selectedCount})
                             </button>
                         </div>
                     </div>
@@ -376,7 +387,7 @@ const Admin_BulkUpload = () => {
                                     <tr style={{ borderBottom: '1px solid #eaeaea' }}>
                                         <th style={{ textAlign: 'left', padding: '6px 8px' }}>Name</th>
                                         <th style={{ textAlign: 'left', padding: '6px 8px' }}>Email</th>
-                                        <th style={{ textAlign: 'left', padding: '6px 8px' }}>Certificate #</th>
+                                        <th style={{ textAlign: 'left', padding: '6px 8px' }}>Completion</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -384,7 +395,7 @@ const Admin_BulkUpload = () => {
                                         <tr key={learner.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
                                             <td style={{ padding: '6px 8px' }}>{learner.name}</td>
                                             <td style={{ padding: '6px 8px' }}>{learner.email}</td>
-                                            <td style={{ padding: '6px 8px' }}>{learner.certNumber}</td>
+                                            <td style={{ padding: '6px 8px' }}>{learner.completionDate}</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -402,20 +413,22 @@ const Admin_BulkUpload = () => {
                 <div className="modal-overlay" onClick={cancelIssue}>
                     <div className="modal-content confirmation-modal" onClick={(e) => e.stopPropagation()}>
                         <h2>Confirm Bulk Issuance</h2>
-                        <p className="confirmation-message confirmation-question">You are about to issue certificates to <strong>{selectedCount}</strong> learner(s).</p>
+                        <p className="confirmation-message confirmation-question">
+                            You are about to issue certificates to <strong>{selectedCount}</strong> learner(s).
+                        </p>
                         <div className="modal-details" style={{ maxHeight: '200px', overflowY: 'auto' }}>
                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
                                 <thead>
                                     <tr style={{ borderBottom: '1px solid #eaeaea' }}>
                                         <th style={{ textAlign: 'left', padding: '6px 8px' }}>Name</th>
-                                        <th style={{ textAlign: 'left', padding: '6px 8px' }}>Certificate #</th>
+                                        <th style={{ textAlign: 'left', padding: '6px 8px' }}>Email</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {selectedLearners.filter(l => l.selected).map((learner) => (
                                         <tr key={learner.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
                                             <td style={{ padding: '6px 8px' }}>{learner.name}</td>
-                                            <td style={{ padding: '6px 8px' }}>{learner.certNumber}</td>
+                                            <td style={{ padding: '6px 8px' }}>{learner.email}</td>
                                         </tr>
                                     ))}
                                 </tbody>
