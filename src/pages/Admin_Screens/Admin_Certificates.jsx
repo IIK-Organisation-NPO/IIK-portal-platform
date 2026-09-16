@@ -522,27 +522,13 @@ const Admin_Certificates = () => {
                             </div>
                             <div className="detail-row">
                                 <span className="detail-label">Learner:</span>
-                                <input
-                                    type="text"
-                                    name="learner"
-                                    value={editFormData.learner}
-                                    onChange={handleEditFormChange}
-                                    className="modal-input"
-                                />
+                                <span className="detail-value">{editingCert.learner}</span>
                             </div>
                             <div className="detail-row">
                                 <span className="detail-label">Programme:</span>
-                                <select
-                                    name="programme"
-                                    value={editFormData.programme}
-                                    onChange={handleEditFormChange}
-                                    className="modal-input"
-                                >
-                                    {programmes.map((prog) => (
-                                        <option key={prog} value={prog}>{prog}</option>
-                                    ))}
-                                </select>
+                                <span className="detail-value">{editingCert.programme}</span>
                             </div>
+
                             <div className="detail-row">
                                 <span className="detail-label">Issue Date:</span>
                                 <input
