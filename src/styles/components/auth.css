@@ -485,4 +485,68 @@
   .header-nav a {
     font-size: 0.85rem;
   }
+
+  /* ============================================================ */
+  /* TOAST POPUP (Referenced from Admin_AccountSettings)          */
+  /* ============================================================ */
+  .toast-message {
+    position: fixed;
+    top: 2rem; /* Positioned slightly lower for login page context */
+    left: 50%;
+    transform: translateX(-50%);
+    background: #0f172a; /* Dark theme matching Admin */
+    color: #ffffff;
+    padding: 0.875rem 1.5rem;
+    border-radius: 0.625rem;
+    font-family: "Inter", sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.4;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.35);
+    z-index: 10000;
+    max-width: 90vw;
+    text-align: center;
+    pointer-events: none;
+  }
+
+  /* Enter animation */
+  .toast-enter {
+    animation: toastIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  /* Exit animation */
+  .toast-exit {
+    animation: toastOut 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  @keyframes toastIn {
+    from {
+      opacity: 0;
+      transform: translateX(-50%) translateY(-24px) scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0) scale(1);
+    }
+  }
+
+  @keyframes toastOut {
+    from {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0) scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: translateX(-50%) translateY(-16px) scale(0.98);
+    }
+  }
+
+  /* Responsive adjustments for Toast */
+  @media (max-width: 768px) {
+    .toast-message {
+      top: 1.5rem;
+      font-size: 13px;
+      padding: 0.75rem 1.25rem;
+    }
+  }
 }
