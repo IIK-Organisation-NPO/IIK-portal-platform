@@ -13,65 +13,22 @@ const Admin_BulkUpload = () => {
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [issueDate, setIssueDate] = useState('');
 
-    // selected property to each learner
     const [selectedLearners, setSelectedLearners] = useState([
-        {
-            id: 1,
-            name: 'Sibusiso Ndlovu',
-            email: 'sibundlovu@example.com',
-            completionDate: '24 Feb 2026',
-            status: 'Completed',
-            selected: true,
-        },
-        {
-            id: 2,
-            name: 'Chantel Fourie',
-            email: 'chantel.f@outlook.com',
-            completionDate: '23 Feb 2026',
-            status: 'Completed',
-            selected: true,
-        },
-        {
-            id: 3,
-            name: 'Lindiwe Khumalo',
-            email: 'lindi.khumalo@mweb.co.za',
-            completionDate: '25 Feb 2026',
-            status: 'Completed',
-            selected: true,
-        },
-        {
-            id: 4,
-            name: 'Pieter de Wet',
-            email: 'pieter.dewet@telkomsa.net',
-            completionDate: '22 Feb 2026',
-            status: 'Completed',
-            selected: true,
-        },
-        {
-            id: 5,
-            name: 'Fatima Patel',
-            email: 'fatima.p@gmail.com',
-            completionDate: '25 Feb 2026',
-            status: 'Completed',
-            selected: false,
-        },
+        { id: 1, name: 'Sibusiso Ndlovu', email: 'sibu.ndlovu@example.com', completionDate: '24 Feb 2026', status: 'Completed', selected: true },
+        { id: 2, name: 'Chantel Fourie', email: 'chantel.f@outlook.com', completionDate: '23 Feb 2026', status: 'Completed', selected: true },
+        { id: 3, name: 'Lindiwe Khumalo', email: 'lindi.khumalo@mweb.co.za', completionDate: '25 Feb 2026', status: 'Completed', selected: true },
+        { id: 4, name: 'Pieter de Wet', email: 'pieter.dewet@telkomsa.net', completionDate: '22 Feb 2026', status: 'Completed', selected: true },
+        { id: 5, name: 'Fatima Patel', email: 'fatima.p@gmail.com', completionDate: '25 Feb 2026', status: 'Completed', selected: false },
     ]);
 
     const [allSelected, setAllSelected] = useState(false);
-
-    // ---- Modal States ----
     const [showPreviewModal, setShowPreviewModal] = useState(false);
     const [showIssueConfirmModal, setShowIssueConfirmModal] = useState(false);
 
     const adminName = 'Admin User';
 
-    const toggleMobileMenu = () => {
-        setIsMobileMenuOpen(!isMobileMenuOpen);
-    };
-
-    const closeMobileMenu = () => {
-        setIsMobileMenuOpen(false);
-    };
+    const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
+    const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
     const handleFileSelect = (e) => {
         const files = Array.from(e.target.files);
@@ -83,65 +40,36 @@ const Admin_BulkUpload = () => {
     };
 
     const handleSelectAllEligible = () => {
-        setSelectedLearners(prev =>
-            prev.map(learner => ({
-                ...learner,
-                selected: true
-            }))
-        );
+        setSelectedLearners(prev => prev.map(l => ({ ...l, selected: true })));
         setAllSelected(true);
     };
 
-    // Deselect all learners
     const handleDeselectAll = () => {
-        setSelectedLearners(prev =>
-            prev.map(learner => ({
-                ...learner,
-                selected: false
-            }))
-        );
+        setSelectedLearners(prev => prev.map(l => ({ ...l, selected: false })));
         setAllSelected(false);
     };
 
     const handleSelectLearner = (id) => {
         setSelectedLearners(prev =>
-            prev.map(learner =>
-                learner.id === id
-                    ? { ...learner, selected: !learner.selected }
-                    : learner
-            )
+            prev.map(l => l.id === id ? { ...l, selected: !l.selected } : l)
         );
     };
 
     const handleSelectAll = () => {
         const allChecked = !allSelected;
         setAllSelected(allChecked);
-        setSelectedLearners(prev =>
-            prev.map(learner => ({
-                ...learner,
-                selected: allChecked
-            }))
-        );
+        setSelectedLearners(prev => prev.map(l => ({ ...l, selected: allChecked })));
     };
 
-    //  Count selected learners
     const selectedCount = selectedLearners.filter(l => l.selected).length;
 
-    // ---- Preview Selected ----
     const handlePreviewSelected = () => {
-        if (selectedCount === 0) {
-            alert('No learners selected.');
-            return;
-        }
+        if (selectedCount === 0) { alert('No learners selected.'); return; }
         setShowPreviewModal(true);
     };
 
-    // ---- Issue Certificates ----
     const handleIssueCertificates = () => {
-        if (selectedCount === 0) {
-            alert('No learners selected.');
-            return;
-        }
+        if (selectedCount === 0) { alert('No learners selected.'); return; }
         setShowIssueConfirmModal(true);
     };
 
@@ -153,20 +81,14 @@ const Admin_BulkUpload = () => {
         navigate('/admin/certificates');
     };
 
-    const cancelIssue = () => {
-        setShowIssueConfirmModal(false);
-    };
-
-    const closePreview = () => {
-        setShowPreviewModal(false);
-    };
+    const cancelIssue = () => setShowIssueConfirmModal(false);
+    const closePreview = () => setShowPreviewModal(false);
 
     const programmes = ['Digital Literacy', 'Microsoft 365', 'Digital Marketing', 'Risk & Compliance Excellence', 'Data Analytics'];
     const statusOptions = ['All', 'Completed', 'In Progress', 'Pending', 'Not Started'];
 
     return (
         <div className="admin-bulkupload-layout">
-            {/* Header */}
             <Admin_Header
                 adminName={adminName}
                 onMenuToggle={toggleMobileMenu}
@@ -175,14 +97,12 @@ const Admin_BulkUpload = () => {
             />
 
             <div className="admin-bulkupload-body">
-                {/* Sidebar */}
                 <Admin_Sidebar
                     active="certificates"
                     isMobileOpen={isMobileMenuOpen}
                     onClose={closeMobileMenu}
                 />
 
-                {/* Main Content */}
                 <main className="admin-bulkupload-content">
                     {/* Page Header */}
                     <div className="bulkupload-page-header">
@@ -190,11 +110,11 @@ const Admin_BulkUpload = () => {
                         <p>Select a programme and configure status filters to identify eligible learners. Match, preview, and dispatch standard credentials in mass.</p>
                     </div>
 
-                    {/* Filter Section - Only Course and Status */}
+                    {/* Filter Section */}
                     <div className="filter-section">
                         <div className="filter-row">
                             <div className="filter-group">
-                                <label>Course / Programme</label>
+                                <label>COURSE / PROGRAMME</label>
                                 <select
                                     value={selectedProgramme}
                                     onChange={(e) => setSelectedProgramme(e.target.value)}
@@ -206,7 +126,7 @@ const Admin_BulkUpload = () => {
                             </div>
 
                             <div className="filter-group">
-                                <label>Completion Status</label>
+                                <label>COMPLETION STATUS</label>
                                 <select
                                     value={selectedStatus}
                                     onChange={(e) => setSelectedStatus(e.target.value)}
@@ -218,9 +138,7 @@ const Admin_BulkUpload = () => {
                             </div>
 
                             <div className="filter-group filter-actions">
-                                <button className="btn-apply-filters">
-                                    Apply Filters
-                                </button>
+                                <button className="btn-apply-filters">Apply Filters</button>
                             </div>
                         </div>
                     </div>
@@ -233,29 +151,11 @@ const Admin_BulkUpload = () => {
                             className="bulk-file-upload-area"
                             onClick={() => document.getElementById('bulkFileInput').click()}
                         >
-                            {/* Empty outlined document icon */}
-                            <svg
-                                className="upload-doc-icon"
-                                xmlns="http://www.w3.org/2000/svg"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="#888888"
-                                strokeWidth="1.5"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                            >
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                                <polyline points="14 2 14 8 20 8" />
-                                <line x1="9" y1="13" x2="15" y2="13" />
-                                <line x1="9" y1="17" x2="15" y2="17" />
-                            </svg>
-
+                            <i className="far fa-file-alt upload-doc-icon"></i>
                             <p>Upload certificate PDF files</p>
                             <span className="upload-hint">Max 50 files, 10MB each.</span>
                             <span className="upload-hint">Filenames must match recipient emails.</span>
-                            <button className="btn-select-files">
-                                Select PDF Files
-                            </button>
+                            <button className="btn-select-files">Select PDF Files</button>
                             <input
                                 type="file"
                                 id="bulkFileInput"
@@ -279,13 +179,16 @@ const Admin_BulkUpload = () => {
                                 Supported formats: Standard PDF/A versions
                             </div>
                             <div className="issue-date-wrapper">
-                                <span className="issue-date-label">Issue date</span>
                                 <input
                                     type="date"
+                                    id="issueDate"
                                     value={issueDate}
                                     onChange={(e) => setIssueDate(e.target.value)}
-                                    className="issue-date-input"
+                                    className={`issue-date-input ${issueDate ? 'has-value' : ''}`}
                                 />
+                                {!issueDate && (
+                                    <span className="issue-date-placeholder">Issue date</span>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -298,16 +201,10 @@ const Admin_BulkUpload = () => {
                                 <span className="selected-count">{selectedCount} Selected</span>
                             </div>
                             <div className="preview-actions">
-                                <button
-                                    className="btn-select-all"
-                                    onClick={handleSelectAllEligible}
-                                >
+                                <button className="btn-select-all" onClick={handleSelectAllEligible}>
                                     Select All Eligible
                                 </button>
-                                <button
-                                    className="btn-deselect-all"
-                                    onClick={handleDeselectAll}
-                                >
+                                <button className="btn-deselect-all" onClick={handleDeselectAll}>
                                     Deselect All
                                 </button>
                             </div>
@@ -357,10 +254,7 @@ const Admin_BulkUpload = () => {
 
                     {/* Action Buttons */}
                     <div className="bulk-actions">
-                        <button
-                            className="btn-back"
-                            onClick={() => navigate('/admin/certificates')}
-                        >
+                        <button className="btn-back" onClick={() => navigate('/admin-certificates')}>
                             Back to Certificates
                         </button>
                         <div className="bulk-actions-right">
@@ -375,7 +269,7 @@ const Admin_BulkUpload = () => {
                 </main>
             </div>
 
-            {/* ===== PREVIEW SELECTED MODAL ===== */}
+            {/* Preview Modal */}
             {showPreviewModal && (
                 <div className="modal-overlay" onClick={closePreview}>
                     <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -408,12 +302,12 @@ const Admin_BulkUpload = () => {
                 </div>
             )}
 
-            {/* ===== ISSUE CONFIRMATION MODAL ===== */}
+            {/* Issue Confirmation Modal */}
             {showIssueConfirmModal && (
                 <div className="modal-overlay" onClick={cancelIssue}>
                     <div className="modal-content confirmation-modal" onClick={(e) => e.stopPropagation()}>
                         <h2>Confirm Bulk Issuance</h2>
-                        <p className="confirmation-message confirmation-question">
+                        <p className="confirmation-question">
                             You are about to issue certificates to <strong>{selectedCount}</strong> learner(s).
                         </p>
                         <div className="modal-details" style={{ maxHeight: '200px', overflowY: 'auto' }}>
@@ -434,7 +328,7 @@ const Admin_BulkUpload = () => {
                                 </tbody>
                             </table>
                         </div>
-                        <p className="confirmation-message" style={{ marginTop: '12px' }}>This action cannot be undone. Proceed?</p>
+                        <p style={{ marginTop: '12px' }}>This action cannot be undone. Proceed?</p>
                         <div className="modal-actions">
                             <button className="modal-btn cancel-btn" onClick={cancelIssue}>Cancel</button>
                             <button className="modal-btn confirm-btn" onClick={confirmIssue}>Yes, Issue Certificates</button>
