@@ -64,6 +64,8 @@ const AdminProgrammes = () => {
   ]);
   const [editingProgramme, setEditingProgramme] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [programmeToDelete, setProgrammeToDelete] = useState(null);
+  const [editName, setEditName] = useState('');
   const [editStatus, setEditStatus] = useState('');
 
   useEffect(() => {
@@ -145,6 +147,7 @@ const AdminProgrammes = () => {
   // Handle edit
   const handleEdit = (programme) => {
     setEditingProgramme(programme);
+    setEditName(programme.name);
     setEditStatus(programme.status);
     setShowEditModal(true);
   };
@@ -153,11 +156,16 @@ const AdminProgrammes = () => {
   const handleSaveEdit = () => {
     setProgrammes(programmes.map(p => 
       p.id === editingProgramme.id
-        ? { ...p, status: editStatus, enrolled: ['Draft', 'Upcoming'].includes(editStatus) ? 0 : p.enrolled }
+        ? { ...p, name: editName.trim() || p.name, status: editStatus, enrolled: ['Draft', 'Upcoming'].includes(editStatus) ? 0 : p.enrolled }
         : p
     ));
     setShowEditModal(false);
     setEditingProgramme(null);
+  };
+
+  const handleDeleteProgramme = () => {
+    setProgrammes(programmes.filter(programme => programme.id !== programmeToDelete.id));
+    setProgrammeToDelete(null);
   };
 
   // Handle create programme
@@ -322,6 +330,12 @@ const AdminProgrammes = () => {
                           >
                             {programme.archived ? 'Unarchive' : 'Archive'}
                           </button>
+                          <button 
+                            className="btn-delete"
+                            onClick={() => setProgrammeToDelete(programme)}
+                          >
+                            Delete
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -339,9 +353,16 @@ const AdminProgrammes = () => {
           {showEditModal && (
             <div className="modal-overlay">
               <div className="modal">
-                <h2>Edit Programme Status</h2>
+                <h2>Edit Programme</h2>
                 <div className="modal-content">
-                  <p><strong>Programme:</strong> {editingProgramme?.name}</p>
+                  <div className="form-group">
+                    <label>Programme Name</label>
+                    <input
+                      type="text"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                    />
+                  </div>
                   <div className="form-group">
                     <label>Status</label>
                     <select 
@@ -360,6 +381,26 @@ const AdminProgrammes = () => {
                   </button>
                   <button className="btn-primary" onClick={handleSaveEdit}>
                     Save Changes
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {programmeToDelete && (
+            <div className="modal-overlay">
+              <div className="modal archive-confirmation-modal" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
+                <h2 id="delete-modal-title">Delete Programme?</h2>
+                <div className="modal-content">
+                  <p className="archive-confirmation-question">Are you sure you want to delete <strong>{programmeToDelete.name}</strong>?</p>
+                  <p className="archive-modal-warning delete-modal-warning">This action cannot be reversed.</p>
+                </div>
+                <div className="modal-actions">
+                  <button className="archive-modal-cancel" onClick={() => setProgrammeToDelete(null)}>
+                    Cancel
+                  </button>
+                  <button className="delete-modal-confirm" onClick={handleDeleteProgramme}>
+                    Delete Programme
                   </button>
                 </div>
               </div>

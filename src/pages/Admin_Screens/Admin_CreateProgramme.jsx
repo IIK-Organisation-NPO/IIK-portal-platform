@@ -36,13 +36,6 @@ const Admin_CreateProgramme = () => {
     ]);
     const navigate = useNavigate();
 
-    // Status options for dropdown
-    const statusOptions = [
-        'Upcoming',
-        'Active',
-        'Draft'
-    ];
-
     const toggleMobileMenu = () => {
         setIsMobileMenuOpen(!isMobileMenuOpen);
     };
@@ -342,24 +335,6 @@ const Admin_CreateProgramme = () => {
                             </div>
                         </div>
 
-                        {/* Status Sidebar */}
-                        <div className="admin-form-sidebar">
-                            <div className="admin-status-card">
-                                <h3 className="admin-status-title">Programme Status</h3>
-                                <div className="admin-status-display">
-                                    <span className="admin-status-label">STATUS</span>
-                                    <select 
-                                        className="admin-status-select"
-                                        value={programmeData.status}
-                                        onChange={(e) => handleInputChange('status', e.target.value)}
-                                    >
-                                        {statusOptions.map((option, index) => (
-                                            <option key={index} value={option}>{option}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
                     </div>
 
                     {/* Draft Confirmation Modal */}

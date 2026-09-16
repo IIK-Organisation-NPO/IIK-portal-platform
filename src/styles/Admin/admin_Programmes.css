@@ -312,6 +312,21 @@
   background: #333333;
 }
 
+.btn-delete {
+  background: #dc2626;
+  color: #ffffff;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-delete:hover {
+  background: #b91c1c;
+}
+
 .btn-unarchive {
   background: #16a34a;
   color: #ffffff;
@@ -459,6 +474,28 @@
 
 .archive-modal-confirm:hover {
   background: #333333;
+}
+
+.delete-modal-warning {
+  border-left-color: #dc2626;
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.delete-modal-confirm {
+  padding: 10px 24px;
+  border: none;
+  border-radius: 8px;
+  background: #dc2626;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.delete-modal-confirm:hover {
+  background: #b91c1c;
 }
 
 /* POPIA Notice */
