@@ -11,6 +11,7 @@ import {
   FaEyeSlash,
   FaGoogle,
   FaVenusMars,
+  FaMapMarkerAlt, // Added missing icon
 } from "react-icons/fa";
 import Footer from "../common/Footer";
 import Input from "../common/Input";
@@ -25,6 +26,7 @@ const Signup = () => {
     phone: "",
     gender: "",
     idNumber: "",
+    physicalAddress: "", // Added Physical Address
     password: "",
     confirmPassword: "",
   });
@@ -70,6 +72,8 @@ const Signup = () => {
     if (!formData.idNumber.trim()) {
       newErrors.idNumber = "ID/Passport number is required";
     }
+
+    // Physical Address is OPTIONAL, so no validation check here
 
     if (!formData.password) {
       newErrors.password = "Password is required";
@@ -241,6 +245,29 @@ const Signup = () => {
                 )}
               </div>
             </div>
+
+            {/* --- ADDED PHYSICAL ADDRESS FIELD --- */}
+            <div className="form-row">
+              <div className="form-group full-width">
+                <label htmlFor="physicalAddress">Physical Address</label>
+                <div className="input-wrapper">
+                  <FaMapMarkerAlt className="input-icon" />
+                  <input
+                    type="text"
+                    id="physicalAddress"
+                    name="physicalAddress"
+                    value={formData.physicalAddress}
+                    onChange={handleChange}
+                    placeholder="e.g. 12 Rosebank Road, Johannesburg, 2196"
+                    className={errors.physicalAddress ? "error" : ""}
+                  />
+                </div>
+                {errors.physicalAddress && (
+                  <span className="error-text">{errors.physicalAddress}</span>
+                )}
+              </div>
+            </div>
+            {/* ------------------------------------ */}
 
             <div className="form-row">
               <div className="form-group">
