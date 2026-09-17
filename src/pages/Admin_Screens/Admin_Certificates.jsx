@@ -929,9 +929,9 @@ const Admin_Certificates = () => {
             {/* ===== ISSUANCE CONFIRMATION MODAL ===== */}
             {showConfirmModal && confirmData && (
                 <div className="modal-overlay" onClick={handleCancelIssue}>
-                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                    <div className="modal-content confirmation-modal" onClick={(e) => e.stopPropagation()}>
                         <h2>Confirm Certificate Issuance</h2>
-                        <p>Please review the details below before issuing the certificate.</p>
+                        <p className="confirmation-message confirmation-question">Please review the details below before issuing the certificate.</p>
                         <div className="modal-details">
                             <div className="detail-row">
                                 <span className="detail-label">Learner:</span>
@@ -1027,6 +1027,7 @@ const Admin_Certificates = () => {
                             </div>
                             <div className="detail-row">
                                 <span className="detail-label">Learner:</span>
+<<<<<<< HEAD
                                 <input
                                     type="text"
                                     value={selectedCertificate.learner_name
@@ -1066,7 +1067,15 @@ const Admin_Certificates = () => {
                                         </option>
                                     ))}
                                 </select>
+=======
+                                <span className="detail-value">{editingCert.learner}</span>
                             </div>
+                            <div className="detail-row">
+                                <span className="detail-label">Programme:</span>
+                                <span className="detail-value">{editingCert.programme}</span>
+>>>>>>> c5d32a3dd518092c21dfda9b3cbb92617a3ec011
+                            </div>
+
                             <div className="detail-row">
                                 <span className="detail-label">Issue Date:</span>
                                 <input
@@ -1129,10 +1138,14 @@ const Admin_Certificates = () => {
             {/* ===== DELETE CONFIRMATION MODAL ===== */}
             {showDeleteModal && deletingCertificate && (
                 <div className="modal-overlay" onClick={handleDeleteCancel}>
-                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                    <div className="modal-content confirmation-modal" onClick={(e) => e.stopPropagation()}>
                         <h2>Confirm Deletion</h2>
+<<<<<<< HEAD
                         <p>Are you sure you want to delete this certificate?</p>
 
+=======
+                        <p className="confirmation-message confirmation-question">Are you sure you want to delete this certificate?</p>
+>>>>>>> c5d32a3dd518092c21dfda9b3cbb92617a3ec011
                         <div className="modal-details">
                             <div className="detail-row">
                                 <span className="detail-label">Certificate No:</span>

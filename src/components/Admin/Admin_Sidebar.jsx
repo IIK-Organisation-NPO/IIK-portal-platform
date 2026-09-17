@@ -15,7 +15,7 @@ const Admin_Sidebar = ({ active = 'dashboard', isMobileOpen, onClose }) => {
         { id: 'learners', label: 'Learners', icon: 'fa-users', path: '/admin/learners' },
         { id: 'certificates', label: 'Certificates', icon: 'fa-certificate', path: '/admin-certificates' },
         { id: 'programmes', label: 'Programmes', icon: 'fa-book-open', path: '/admin/programmes' },
-        { id: 'blog', label: 'Blog & News', icon: 'fa-newspaper', path: '/admin/blog' },
+        { id: 'blog', label: 'Blog & News', icon: 'fa-newspaper', path: '/admin/blog-management' },
         { id: 'staff', label: 'Staff Management', icon: 'fa-user-cog', path: '/admin/staff' },
         { id: 'settings', label: 'Settings', icon: 'fa-cog', path: '/admin/settings' },
         { id: 'logout', label: 'Logout', icon: 'fa-sign-out-alt', path: '#', isLogout: true },
@@ -94,7 +94,7 @@ const Admin_Sidebar = ({ active = 'dashboard', isMobileOpen, onClose }) => {
             {/* Logout Confirmation Modal */}
             {showLogoutModal && (
                 <div className="logout-modal-overlay" onClick={cancelLogout}>
-                    <div className="logout-modal-content" onClick={(e) => e.stopPropagation()}>
+                    <div className="logout-modal-content confirmation-modal" onClick={(e) => e.stopPropagation()}>
                         {/* Modal Header */}
                         <div className="logout-modal-header">
                             <h2>Confirm Logout</h2>
@@ -105,8 +105,8 @@ const Admin_Sidebar = ({ active = 'dashboard', isMobileOpen, onClose }) => {
                         
                         {/* Modal Body */}
                         <div className="logout-modal-body">
-                            <p>Are you sure you want to logout?</p>
-                            <p className="logout-modal-warning">
+                            <p className="confirmation-message confirmation-question">Are you sure you want to logout?</p>
+                            <p className="logout-modal-warning confirmation-message">
                                 You will be redirected to the login page and will need to sign in again to access the admin panel.
                             </p>
                         </div>

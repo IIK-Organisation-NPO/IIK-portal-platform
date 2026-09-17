@@ -1,0 +1,502 @@
+/* Learner_Programmes.css */
+
+/* ===== Import Fonts ===== */
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Text:ital@0;1&family=Geist:wght@100..900&display=swap');
+
+/* ===== Layout ===== */
+.programmes-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: #f8fafc;
+}
+
+.programmes-body {
+  display: flex;
+  flex: 1;
+  min-height: calc(100vh - 70px);
+}
+
+/* ===== Main Content ===== */
+.programmes-page {
+  flex: 1;
+  min-width: 0;
+  background: #f8fafc;
+  min-height: calc(100vh - 70px);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===== Hero Section - Left Aligned ===== */
+.programmes-hero {
+  background: #ffffff;
+  padding: 2rem 3rem 1.5rem;
+  text-align: left;
+  border-bottom: 1px solid #e5e5e5;
+  flex-shrink: 0;
+}
+
+.programmes-hero .hero-content {
+  max-width: 100%;
+  margin: 0;
+}
+
+.programmes-hero h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+  color: #0f172a;
+  font-family: 'Geist', sans-serif;
+}
+
+.programmes-hero .hero-subtitle {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #64748b;
+  font-family: 'Geist', sans-serif;
+  max-width: 100%;
+}
+
+/* ===== Filter Section ===== */
+.programmes-filter {
+  background: #ffffff;
+  padding: 1rem 3rem;
+  border-bottom: 1px solid #e5e5e5;
+  flex-shrink: 0;
+}
+
+.programmes-filter .filter-content {
+  max-width: 100%;
+  margin: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.programmes-filter .filter-left {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.category-filters {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.category-filters .filter-btn {
+  padding: 0.4rem 1.2rem;
+  border: none;
+  background: transparent;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+  border-radius: 50px;
+  transition: all 0.2s ease;
+  font-family: 'Geist', sans-serif;
+  white-space: nowrap;
+}
+
+.category-filters .filter-btn:hover {
+  color: #0f172a;
+  background: #f1f5f9;
+}
+
+.category-filters .filter-btn.active {
+  color: #ffffff;
+  background: #0f172a;
+}
+
+.programmes-filter .filter-right {
+  flex-shrink: 0;
+  min-width: 280px;
+}
+
+.programmes-filter .search-input {
+  padding: 0.5rem 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-family: 'Geist', sans-serif;
+  color: #0f172a;
+  background: #f8fafc;
+  width: 100%;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.programmes-filter .search-input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  background: #ffffff;
+}
+
+.programmes-filter .search-input::placeholder {
+  color: #94a3b8;
+}
+
+/* ===== Programmes Grid ===== */
+.programmes-grid-section {
+  padding: 2rem 3rem 3rem;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.programmes-grid-section .grid-content {
+  max-width: 100%;
+  margin: 0;
+}
+
+.programmes-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+
+/* ===== Programme Card ===== */
+.programme-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.programme-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  transform: translateY(-2px);
+}
+
+/* Image Placeholder */
+.programme-card .programme-image-placeholder {
+  width: 100%;
+  height: 160px;
+  background: #e8edf3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.programme-card .placeholder-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  color: #94a3b8;
+  font-size: 0.8rem;
+  font-family: 'Geist', sans-serif;
+}
+
+.programme-card .placeholder-content svg {
+  opacity: 0.4;
+}
+
+/* Programme Content */
+.programme-card .programme-content {
+  padding: 1.25rem 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.programme-card h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0 0 0.5rem 0;
+  font-family: 'Geist', sans-serif;
+  line-height: 1.3;
+}
+
+.programme-card .programme-description {
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: #64748b;
+  margin: 0;
+  font-family: 'Geist', sans-serif;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+.programme-card .read-more-button {
+  align-self: flex-start;
+  margin: 0.5rem 0 1rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #0f172a;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: 'Geist', sans-serif;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.programme-card .read-more-button:hover {
+  color: #475569;
+}
+
+.programme-card .programme-meta {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.programme-card .duration {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #475569;
+  background: #f1f5f9;
+  padding: 0.2rem 0.75rem;
+  border-radius: 0;
+  font-family: 'Geist', sans-serif;
+}
+
+.programme-card .btn-interest {
+  padding: 0.5rem 1.5rem;
+  border: 2px solid #000000;
+  background: #000000;
+  color: #ffffff;
+  border-radius: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: 'Geist', sans-serif;
+  width: 100%;
+}
+
+.programme-card .btn-interest:hover {
+  background: #222222;
+  color: #ffffff;
+}
+
+.programme-card .btn-interest.interested {
+  background: #000000;
+  border-color: #000000;
+  color: #ffffff;
+}
+
+.programme-card .btn-interest.interested:hover {
+  background: #222222;
+  border-color: #222222;
+}
+
+/* ===== Programme Details Modal ===== */
+.programme-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.programme-modal {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.2);
+}
+
+.programme-modal-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 1;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.programme-modal-close:hover {
+  background: #f1f5f9;
+}
+
+.programme-modal-image {
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e8edf3;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  font-family: 'Geist', sans-serif;
+}
+
+.programme-modal-content {
+  padding: 1.5rem;
+}
+
+.programme-modal-content h2 {
+  margin: 0 0 0.75rem;
+  color: #0f172a;
+  font-size: 1.35rem;
+  font-family: 'Geist', sans-serif;
+}
+
+.programme-modal-content p {
+  margin: 0 0 1.25rem;
+  color: #64748b;
+  font-size: 0.95rem;
+  line-height: 1.7;
+  font-family: 'Geist', sans-serif;
+}
+
+.programme-modal-content .duration {
+  display: inline-block;
+}
+
+/* ===== No Results ===== */
+.no-results {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 3rem 2rem;
+  color: #94a3b8;
+  font-size: 1.1rem;
+  font-family: 'Geist', sans-serif;
+}
+
+/* ===== Responsive Design ===== */
+@media (max-width: 1200px) {
+  .programmes-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+}
+
+@media (max-width: 1024px) {
+  .programmes-page {
+    margin-left: 0;
+  }
+
+  .programmes-hero {
+    padding: 1.5rem 1.5rem 1.25rem;
+  }
+
+  .programmes-filter {
+    padding: 0.75rem 1.5rem;
+  }
+
+  .programmes-grid-section {
+    padding: 1.5rem 1.5rem 2rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .programmes-hero h1 {
+    font-size: 1.75rem;
+  }
+
+  .programmes-hero .hero-subtitle {
+    font-size: 0.95rem;
+  }
+
+  .programmes-filter .filter-content {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .programmes-filter .filter-left {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .category-filters {
+    justify-content: center;
+  }
+
+  .programmes-filter .filter-right {
+    min-width: unset;
+    width: 100%;
+  }
+
+  .programmes-filter .search-input {
+    width: 100%;
+  }
+
+  .programmes-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .programme-card .programme-image-placeholder {
+    height: 120px;
+  }
+}
+
+@media (max-width: 480px) {
+  .programmes-hero {
+    padding: 1.25rem 1rem 1rem;
+  }
+
+  .programmes-hero h1 {
+    font-size: 1.5rem;
+  }
+
+  .programmes-hero .hero-subtitle {
+    font-size: 0.9rem;
+  }
+
+  .programmes-filter {
+    padding: 0.75rem 1rem;
+  }
+
+  .programmes-grid-section {
+    padding: 1rem 1rem 1.5rem;
+  }
+
+  .programmes-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .category-filters .filter-btn {
+    font-size: 0.75rem;
+    padding: 0.3rem 0.8rem;
+  }
+
+  .programme-card .programme-image-placeholder {
+    height: 100px;
+  }
+
+  .programme-card .programme-content {
+    padding: 1rem;
+  }
+
+  .programme-card h3 {
+    font-size: 0.95rem;
+  }
+
+  .programme-card .programme-description {
+    font-size: 0.8rem;
+  }
+
+  .programme-card .btn-interest {
+    font-size: 0.8rem;
+    padding: 0.4rem 1rem;
+  }
+}

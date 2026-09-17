@@ -11,8 +11,8 @@ const Admin_BulkUpload = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [selectedProgramme, setSelectedProgramme] = useState('');
     const [selectedStatus, setSelectedStatus] = useState('Completed');
-    const [selectedDateRange, setSelectedDateRange] = useState('Last 30 Days');
     const [selectedFiles, setSelectedFiles] = useState([]);
+<<<<<<< HEAD
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [successMessage, setSuccessMessage] = useState('');
@@ -26,6 +26,19 @@ const Admin_BulkUpload = () => {
     const [allSelected, setAllSelected] = useState(false);
 
     // Preview & confirmation modals
+=======
+    const [issueDate, setIssueDate] = useState('');
+
+    const [selectedLearners, setSelectedLearners] = useState([
+        { id: 1, name: 'Sibusiso Ndlovu', email: 'sibu.ndlovu@example.com', completionDate: '24 Feb 2026', status: 'Completed', selected: true },
+        { id: 2, name: 'Chantel Fourie', email: 'chantel.f@outlook.com', completionDate: '23 Feb 2026', status: 'Completed', selected: true },
+        { id: 3, name: 'Lindiwe Khumalo', email: 'lindi.khumalo@mweb.co.za', completionDate: '25 Feb 2026', status: 'Completed', selected: true },
+        { id: 4, name: 'Pieter de Wet', email: 'pieter.dewet@telkomsa.net', completionDate: '22 Feb 2026', status: 'Completed', selected: true },
+        { id: 5, name: 'Fatima Patel', email: 'fatima.p@gmail.com', completionDate: '25 Feb 2026', status: 'Completed', selected: false },
+    ]);
+
+    const [allSelected, setAllSelected] = useState(false);
+>>>>>>> c5d32a3dd518092c21dfda9b3cbb92617a3ec011
     const [showPreviewModal, setShowPreviewModal] = useState(false);
     const [showIssueConfirmModal, setShowIssueConfirmModal] = useState(false);
 
@@ -33,13 +46,8 @@ const Admin_BulkUpload = () => {
     const statusOptions = ['All', 'Completed', 'In Progress', 'Withdrawn'];
     const dateRanges = ['Last 7 Days', 'Last 30 Days', 'Last 90 Days', 'Last 6 Months', 'Last Year'];
 
-    const toggleMobileMenu = () => {
-        setIsMobileMenuOpen(!isMobileMenuOpen);
-    };
-
-    const closeMobileMenu = () => {
-        setIsMobileMenuOpen(false);
-    };
+    const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
+    const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
     // ============================================
     // PLURALIZATION HELPER
@@ -180,6 +188,7 @@ const Admin_BulkUpload = () => {
     // SELECT ALL ELIGIBLE
     // ============================================
     const handleSelectAllEligible = () => {
+<<<<<<< HEAD
         setFilteredLearners(prev =>
             prev.map(learner => ({
                 ...learner,
@@ -199,6 +208,14 @@ const Admin_BulkUpload = () => {
                 selected: false
             }))
         );
+=======
+        setSelectedLearners(prev => prev.map(l => ({ ...l, selected: true })));
+        setAllSelected(true);
+    };
+
+    const handleDeselectAll = () => {
+        setSelectedLearners(prev => prev.map(l => ({ ...l, selected: false })));
+>>>>>>> c5d32a3dd518092c21dfda9b3cbb92617a3ec011
         setAllSelected(false);
     };
 
@@ -206,12 +223,17 @@ const Admin_BulkUpload = () => {
     // SELECT INDIVIDUAL LEARNER
     // ============================================
     const handleSelectLearner = (id) => {
+<<<<<<< HEAD
         setFilteredLearners(prev =>
             prev.map(learner =>
                 learner.id === id
                     ? { ...learner, selected: !learner.selected }
                     : learner
             )
+=======
+        setSelectedLearners(prev =>
+            prev.map(l => l.id === id ? { ...l, selected: !l.selected } : l)
+>>>>>>> c5d32a3dd518092c21dfda9b3cbb92617a3ec011
         );
 
         const allChecked = filteredLearners.every(l => l.selected);
@@ -224,6 +246,7 @@ const Admin_BulkUpload = () => {
     const handleSelectAll = () => {
         const allChecked = !allSelected;
         setAllSelected(allChecked);
+<<<<<<< HEAD
         setFilteredLearners(prev =>
             prev.map(learner => ({
                 ...learner,
@@ -382,6 +405,36 @@ const Admin_BulkUpload = () => {
             </div>
         );
     }
+=======
+        setSelectedLearners(prev => prev.map(l => ({ ...l, selected: allChecked })));
+    };
+
+    const selectedCount = selectedLearners.filter(l => l.selected).length;
+
+    const handlePreviewSelected = () => {
+        if (selectedCount === 0) { alert('No learners selected.'); return; }
+        setShowPreviewModal(true);
+    };
+
+    const handleIssueCertificates = () => {
+        if (selectedCount === 0) { alert('No learners selected.'); return; }
+        setShowIssueConfirmModal(true);
+    };
+
+    const confirmIssue = () => {
+        console.log('Issuing certificates for:', selectedLearners.filter(l => l.selected));
+        console.log('Issue date:', issueDate);
+        alert(`Certificates issued to ${selectedCount} learner(s)!`);
+        setShowIssueConfirmModal(false);
+        navigate('/admin/certificates');
+    };
+
+    const cancelIssue = () => setShowIssueConfirmModal(false);
+    const closePreview = () => setShowPreviewModal(false);
+
+    const programmes = ['Digital Literacy', 'Microsoft 365', 'Digital Marketing', 'Risk & Compliance Excellence', 'Data Analytics'];
+    const statusOptions = ['All', 'Completed', 'In Progress', 'Pending', 'Not Started'];
+>>>>>>> c5d32a3dd518092c21dfda9b3cbb92617a3ec011
 
     return (
         <div className="admin-bulkupload-layout">
@@ -440,7 +493,7 @@ const Admin_BulkUpload = () => {
 
                     {/* Page Header */}
                     <div className="bulkupload-page-header">
-                        <h1>Bulk Certificate Issuance – By Course</h1>
+                        <h1>Bulk Certificate Issuance — By Course</h1>
                         <p>Select a programme and configure status filters to identify eligible learners. Match, preview, and dispatch standard credentials in mass.</p>
                     </div>
 
@@ -448,7 +501,7 @@ const Admin_BulkUpload = () => {
                     <div className="filter-section">
                         <div className="filter-row">
                             <div className="filter-group">
-                                <label>Course / Programme</label>
+                                <label>COURSE / PROGRAMME</label>
                                 <select
                                     value={selectedProgramme}
                                     onChange={(e) => setSelectedProgramme(e.target.value)}
@@ -463,7 +516,7 @@ const Admin_BulkUpload = () => {
                             </div>
 
                             <div className="filter-group">
-                                <label>Completion Status</label>
+                                <label>COMPLETION STATUS</label>
                                 <select
                                     value={selectedStatus}
                                     onChange={(e) => setSelectedStatus(e.target.value)}
@@ -474,25 +527,17 @@ const Admin_BulkUpload = () => {
                                 </select>
                             </div>
 
-                            <div className="filter-group">
-                                <label>Date Range</label>
-                                <select
-                                    value={selectedDateRange}
-                                    onChange={(e) => setSelectedDateRange(e.target.value)}
-                                >
-                                    {dateRanges.map((range) => (
-                                        <option key={range} value={range}>{range}</option>
-                                    ))}
-                                </select>
-                            </div>
-
                             <div className="filter-group filter-actions">
+<<<<<<< HEAD
                                 <button
                                     className="btn-apply-filters"
                                     onClick={applyFilters}
                                 >
                                     <i className="fas fa-filter"></i> Apply Filters
                                 </button>
+=======
+                                <button className="btn-apply-filters">Apply Filters</button>
+>>>>>>> c5d32a3dd518092c21dfda9b3cbb92617a3ec011
                             </div>
                         </div>
                     </div>
@@ -506,12 +551,17 @@ const Admin_BulkUpload = () => {
                             className="bulk-file-upload-area"
                             onClick={() => document.getElementById('bulkFileInput').click()}
                         >
-                            <i className="fas fa-cloud-upload-alt"></i>
+                            <i className="far fa-file-alt upload-doc-icon"></i>
                             <p>Upload certificate PDF files</p>
                             <span className="upload-hint">Max 50 files, 10MB each.</span>
+<<<<<<< HEAD
                             <button className="btn-select-files">
                                 <i className="fas fa-file-pdf"></i> Select PDF Files
                             </button>
+=======
+                            <span className="upload-hint">Filenames must match recipient emails.</span>
+                            <button className="btn-select-files">Select PDF Files</button>
+>>>>>>> c5d32a3dd518092c21dfda9b3cbb92617a3ec011
                             <input
                                 type="file"
                                 id="bulkFileInput"
@@ -529,14 +579,30 @@ const Admin_BulkUpload = () => {
                             </div>
                         )}
 
-                        <div className="supported-formats">
-                            Supported formats: Standard PDF/A versions
+                        {/* Bottom row: Supported formats + Issue date */}
+                        <div className="bulk-upload-footer">
+                            <div className="supported-formats">
+                                Supported formats: Standard PDF/A versions
+                            </div>
+                            <div className="issue-date-wrapper">
+                                <input
+                                    type="date"
+                                    id="issueDate"
+                                    value={issueDate}
+                                    onChange={(e) => setIssueDate(e.target.value)}
+                                    className={`issue-date-input ${issueDate ? 'has-value' : ''}`}
+                                />
+                                {!issueDate && (
+                                    <span className="issue-date-placeholder">Issue date</span>
+                                )}
+                            </div>
                         </div>
                     </div>
 
                     {/* Filtered Recipient Preview */}
                     <div className="recipient-preview-section">
                         <div className="preview-header">
+<<<<<<< HEAD
                             <h3>
                                 Filtered Recipient Preview & Verification
                                 <span style={{
@@ -557,12 +623,18 @@ const Admin_BulkUpload = () => {
                                     onClick={handleSelectAllEligible}
                                 >
                                     <i className="fas fa-check-double"></i> Select All Eligible
+=======
+                            <div className="preview-header-left">
+                                <h3>Filtered Recipient Preview & Verification</h3>
+                                <span className="selected-count">{selectedCount} Selected</span>
+                            </div>
+                            <div className="preview-actions">
+                                <button className="btn-select-all" onClick={handleSelectAllEligible}>
+                                    Select All Eligible
+>>>>>>> c5d32a3dd518092c21dfda9b3cbb92617a3ec011
                                 </button>
-                                <button
-                                    className="btn-deselect-all"
-                                    onClick={handleDeselectAll}
-                                >
-                                    <i className="fas fa-times"></i> Deselect All
+                                <button className="btn-deselect-all" onClick={handleDeselectAll}>
+                                    Deselect All
                                 </button>
                             </div>
                         </div>
@@ -628,13 +700,11 @@ const Admin_BulkUpload = () => {
 
                     {/* Action Buttons */}
                     <div className="bulk-actions">
-                        <button
-                            className="btn-back"
-                            onClick={() => navigate('/admin-certificates')}
-                        >
-                            <i className="fas fa-arrow-left"></i> Back to Certificates
+                        <button className="btn-back" onClick={() => navigate('/admin-certificates')}>
+                            Back to Certificates
                         </button>
                         <div className="bulk-actions-right">
+<<<<<<< HEAD
                             <button
                                 className="btn-preview"
                                 onClick={handlePreview}
@@ -657,13 +727,20 @@ const Admin_BulkUpload = () => {
                             >
                                 <i className="fas fa-certificate"></i>
                                 {submitting ? 'Issuing...' : `Issue Certificates (${selectedCount})`}
+=======
+                            <button className="btn-preview" onClick={handlePreviewSelected}>
+                                Preview Selected ({selectedCount})
+                            </button>
+                            <button className="btn-issue-bulk" onClick={handleIssueCertificates}>
+                                Issue Certificates ({selectedCount})
+>>>>>>> c5d32a3dd518092c21dfda9b3cbb92617a3ec011
                             </button>
                         </div>
                     </div>
                 </main>
             </div>
 
-            {/* ===== PREVIEW SELECTED MODAL ===== */}
+            {/* Preview Modal */}
             {showPreviewModal && (
                 <div className="modal-overlay" onClick={closePreview}>
                     <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -675,7 +752,7 @@ const Admin_BulkUpload = () => {
                                     <tr style={{ borderBottom: '1px solid #eaeaea' }}>
                                         <th style={{ textAlign: 'left', padding: '6px 8px' }}>Name</th>
                                         <th style={{ textAlign: 'left', padding: '6px 8px' }}>Email</th>
-                                        <th style={{ textAlign: 'left', padding: '6px 8px' }}>Certificate #</th>
+                                        <th style={{ textAlign: 'left', padding: '6px 8px' }}>Completion</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -683,7 +760,7 @@ const Admin_BulkUpload = () => {
                                         <tr key={learner.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
                                             <td style={{ padding: '6px 8px' }}>{learner.name}</td>
                                             <td style={{ padding: '6px 8px' }}>{learner.email}</td>
-                                            <td style={{ padding: '6px 8px' }}>{learner.certNumber}</td>
+                                            <td style={{ padding: '6px 8px' }}>{learner.completionDate}</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -696,31 +773,33 @@ const Admin_BulkUpload = () => {
                 </div>
             )}
 
-            {/* ===== ISSUE CONFIRMATION MODAL ===== */}
+            {/* Issue Confirmation Modal */}
             {showIssueConfirmModal && (
                 <div className="modal-overlay" onClick={cancelIssue}>
-                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                    <div className="modal-content confirmation-modal" onClick={(e) => e.stopPropagation()}>
                         <h2>Confirm Bulk Issuance</h2>
-                        <p>You are about to issue certificates to <strong>{selectedCount}</strong> learner(s).</p>
+                        <p className="confirmation-question">
+                            You are about to issue certificates to <strong>{selectedCount}</strong> learner(s).
+                        </p>
                         <div className="modal-details" style={{ maxHeight: '200px', overflowY: 'auto' }}>
                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
                                 <thead>
                                     <tr style={{ borderBottom: '1px solid #eaeaea' }}>
                                         <th style={{ textAlign: 'left', padding: '6px 8px' }}>Name</th>
-                                        <th style={{ textAlign: 'left', padding: '6px 8px' }}>Certificate #</th>
+                                        <th style={{ textAlign: 'left', padding: '6px 8px' }}>Email</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {filteredLearners.filter(l => l.selected).map((learner) => (
                                         <tr key={learner.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
                                             <td style={{ padding: '6px 8px' }}>{learner.name}</td>
-                                            <td style={{ padding: '6px 8px' }}>{learner.certNumber}</td>
+                                            <td style={{ padding: '6px 8px' }}>{learner.email}</td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
                         </div>
-                        <p style={{ marginTop: '12px', color: '#555' }}>This action cannot be undone. Proceed?</p>
+                        <p style={{ marginTop: '12px' }}>This action cannot be undone. Proceed?</p>
                         <div className="modal-actions">
                             <button className="modal-btn cancel-btn" onClick={cancelIssue}>Cancel</button>
                             <button className="modal-btn confirm-btn" onClick={confirmIssue}>Yes, Issue Certificates</button>

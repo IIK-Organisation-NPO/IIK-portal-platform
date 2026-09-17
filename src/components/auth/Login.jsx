@@ -160,6 +160,7 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+<<<<<<< HEAD
     
     if (!email || !password) {
       setError('Please enter both email and password');
@@ -291,6 +292,10 @@ const Login = () => {
   // ============ GOOGLE LOGIN ============
   const handleGoogleLogin = () => {
     window.location.href = `${API_URL}/api/auth/google`;
+=======
+    console.log('Login attempt with:', { email, password, rememberMe });
+    navigate('/learner-dashboard');
+>>>>>>> c5d32a3dd518092c21dfda9b3cbb92617a3ec011
   };
 
   return (
