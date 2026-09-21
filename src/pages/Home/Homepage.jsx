@@ -1,44 +1,66 @@
 // src/pages/learner/Homepage.jsx
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { FaChevronRight, FaArrowUp } from "react-icons/fa";
+import { FaChevronRight } from "react-icons/fa";
 import Footer from "../../components/common/Footer";
 import "../../styles/pages/learner.css";
-import logo from "../../assets/images/small Mki.png"; // Change to your actual filename
+import logo from "../../assets/images/small Mki.png";
+
+const API_BASE =
+  (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_BASE_URL) ||
+  "http://localhost:5000";
 
 const Homepage = () => {
-  const [isVisible, setIsVisible] = useState(false);
+  const [programmes, setProgrammes] = useState([]);
+  const [loadingProgrammes, setLoadingProgrammes] = useState(true);
 
-  // Show button when page is scrolled down
-  const toggleVisibility = useCallback(() => {
-    if (window.scrollY > 300) {
-      setIsVisible(true);
-    } else {
-      setIsVisible(false);
-    }
+  // -------------------------------------------------------------------------
+  // Fetch programmes from the DB — only Active and Upcoming
+  // -------------------------------------------------------------------------
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchProgrammes = async () => {
+      try {
+        setLoadingProgrammes(true);
+        const res = await fetch(`${API_BASE}/api/programmes`);
+        const data = await res.json();
+
+        if (cancelled) return;
+
+        if (data.success && Array.isArray(data.programmes)) {
+          const visible = data.programmes
+            .filter(
+              (p) => p.status === "Active" || p.status === "Upcoming"
+            )
+            .map((p) => ({
+              id: p.id,
+              name: p.name,
+              description: p.description || "",
+            }));
+
+          setProgrammes(visible);
+        } else {
+          setProgrammes([]);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.error("Homepage: fetch programmes error:", err);
+          setProgrammes([]);
+        }
+      } finally {
+        if (!cancelled) setLoadingProgrammes(false);
+      }
+    };
+
+    fetchProgrammes();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  // Set the top coordinate to 0
-  // Make scrolling smooth
-  const scrollToTop = () => {
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
-  };
-
-  useEffect(() => {
-    // Add scroll event listener
-    window.addEventListener("scroll", toggleVisibility);
-
-    // Check initial scroll position
-    toggleVisibility();
-
-    // Cleanup event listener
-    return () => {
-      window.removeEventListener("scroll", toggleVisibility);
-    };
-  }, [toggleVisibility]);
+  // Limit to the first 6 so the grid stays clean regardless of DB size
+  const displayedProgrammes = programmes.slice(0, 6);
 
   return (
     <div className="learner-home">
@@ -50,7 +72,7 @@ const Homepage = () => {
             <span>Learner Certificate Portal</span>
           </div>
           <nav className="header-nav">
-            <Link to="/Homepage">Home</Link>
+            <Link to="/">Home</Link>
             <a
               href="https://www.iik.co.za/contact-us"
               target="_blank"
@@ -58,8 +80,8 @@ const Homepage = () => {
             >
               Contact
             </a>
+            <Link to="/BlogPage">Blog</Link>
             <Link to="/about">About</Link>
-            <Link to="/blog">Blog</Link>
             <div className="nav-actions">
               <Link to="/login" className="btn-login">
                 Login
@@ -87,14 +109,9 @@ const Homepage = () => {
             <Link to="/signup" className="btn-hero-primary">
               Get Started
             </Link>
-            <a
-              href="https://www.iik.co.za/About-Us"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-hero-secondary"
-            >
+            <Link to="/learn-more" className="btn-hero-secondary">
               Learn More
-            </a>
+            </Link>
           </div>
         </div>
       </section>
@@ -110,41 +127,28 @@ const Homepage = () => {
             Choose from our high-impact professional courses designed to
             accelerate your digital capabilities.
           </p>
-          <div className="programmes-grid">
-            <div className="programme-card">
-              <div className="icon">💻</div>
-              <h3>Digital Literacy</h3>
-              <p>
-                Master essential computer skills, Internet navigation, email
-                management, and online safety.
-              </p>
-              <button className="btn-view">
-                View Programmes <FaChevronRight size={14} />
-              </button>
+
+          {loadingProgrammes ? (
+            <div style={{ padding: "2rem 0", color: "#64748b" }}>
+              Loading programmes...
             </div>
-            <div className="programme-card">
-              <div className="icon">📊</div>
-              <h3>Microsoft 365</h3>
-              <p>
-                Learn Word, Excel, PowerPoint, Outlook and Teams for high-grade
-                professional productivity.
-              </p>
-              <button className="btn-view">
-                View Programmes <FaChevronRight size={14} />
-              </button>
+          ) : displayedProgrammes.length === 0 ? (
+            <div style={{ padding: "2rem 0", color: "#64748b" }}>
+              No programmes available right now. Please check back soon.
             </div>
-            <div className="programme-card">
-              <div className="icon">📈</div>
-              <h3>Digital Marketing</h3>
-              <p>
-                Social media marketing, search engine optimization, content
-                strategy, email campaigns, and analytics.
-              </p>
-              <button className="btn-view">
-                View Programmes <FaChevronRight size={14} />
-              </button>
+          ) : (
+            <div className="programmes-grid">
+              {displayedProgrammes.map((programme) => (
+                <div className="programme-card" key={programme.id}>
+                  <h3>{programme.name}</h3>
+                  <p>{programme.description}</p>
+                  <button className="btn-view">
+                    View Programmes <FaChevronRight size={14} />
+                  </button>
+                </div>
+              ))}
             </div>
-          </div>
+          )}
         </div>
       </section>
 
@@ -186,7 +190,7 @@ const Homepage = () => {
         </div>
       </section>
 
-      {/* Ready to start (CTA Section) */}
+      {/* CTA Section */}
       <section className="cta-section">
         <div
           className="container"
@@ -199,23 +203,6 @@ const Homepage = () => {
           </Link>
         </div>
       </section>
-
-      {/* Scroll to Top Button - Rendered outside main content but within component */}
-      <div
-        className={`scroll-to-top ${isVisible ? "visible" : ""}`}
-        onClick={scrollToTop}
-        role="button"
-        tabIndex={0}
-        aria-label="Scroll to top"
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            scrollToTop();
-          }
-        }}
-      >
-        <FaArrowUp />
-      </div>
 
       <Footer />
     </div>

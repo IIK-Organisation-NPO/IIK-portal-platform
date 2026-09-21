@@ -55,11 +55,10 @@ const SettingsPage = () => {
   }, []);
 
   return (
-    <div className="settings-layout">
-      <Learner_Header
-        userName="Sarah Khumalo"
-        onMenuToggle={toggleMobileMenu}
-        isMobileMenuOpen={isMobileMenuOpen}
+  <div className="learner-certificates-layout">
+                <Learner_Header
+                    onMenuToggle={toggleMobileMenu}
+                    isMobileMenuOpen={isMobileMenuOpen}
       />
 
       <div className="settings-body">

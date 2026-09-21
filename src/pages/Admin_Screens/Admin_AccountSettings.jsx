@@ -3,23 +3,30 @@ import React, { useState, useEffect, useRef } from 'react';
 import '../../styles/Admin/Admin_AccountSettings.css';
 import Admin_Sidebar from '../../components/Admin/Admin_Sidebar';
 import Admin_Header from '../../components/Admin/Admin_Header';
+import api from '../../services/api';
 
 const Admin_AccountSettings = () => {
   // ============================================================
   // ACCOUNT PROFILE STATE
   // ============================================================
-  const [name, setName] = useState('Admin');
-  const [surname, setSurname] = useState('User');
-  const [email] = useState('admin@iik.co.za'); // Read-only
-  const [role] = useState('Administrator');    // Read-only
+  const [name, setName] = useState('');
+  const [surname, setSurname] = useState('');
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState('Administrator');
+  const [originalProfile, setOriginalProfile] = useState({ name: '', surname: '' });
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileError, setProfileError] = useState('');
 
   // ============================================================
   // PASSWORD STATE
   // ============================================================
-  const [currentPassword, setCurrentPassword] = useState('**********');
+  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordErrors, setPasswordErrors] = useState({});
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordServerError, setPasswordServerError] = useState('');
 
   // ============================================================
   // MODAL STATE
@@ -30,13 +37,10 @@ const Admin_AccountSettings = () => {
   const [showRestoreModal, setShowRestoreModal] = useState(false);
 
   // ============================================================
-  // TOAST STATE (FIXED)
+  // TOAST STATE
   // ============================================================
-  // toastMessage  -> the text to display
-  // toastVisible  -> controls enter vs. exit animation class
   const [toastMessage, setToastMessage] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
-  // Store timer IDs so rapid clicks don't cut off the previous toast
   const toastTimerRef = useRef(null);
   const toastCleanupRef = useRef(null);
 
@@ -73,43 +77,25 @@ const Admin_AccountSettings = () => {
   // ============================================================
   // UTILITY FUNCTIONS
   // ============================================================
-
-  /** Scrolls window to top smoothly. */
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  /**
-   * Displays a toast popup that:
-   *   1. Fades + slides in from the top of the screen
-   *   2. Stays visible for 2.5 seconds
-   *   3. Fades + slides out gently
-   *
-   * FIX: Clears any previous timers so rapid clicks don't cut the
-   *      new toast short, and adds a two-phase show/hide so we can
-   *      animate the exit properly.
-   */
   const showToast = (message) => {
-    // Cancel any pending timers from a previous toast
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     if (toastCleanupRef.current) clearTimeout(toastCleanupRef.current);
 
-    // Phase 1: set the message and make it visible (triggers enter animation)
     setToastMessage(message);
     setToastVisible(true);
 
-    // Phase 2: after 2.5s, trigger exit animation
     toastTimerRef.current = setTimeout(() => {
       setToastVisible(false);
-
-      // Phase 3: after exit animation completes (400ms), remove the node
       toastCleanupRef.current = setTimeout(() => {
         setToastMessage('');
       }, 400);
     }, 2500);
   };
 
-  /** Clean up toast timers if the component unmounts mid-animation. */
   useEffect(() => {
     return () => {
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
@@ -117,47 +103,155 @@ const Admin_AccountSettings = () => {
     };
   }, []);
 
-  /** Show / hide the scroll-to-top button. */
   useEffect(() => {
     const handleScroll = () => setShowScrollButton(window.scrollY > 400);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  /** Scroll to top on mount. */
   useEffect(() => {
     scrollToTop();
+  }, []);
+  // ============================================================
+  // FETCH MY PROFILE ON MOUNT
+  // Tolerant of both { success, data } and { ... } response shapes,
+  // retries once on failure, and surfaces the real error message.
+  // ============================================================
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchProfile = async (attempt = 1) => {
+      try {
+        setProfileLoading(true);
+        setProfileError('');
+
+        const res = await api.get('/staff/me');
+        if (cancelled) return;
+
+        // Support both response shapes:
+        //   A) { success: true, data: { name, surname, ... } }
+        //   B) { name, surname, ... }            (unwrapped)
+        const payload = res.data?.data ?? res.data ?? null;
+        const isOk = res.data?.success !== false && !!payload;
+
+        if (isOk && (payload.name || payload.Name)) {
+          const rawRole = payload.role_type || payload.role || '';
+          const roleId  = payload.role_id ?? payload.roleId ?? null;
+
+          let roleLabel = 'Administrator';
+          if (rawRole === 'Super Admin' || roleId === 3) roleLabel = 'Super Admin';
+          else if (rawRole === 'ADMIN' || roleId === 1) roleLabel = 'Administrator';
+          else if (rawRole) roleLabel = rawRole;
+
+          setName(payload.name || payload.Name || '');
+          setSurname(payload.surname || payload.Surname || '');
+          setEmail(payload.email || payload.Email_address || '');
+          setRole(roleLabel);
+
+          setOriginalProfile({
+            name: payload.name || payload.Name || '',
+            surname: payload.surname || payload.Surname || ''
+          });
+
+          setProfileError('');
+        } else {
+          setProfileError(res.data?.message || 'Failed to load profile');
+        }
+      } catch (err) {
+        if (cancelled) return;
+
+        // Retry once — StrictMode / network hiccups sometimes kill the first attempt
+        if (attempt === 1) {
+          setTimeout(() => fetchProfile(2), 300);
+          return;
+        }
+
+        console.error('Fetch profile error:', err);
+        setProfileError(
+          err.response?.data?.message ||
+          err.response?.data?.error ||
+          err.message ||
+          'Failed to load profile'
+        );
+      } finally {
+        if (!cancelled) setProfileLoading(false);
+      }
+    };
+
+    fetchProfile();
+
+    return () => { cancelled = true; };
   }, []);
 
   // ============================================================
   // PROFILE HANDLERS
   // ============================================================
   const handleSaveProfile = () => {
-    if (name !== 'Admin' || surname !== 'User') {
-      setShowProfileModal(true);
-    } else {
+    setProfileError('');
+
+    if (name.trim() === originalProfile.name && surname.trim() === originalProfile.surname) {
       showToast('No changes to save.');
+      return;
     }
+
+    if (!name.trim() || !surname.trim()) {
+      setProfileError('Name and surname are required');
+      return;
+    }
+
+    setShowProfileModal(true);
   };
 
-  const confirmProfileSave = () => {
-    setShowProfileModal(false);
-    showToast('Profile updated successfully!');
+  const confirmProfileSave = async () => {
+    setProfileSaving(true);
+    setProfileError('');
+
+    try {
+      const res = await api.put('/staff/me', {
+        name: name.trim(),
+        surname: surname.trim()
+      });
+
+      if (res.data.success) {
+        const d = res.data.data || {};
+        setOriginalProfile({
+          name: d.name || name.trim(),
+          surname: d.surname || surname.trim()
+        });
+        setShowProfileModal(false);
+        showToast('Profile updated successfully!');
+      } else {
+        const messages = (res.data.errors || [])
+          .map(e => e.message)
+          .join('. ');
+        setProfileError(messages || res.data.message || 'Failed to update profile');
+        setShowProfileModal(false);
+      }
+    } catch (err) {
+      console.error('Save profile error:', err);
+      const messages = (err.response?.data?.errors || [])
+        .map(e => e.message)
+        .join('. ');
+      setProfileError(
+        messages ||
+        err.response?.data?.message ||
+        'Failed to update profile'
+      );
+      setShowProfileModal(false);
+    } finally {
+      setProfileSaving(false);
+    }
   };
 
   // ============================================================
   // PASSWORD HANDLERS
   // ============================================================
-
-  /**
-   * Validates password inputs against the same rules used on Signup:
-   *   - Not empty
-   *   - Min 8 characters
-   *   - At least 1 lowercase, 1 uppercase, 1 digit, 1 special char
-   *   - Confirm matches
-   */
   const validatePassword = () => {
     const errors = {};
+
+    if (!currentPassword) {
+      errors.currentPassword = 'Current password is required';
+    }
 
     if (!newPassword) {
       errors.newPassword = 'New password is required';
@@ -184,28 +278,64 @@ const Admin_AccountSettings = () => {
   };
 
   const handleUpdatePassword = () => {
-    // FIX: capture the returned errors directly (React state updates are async,
-    // so reading passwordErrors right after setPasswordErrors would be stale).
+    setPasswordServerError('');
     const errors = validatePassword();
 
     if (Object.keys(errors).length > 0) {
-      // Show the first error to the user via toast
       const firstError = Object.values(errors)[0];
       showToast(firstError);
       return;
     }
 
-    // All validations passed -> open confirmation modal
     setShowPasswordModal(true);
   };
 
-  const confirmPasswordUpdate = () => {
+  const confirmPasswordUpdate = async () => {
+    setPasswordSaving(true);
+    setPasswordServerError('');
+
+    try {
+      const res = await api.put('/staff/me/password', {
+        currentPassword,
+        newPassword,
+        confirmPassword
+      });
+
+      if (res.data.success) {
+        setShowPasswordModal(false);
+        showToast('Password updated successfully!');
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+        setPasswordErrors({});
+      } else {
+        handlePasswordErrors(res.data);
+      }
+    } catch (err) {
+      console.error('Change password error:', err);
+      handlePasswordErrors(err.response?.data || {});
+    } finally {
+      setPasswordSaving(false);
+    }
+  };
+
+  const handlePasswordErrors = (data) => {
     setShowPasswordModal(false);
-    showToast('Password updated successfully!');
-    setCurrentPassword(newPassword);
-    setNewPassword('');
-    setConfirmPassword('');
-    setPasswordErrors({});
+
+    const fieldErrors = {};
+    (data.errors || []).forEach(e => {
+      if (e.field) fieldErrors[e.field] = e.message;
+    });
+
+    if (Object.keys(fieldErrors).length > 0) {
+      setPasswordErrors(fieldErrors);
+      setPasswordServerError('');
+      const first = Object.values(fieldErrors)[0];
+      showToast(first);
+    } else {
+      setPasswordServerError(data.message || 'Failed to update password');
+      showToast(data.message || 'Failed to update password');
+    }
   };
 
   // ============================================================
@@ -243,7 +373,7 @@ const Admin_AccountSettings = () => {
   };
 
   // ============================================================
-  // TOGGLE HANDLERS  (each shows a clear enable/disable toast)
+  // TOGGLE HANDLERS
   // ============================================================
   const toggle2FA = () => {
     const newState = !is2FAEnabled;
@@ -335,6 +465,8 @@ const Admin_AccountSettings = () => {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="editable-input"
+                  disabled={profileLoading || profileSaving}
+                  placeholder={profileLoading ? 'Loading...' : ''}
                 />
               </div>
               <div className="profile-item">
@@ -344,6 +476,8 @@ const Admin_AccountSettings = () => {
                   value={surname}
                   onChange={(e) => setSurname(e.target.value)}
                   className="editable-input"
+                  disabled={profileLoading || profileSaving}
+                  placeholder={profileLoading ? 'Loading...' : ''}
                 />
               </div>
               <div className="profile-item">
@@ -361,7 +495,16 @@ const Admin_AccountSettings = () => {
                 {role}
               </span>
             </div>
-            <button className="btn btn-save" onClick={handleSaveProfile}>Save Changes</button>
+            {profileError && (
+              <p className="error-text" style={{ marginTop: '10px' }}>{profileError}</p>
+            )}
+            <button
+              className="btn btn-save"
+              onClick={handleSaveProfile}
+              disabled={profileLoading || profileSaving}
+            >
+              {profileSaving ? 'Saving...' : 'Save Changes'}
+            </button>
           </div>
 
           {/* ==================== SECURITY SETTINGS ==================== */}
@@ -374,9 +517,19 @@ const Admin_AccountSettings = () => {
                 <input
                   type="password"
                   value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="editable-input"
+                  onChange={(e) => {
+                    setCurrentPassword(e.target.value);
+                    if (passwordErrors.currentPassword) {
+                      setPasswordErrors(prev => ({ ...prev, currentPassword: '' }));
+                    }
+                  }}
+                  className={`editable-input ${passwordErrors.currentPassword ? 'input-error' : ''}`}
+                  placeholder="Enter your current password"
+                  disabled={passwordSaving}
                 />
+                {passwordErrors.currentPassword && (
+                  <span className="error-text">{passwordErrors.currentPassword}</span>
+                )}
               </div>
               <div className="security-row">
                 <div className="security-item half">
@@ -391,6 +544,7 @@ const Admin_AccountSettings = () => {
                       }
                     }}
                     className={`editable-input ${passwordErrors.newPassword ? 'input-error' : ''}`}
+                    disabled={passwordSaving}
                   />
                   {passwordErrors.newPassword && (
                     <span className="error-text">{passwordErrors.newPassword}</span>
@@ -408,13 +562,23 @@ const Admin_AccountSettings = () => {
                       }
                     }}
                     className={`editable-input ${passwordErrors.confirmPassword ? 'input-error' : ''}`}
+                    disabled={passwordSaving}
                   />
                   {passwordErrors.confirmPassword && (
                     <span className="error-text">{passwordErrors.confirmPassword}</span>
                   )}
                 </div>
               </div>
-              <button className="btn btn-update" onClick={handleUpdatePassword}>Update Password</button>
+              {passwordServerError && (
+                <p className="error-text" style={{ marginBottom: '10px' }}>{passwordServerError}</p>
+              )}
+              <button
+                className="btn btn-update"
+                onClick={handleUpdatePassword}
+                disabled={passwordSaving}
+              >
+                {passwordSaving ? 'Updating...' : 'Update Password'}
+              </button>
             </div>
 
             <div className="two-factor-section">
@@ -555,19 +719,31 @@ const Admin_AccountSettings = () => {
 
       {/* ==================== PROFILE MODAL ==================== */}
       {showProfileModal && (
-        <div className="logout-modal-overlay" onClick={() => setShowProfileModal(false)}>
+        <div className="logout-modal-overlay" onClick={() => !profileSaving && setShowProfileModal(false)}>
           <div className="logout-modal-content confirmation-modal" onClick={(e) => e.stopPropagation()}>
             <div className="logout-modal-header">
               <h2>Confirm Changes</h2>
-              <button className="logout-modal-close" onClick={() => setShowProfileModal(false)}>×</button>
+              <button
+                className="logout-modal-close"
+                onClick={() => setShowProfileModal(false)}
+                disabled={profileSaving}
+              >×</button>
             </div>
             <div className="logout-modal-body">
               <p className="confirmation-message confirmation-question">Are you sure you want to save changes to your profile?</p>
               <p className="logout-modal-warning confirmation-message">Your name and surname will be updated across the system.</p>
             </div>
             <div className="logout-modal-actions">
-              <button className="logout-modal-btn cancel-btn" onClick={() => setShowProfileModal(false)}>No, Stay</button>
-              <button className="logout-modal-btn confirm-btn" onClick={confirmProfileSave}>Yes, Save</button>
+              <button
+                className="logout-modal-btn cancel-btn"
+                onClick={() => setShowProfileModal(false)}
+                disabled={profileSaving}
+              >No, Stay</button>
+              <button
+                className="logout-modal-btn confirm-btn"
+                onClick={confirmProfileSave}
+                disabled={profileSaving}
+              >{profileSaving ? 'Saving...' : 'Yes, Save'}</button>
             </div>
           </div>
         </div>
@@ -575,19 +751,31 @@ const Admin_AccountSettings = () => {
 
       {/* ==================== PASSWORD MODAL ==================== */}
       {showPasswordModal && (
-        <div className="logout-modal-overlay" onClick={() => setShowPasswordModal(false)}>
+        <div className="logout-modal-overlay" onClick={() => !passwordSaving && setShowPasswordModal(false)}>
           <div className="logout-modal-content confirmation-modal" onClick={(e) => e.stopPropagation()}>
             <div className="logout-modal-header">
               <h2>Confirm Password Update</h2>
-              <button className="logout-modal-close" onClick={() => setShowPasswordModal(false)}>×</button>
+              <button
+                className="logout-modal-close"
+                onClick={() => setShowPasswordModal(false)}
+                disabled={passwordSaving}
+              >×</button>
             </div>
             <div className="logout-modal-body">
               <p className="confirmation-message confirmation-question">Are you sure you want to modify this password?</p>
               <p className="logout-modal-warning confirmation-message">Continuing will result in use of the new password.</p>
             </div>
             <div className="logout-modal-actions">
-              <button className="logout-modal-btn cancel-btn" onClick={() => setShowPasswordModal(false)}>No, Cancel</button>
-              <button className="logout-modal-btn confirm-btn" onClick={confirmPasswordUpdate}>Yes, Update</button>
+              <button
+                className="logout-modal-btn cancel-btn"
+                onClick={() => setShowPasswordModal(false)}
+                disabled={passwordSaving}
+              >No, Cancel</button>
+              <button
+                className="logout-modal-btn confirm-btn"
+                onClick={confirmPasswordUpdate}
+                disabled={passwordSaving}
+              >{passwordSaving ? 'Updating...' : 'Yes, Update'}</button>
             </div>
           </div>
         </div>
@@ -634,7 +822,6 @@ const Admin_AccountSettings = () => {
       )}
 
       {/* ==================== TOAST POPUP ==================== */}
-      {/* The className toggles between enter/exit animations */}
       {toastMessage && (
         <div className={`toast-message ${toastVisible ? 'toast-enter' : 'toast-exit'}`}>
           {toastMessage}

@@ -2,10 +2,7 @@
 // ============================================================
 // Admin_BlogCreate — Create New Post page
 // Handles Blog Posts, Events, Announcements and News.
-// Uses the same native <input type="date"> pattern as
-// Admin_Certificates for the Event Date picker.
-// Article Body uses a lightweight contentEditable rich-text
-// editor so Bold / Italic / Underline / Lists / Links work.
+// Article Body uses a contentEditable rich-text editor.
 // ============================================================
 
 import { useState, useRef, useEffect } from 'react';
@@ -13,6 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import Admin_Header from '../../components/Admin/Admin_Header';
 import Admin_Sidebar from '../../components/Admin/Admin_Sidebar';
 import '../../styles/Admin/Admin_BlogCreate.css';
+import { blogAPI } from '../../services/api';
 
 const Admin_BlogCreate = () => {
     // -----------------------------------------------------------
@@ -21,12 +19,8 @@ const Admin_BlogCreate = () => {
     const navigate = useNavigate();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-    // Reference to the contentEditable div so we can read its HTML
-    // and restore focus after toolbar clicks.
     const editorRef = useRef(null);
 
-    // Form values — same shape as before, but `articleBody` now
-    // holds HTML (from the rich-text editor) instead of plain text.
     const [formData, setFormData] = useState({
         postType: 'Blog Post',
         officialTitle: '',
@@ -38,7 +32,6 @@ const Admin_BlogCreate = () => {
         venue: '',
     });
 
-    // Validation errors — keyed by formData field name.
     const [errors, setErrors] = useState({});
 
     const adminName = 'Admin User';
@@ -56,7 +49,6 @@ const Admin_BlogCreate = () => {
         const { name, value } = e.target;
         setFormData((prev) => ({ ...prev, [name]: value }));
 
-        // Clear this field's error as soon as the user edits it.
         setErrors((prev) => {
             if (!prev[name]) return prev;
             const next = { ...prev };
@@ -67,19 +59,12 @@ const Admin_BlogCreate = () => {
 
     // -----------------------------------------------------------
     // 4. RICH TEXT EDITOR HANDLERS
-    //    The editor is a <div contentEditable>.
-    //    On every keystroke we sync its HTML into formData.articleBody.
-    //    The toolbar uses document.execCommand, which browsers still
-    //    support and is perfect for a lightweight editor like this.
     // -----------------------------------------------------------
-
-    // Sync the editor's HTML into state so validation and publish work.
     const handleEditorInput = () => {
         if (!editorRef.current) return;
         const html = editorRef.current.innerHTML;
         setFormData((prev) => ({ ...prev, articleBody: html }));
 
-        // Clear error once the user starts typing.
         setErrors((prev) => {
             if (!prev.articleBody) return prev;
             const next = { ...prev };
@@ -88,26 +73,16 @@ const Admin_BlogCreate = () => {
         });
     };
 
-    // Called by each toolbar button.
-    // `command` is a document.execCommand name (bold, italic, ...).
-    // `value` is optional (used for createLink, formatBlock, etc.).
     const applyFormat = (command, value = null) => {
-        // Restore focus to the editor if the user clicked a toolbar button.
         editorRef.current?.focus();
-
-        // Apply the command to the current selection.
         document.execCommand(command, false, value);
-
-        // Push the updated HTML into state.
         handleEditorInput();
     };
 
-    // Insert-link prompt — asks the user for a URL then applies it.
     const handleInsertLink = () => {
         const url = window.prompt('Enter the URL (include https://):');
         if (!url) return;
 
-        // Basic safety: prepend https:// if the user forgot the scheme.
         const safeUrl = /^https?:\/\//i.test(url) ? url : `https://${url}`;
         applyFormat('createLink', safeUrl);
     };
@@ -124,17 +99,9 @@ const Admin_BlogCreate = () => {
 
     // -----------------------------------------------------------
     // 6. VALIDATION
-    //    - Title and body always required (for publish).
-    //    - Events additionally require date + venue.
-    //    - Drafts only require the title.
-    //
-    //    Note: the contentEditable div may contain empty markup like
-    //    "<br>" or "<p></p>" even when the user hasn't typed anything,
-    //    so we strip tags before checking for real content.
     // -----------------------------------------------------------
     const isEvent = formData.postType === 'Event';
 
-    // Strips HTML tags and returns the visible text.
     const stripHtml = (html) => {
         const temp = document.createElement('div');
         temp.innerHTML = html || '';
@@ -165,9 +132,19 @@ const Admin_BlogCreate = () => {
     };
 
     // -----------------------------------------------------------
-    // 7. ACTION HANDLERS
+    // 7. ACTION HANDLERS  ← THE ONLY LOGIC THAT CHANGED
     // -----------------------------------------------------------
-    const handleSaveDraft = () => {
+    const buildPayload = (status) => ({
+        postType:      formData.postType,
+        officialTitle: formData.officialTitle,
+        tags:          formData.tags,
+        articleBody:   formData.articleBody,
+        eventDate:     formData.eventDate || null,
+        venue:         formData.venue     || null,
+        status, // 'draft' | 'published'
+    });
+
+    const handleSaveDraft = async () => {
         const nextErrors = validate({ requireBody: false });
 
         if (Object.keys(nextErrors).length > 0) {
@@ -176,11 +153,16 @@ const Admin_BlogCreate = () => {
             return;
         }
 
-        console.log('Draft saved:', { ...formData, status: 'draft' });
-        alert('Draft saved successfully!');
+        try {
+            await blogAPI.createPost(buildPayload('draft'));
+            alert('Draft saved successfully!');
+            navigate('/admin/blog-management');
+        } catch (err) {
+            alert(err.response?.data?.error || err.message);
+        }
     };
 
-    const handlePublish = () => {
+    const handlePublish = async () => {
         const nextErrors = validate({ requireBody: true });
 
         if (Object.keys(nextErrors).length > 0) {
@@ -190,9 +172,13 @@ const Admin_BlogCreate = () => {
         }
 
         setErrors({});
-        console.log('Published:', { ...formData, status: 'published' });
-        alert('Post published successfully!');
-        navigate('/admin/blog-management');
+        try {
+            await blogAPI.createPost(buildPayload('published'));
+            alert('Post published successfully!');
+            navigate('/admin/blog-management');
+        } catch (err) {
+            alert(err.response?.data?.error || err.message);
+        }
     };
 
     const handleCancel = () => {
@@ -208,7 +194,6 @@ const Admin_BlogCreate = () => {
         });
         setErrors({});
 
-        // Clear the contentEditable div manually since it's uncontrolled.
         if (editorRef.current) {
             editorRef.current.innerHTML = '';
         }
@@ -216,8 +201,6 @@ const Admin_BlogCreate = () => {
         alert('Form has been reset');
     };
 
-    // Keep the editor DOM in sync if articleBody is reset programmatically
-    // (e.g. via handleCancel or future "load draft" logic).
     useEffect(() => {
         if (editorRef.current && editorRef.current.innerHTML !== formData.articleBody) {
             editorRef.current.innerHTML = formData.articleBody || '';
@@ -227,7 +210,7 @@ const Admin_BlogCreate = () => {
     const postTypeOptions = ['Blog Post', 'Event', 'Announcement', 'News'];
 
     // -----------------------------------------------------------
-    // 8. RENDER
+    // 8. RENDER (unchanged)
     // -----------------------------------------------------------
     return (
         <div className="admin-blogcreate-layout">
@@ -246,7 +229,6 @@ const Admin_BlogCreate = () => {
                 />
 
                 <main className="admin-blogcreate-content">
-                    {/* Page heading */}
                     <div className="blogcreate-page-header">
                         <h1>Create New Post</h1>
                         <p>
@@ -256,9 +238,7 @@ const Admin_BlogCreate = () => {
                     </div>
 
                     <div className="blogcreate-grid">
-                        {/* ============================================
-                            LEFT COLUMN — main post fields
-                           ============================================ */}
+                        {/* LEFT COLUMN */}
                         <div className="blogcreate-left">
                             {/* Post Type */}
                             <div className="form-group">
@@ -318,11 +298,7 @@ const Admin_BlogCreate = () => {
                                 </div>
                             </div>
 
-                            {/* ------------------------------------------------
-                                RICH TEXT EDITOR
-                                A contentEditable div replaces the textarea
-                                so the toolbar commands can actually format.
-                            ------------------------------------------------ */}
+                            {/* RICH TEXT EDITOR */}
                             <div className="form-group">
                                 <label>Article Body / Event Description</label>
 
@@ -402,7 +378,6 @@ const Admin_BlogCreate = () => {
                                     </button>
                                 </div>
 
-                                {/* The actual editable area */}
                                 <div
                                     ref={editorRef}
                                     className={`rich-text-editor ${errors.articleBody ? 'input-error' : ''}`}
@@ -418,9 +393,7 @@ const Admin_BlogCreate = () => {
                             </div>
                         </div>
 
-                        {/* ============================================
-                            RIGHT COLUMN — media + event logistics
-                           ============================================ */}
+                        {/* RIGHT COLUMN */}
                         <div className="blogcreate-right">
                             {/* Featured Image */}
                             <div className="blogcreate-card">
@@ -462,7 +435,7 @@ const Admin_BlogCreate = () => {
                                 </div>
                             </div>
 
-                            {/* EVENT LOGISTICS — only rendered when post type = Event */}
+                            {/* EVENT LOGISTICS */}
                             {isEvent && (
                                 <div className="blogcreate-card event-card">
                                     <h3 className="card-title">
