@@ -18,6 +18,7 @@ const AdminStaffManagement = () => {
     email: '',
     phone: '',
     role: '',
+    centre: '',
     password: '',
     confirmPassword: ''
   });
@@ -104,7 +105,7 @@ const AdminStaffManagement = () => {
     };
 
     setStaffMembers([...staffMembers, newStaff]);
-    setFormData({ name: '', surname: '', email: '', phone: '', role: '', password: '', confirmPassword: '' });
+    setFormData({ name: '', surname: '', email: '', phone: '', role: '', centre: '', password: '', confirmPassword: '' });
   };
 
   // --- Action Modal Handlers ---
@@ -193,6 +194,28 @@ const AdminStaffManagement = () => {
                     <option value="Viewer">Viewer</option>
                   </select>
                 </div>
+                <div className="form-group">
+                  <label>ASSIGN CENTRE</label>
+                  <select name="centre" value={formData.centre} onChange={handleInputChange}>
+                    <option value="">Select Centre...</option>
+                    <option value="Bergville Sports Centre">Bergville Sports Centre</option>
+                    <option value="Kokstad Skills Centre">Kokstad Skills Centre</option>
+                    <option value="Mfolozi Service Centre">Mfolozi Service Centre</option>
+                    <option value="uPhongolo Centre">uPhongolo Centre</option>
+                    <option value="Richmond Digital Centre">Richmond Digital Centre</option>
+                    <option value="Umdoni Digital Centre">Umdoni Digital Centre</option>
+                    <option value="Jozini Digital Centre">Jozini Digital Centre</option>
+                    <option value="	Harry Gwala Techno Hub">	Harry Gwala Techno Hub</option>
+                    <option value="Ndwedwe Digital Centre">Ndwedwe Digital Centre</option>
+                    <option value="Amahlubi, Community Service Centre">Amahlubi, Community Service Centre</option>
+                    <option value="KwaMashu,SmartXchange Digital Hub">KwaMashu,SmartXchange Digital Hub</option>
+                    <option value="Umdoni Digital Centre">uMlazi Digital Centre</option>
+                    <option value="iMamba One Stop Shop Development Centre">iMamba One Stop Shop Development Centre</option>
+                    <option value="Mkuze Airport Digital Centre">Mkuze Airport Digital Centre</option>
+                    <option value="eDumbe Digital Centre">eDumbe Digital Centre</option>
+                    <option value="Vumanhlamvu Community Centre">Vumanhlamvu Community Centre</option>
+                  </select>
+                </div>
                 <div className="form-group"><label>TEMPORARY PASSWORD</label><input type="password" name="password" placeholder="••••••••" value={formData.password} onChange={handleInputChange} /></div>
                 <div className="form-group"><label>CONFIRM PASSWORD</label><input type="password" name="confirmPassword" placeholder="••••••••" value={formData.confirmPassword} onChange={handleInputChange} /></div>
               </div>
@@ -236,7 +259,7 @@ const AdminStaffManagement = () => {
                   <p className="action-modal-subtitle">
                     Choose what you would like to do with <strong>{selectedStaff?.name}</strong>.
                   </p>
-                  
+
                   {/* The container that forces the vertical stacking */}
                   <div className="action-modal-buttons">
                     <button className="action-modal-btn btn-edit" onClick={handleSelectEdit}>
