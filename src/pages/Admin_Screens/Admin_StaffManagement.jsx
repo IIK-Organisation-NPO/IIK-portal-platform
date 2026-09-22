@@ -33,7 +33,6 @@ const validateName = (value, label = 'Name') => {
   if (!v) return `${label} is required`;
   if (v.length < 2) return `${label} must be at least 2 characters`;
   if (v.length > 50) return `${label} must be less than 50 characters`;
-  // if (/\d/.test(v)) return `${label} cannot contain numbers`;
   if (!/^[A-Za-z\s\-']+$/.test(v)) return `${label} can only contain letters, spaces, hyphens, and apostrophes`;
   return '';
 };
@@ -46,7 +45,6 @@ const validateEmail = (value) => {
   return '';
 };
 
-// Phone: allow blank. If not blank, normalise +27/27 -> 0 and require 10 digits.
 const normalizePhone = (raw) => {
   if (!raw) return '';
   let cleaned = String(raw).replace(/[\s\-()]/g, '');
@@ -155,6 +153,8 @@ const AdminStaffManagement = () => {
   // --- Modal State ---
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
+  const [showActionModal, setShowActionModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState(null);
   const [editStatus, setEditStatus] = useState('');
 
@@ -195,7 +195,6 @@ const AdminStaffManagement = () => {
       if (data.success && Array.isArray(data.data)) {
         setRoles(data.data);
       } else {
-        // Fallback if the endpoint fails
         setRoles([
           { role_id: 1, role_type: 'ADMIN' },
           { role_id: 3, role_type: 'Super Admin' }
@@ -328,7 +327,6 @@ const AdminStaffManagement = () => {
         return;
       }
 
-      // Prepend the new row using the same shape as the fetched rows
       const created = data.data;
       setStaffMembers(prev => [
         normalizeStaff({
@@ -361,7 +359,37 @@ const AdminStaffManagement = () => {
     }
   };
 
-  // --- Edit modal ---
+  // --- Action modal (hub) ---
+  const handleOpenActionModal = (staff) => {
+    setSelectedStaff(staff);
+    setShowActionModal(true);
+  };
+
+  const handleCloseActionModal = () => {
+    setShowActionModal(false);
+    setSelectedStaff(null);
+  };
+
+  const handleSelectEdit = () => {
+    if (!selectedStaff) return;
+    setEditStatus(selectedStaff.status);
+    setShowActionModal(false);
+    setShowEditModal(true);
+  };
+
+  const handleSelectDeactivate = () => {
+    if (!selectedStaff) return;
+    setShowActionModal(false);
+    setShowDeactivateModal(true);
+  };
+
+  const handleSelectDelete = () => {
+    if (!selectedStaff) return;
+    setShowActionModal(false);
+    setShowDeleteModal(true);
+  };
+
+  // --- Edit modal (direct entry point kept too) ---
   const handleEditClick = (staff) => {
     setSelectedStaff(staff);
     setEditStatus(staff.status);
@@ -443,6 +471,42 @@ const AdminStaffManagement = () => {
     }
   };
 
+  // --- Delete modal ---
+  const handleConfirmDelete = async () => {
+    if (!selectedStaff) return;
+
+    const previous = staffMembers;
+
+    // Optimistic remove
+    setStaffMembers(prev => prev.filter(s => s.id !== selectedStaff.id));
+    setShowDeleteModal(false);
+
+    try {
+      const res = await fetch(`${API_BASE}/api/staff/${selectedStaff.id}`, {
+        method: 'DELETE'
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        setStaffMembers(previous);
+        setServerError(data.message || 'Failed to delete staff member.');
+        setTimeout(() => setServerError(''), 5000);
+        return;
+      }
+
+      setSuccessMessage('Staff member deleted successfully.');
+      setTimeout(() => setSuccessMessage(''), 4000);
+    } catch (err) {
+      console.error('Delete staff error:', err);
+      setStaffMembers(previous);
+      setServerError('Cannot reach the server. Please try again.');
+      setTimeout(() => setServerError(''), 5000);
+    } finally {
+      setSelectedStaff(null);
+    }
+  };
+
   const showError = (field) => touched[field] && errors[field];
 
   return (
@@ -500,7 +564,6 @@ const AdminStaffManagement = () => {
             <h2>Register New Staff Member</h2>
             <form onSubmit={handleRegisterStaff} className="register-form" noValidate>
               <div className="form-grid">
-                {/* Name */}
                 <div className="form-group">
                   <label>NAME</label>
                   <input
@@ -516,7 +579,6 @@ const AdminStaffManagement = () => {
                   {showError('name') && <span className="field-error">{errors.name}</span>}
                 </div>
 
-                {/* Surname */}
                 <div className="form-group">
                   <label>SURNAME</label>
                   <input
@@ -532,7 +594,6 @@ const AdminStaffManagement = () => {
                   {showError('surname') && <span className="field-error">{errors.surname}</span>}
                 </div>
 
-                {/* Email */}
                 <div className="form-group">
                   <label>EMAIL ADDRESS</label>
                   <input
@@ -548,7 +609,6 @@ const AdminStaffManagement = () => {
                   {showError('email') && <span className="field-error">{errors.email}</span>}
                 </div>
 
-                {/* Phone */}
                 <div className="form-group">
                   <label>PHONE NUMBER</label>
                   <input
@@ -565,7 +625,6 @@ const AdminStaffManagement = () => {
                   {showError('phone_number') && <span className="field-error">{errors.phone_number}</span>}
                 </div>
 
-                {/* Role — populated from the role table (1 & 3 only) */}
                 <div className="form-group">
                   <label>ASSIGN SYSTEM ROLE</label>
                   <select
@@ -590,7 +649,6 @@ const AdminStaffManagement = () => {
                   {showError('role_id') && <span className="field-error">{errors.role_id}</span>}
                 </div>
 
-                {/* Password */}
                 <div className="form-group">
                   <label>TEMPORARY PASSWORD</label>
                   <div className="input-wrapper" style={{ position: 'relative' }}>
@@ -621,7 +679,6 @@ const AdminStaffManagement = () => {
                   </div>
                   {showError('password') && <span className="field-error">{errors.password}</span>}
 
-                  {/* Live password requirements checklist */}
                   {passwordFocused && formData.password && !allPasswordRequirementsMet && (
                     <div className="password-requirements">
                       <p className="requirements-title">Password must contain:</p>
@@ -639,7 +696,6 @@ const AdminStaffManagement = () => {
                   )}
                 </div>
 
-                {/* Confirm Password */}
                 <div className="form-group">
                   <label>CONFIRM PASSWORD</label>
                   <div className="input-wrapper" style={{ position: 'relative' }}>
@@ -735,12 +791,12 @@ const AdminStaffManagement = () => {
                       </td>
                       <td>
                         <div className="action-buttons">
-                          <button className="btn-edit" onClick={() => handleEditClick(staff)}>Edit</button>
                           <button
-                            className="btn-archive"
-                            onClick={() => handleDeactivateClick(staff)}
-                            disabled={staff.status === 'Inactive'}
-                          >Deactivate</button>
+                            className="btn-edit"
+                            onClick={() => handleOpenActionModal(staff)}
+                          >
+                            Actions
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -750,7 +806,42 @@ const AdminStaffManagement = () => {
             </table>
           </div>
 
-          {/* Edit modal */}
+          {/* --- MODALS --- */}
+
+          {/* Action Selection Modal */}
+          {showActionModal && (
+            <div className="modal-overlay">
+              <div className="modal action-modal" role="dialog" aria-modal="true" aria-labelledby="action-modal-title">
+                <h2 id="action-modal-title">Select an Action</h2>
+                <div className="modal-content">
+                  <p className="action-modal-subtitle">
+                    Choose what you would like to do with <strong>{selectedStaff?.name}</strong>.
+                  </p>
+
+                  <div className="action-modal-buttons">
+                    <button className="action-modal-btn btn-edit" onClick={handleSelectEdit}>
+                      Edit
+                    </button>
+                    <button
+                      className="action-modal-btn btn-archive"
+                      onClick={handleSelectDeactivate}
+                      disabled={selectedStaff?.status === 'Inactive'}
+                    >
+                      Deactivate
+                    </button>
+                    <button className="action-modal-btn btn-delete" onClick={handleSelectDelete}>
+                      Delete
+                    </button>
+                  </div>
+                </div>
+                <div className="modal-actions">
+                  <button className="btn-secondary" onClick={handleCloseActionModal}>Cancel</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Edit Status Modal */}
           {showEditModal && (
             <div className="modal-overlay">
               <div className="modal" role="dialog" aria-modal="true">
@@ -766,14 +857,14 @@ const AdminStaffManagement = () => {
                   </div>
                 </div>
                 <div className="modal-actions">
-                  <button className="btn-secondary" onClick={() => setShowEditModal(false)}>Cancel</button>
+                  <button className="btn-secondary" onClick={() => { setShowEditModal(false); setSelectedStaff(null); }}>Cancel</button>
                   <button className="btn-primary" onClick={handleSaveEdit}>Save Changes</button>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Deactivate confirmation modal */}
+          {/* Deactivate Confirmation Modal */}
           {showDeactivateModal && (
             <div className="modal-overlay">
               <div className="modal" role="dialog" aria-modal="true" aria-labelledby="deactivate-modal-title">
@@ -783,12 +874,30 @@ const AdminStaffManagement = () => {
                   <p className="modal-warning-text">This action will revoke their access to the portal immediately.</p>
                 </div>
                 <div className="modal-actions">
-                  <button className="btn-secondary" onClick={() => setShowDeactivateModal(false)}>Cancel</button>
+                  <button className="btn-secondary" onClick={() => { setShowDeactivateModal(false); setSelectedStaff(null); }}>Cancel</button>
                   <button className="btn-archive" onClick={handleConfirmDeactivate}>Deactivate Staff</button>
                 </div>
               </div>
             </div>
           )}
+
+          {/* Delete Confirmation Modal */}
+          {showDeleteModal && (
+            <div className="modal-overlay">
+              <div className="modal" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
+                <h2 id="delete-modal-title">Delete Staff Member?</h2>
+                <div className="modal-content">
+                  <p>Are you sure you want to delete <strong>{selectedStaff?.name}</strong>?</p>
+                  <p className="modal-warning-text">This action will remove their access to the portal completely</p>
+                </div>
+                <div className="modal-actions">
+                  <button className="btn-secondary" onClick={() => { setShowDeleteModal(false); setSelectedStaff(null); }}>Cancel</button>
+                  <button className="btn-delete" onClick={handleConfirmDelete}>Delete Staff</button>
+                </div>
+              </div>
+            </div>
+          )}
+
         </main>
       </div>
     </div>

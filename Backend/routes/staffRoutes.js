@@ -6,8 +6,9 @@ const {
     createStaff,
     getAllStaff,
     updateStaffStatus,
+    deleteStaff,                 // ← NEW
     getMyAdminProfile,
-    getAssignableRoles, 
+    getAssignableRoles,
     updateMyAdminProfile,
     changeMyPassword
 } = require('../controllers/staffController');
@@ -29,5 +30,6 @@ router.get('/staff/roles', getAssignableRoles);
 router.post('/staff', validateStaffSignup, createStaff);
 router.get('/staff', getAllStaff);
 router.patch('/staff/:id/status', updateStaffStatus);
+router.delete('/staff/:id', deleteStaff);          // ← FIXED
 
 module.exports = router;

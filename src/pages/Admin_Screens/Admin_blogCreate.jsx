@@ -1,8 +1,11 @@
-// src/pages/Admin_Screens/Admin_BlogCreate.jsx
+ //src/pages/Admin_Screens/Admin_BlogCreate.jsx
 // ============================================================
 // Admin_BlogCreate — Create New Post page
 // Handles Blog Posts, Events, Announcements and News.
 // Article Body uses a contentEditable rich-text editor.
+// Featured image is uploaded to the backend, and its URL is
+// embedded as an <img> inside the post's HTML body so it appears
+// on the public blog without adding any MySQL column.
 // ============================================================
 
 import { useState, useRef, useEffect } from 'react';
@@ -34,6 +37,9 @@ const Admin_BlogCreate = () => {
 
     const [errors, setErrors] = useState({});
 
+    // Toast notification state (replaces alert)
+    const [toast, setToast] = useState(null); // { type: 'success' | 'error', text: string }
+
     const adminName = 'Admin User';
 
     // -----------------------------------------------------------
@@ -41,6 +47,14 @@ const Admin_BlogCreate = () => {
     // -----------------------------------------------------------
     const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
     const closeMobileMenu = () => setIsMobileMenuOpen(false);
+
+    // -----------------------------------------------------------
+    // TOAST HELPER — auto-hides after 3.5 seconds
+    // -----------------------------------------------------------
+    const showToast = (type, text) => {
+        setToast({ type, text });
+        window.setTimeout(() => setToast(null), 3500);
+    };
 
     // -----------------------------------------------------------
     // 3. GENERIC INPUT HANDLER
@@ -92,9 +106,16 @@ const Admin_BlogCreate = () => {
     // -----------------------------------------------------------
     const handleFileUpload = (e) => {
         const file = e.target.files[0];
-        if (file) {
-            setFormData((prev) => ({ ...prev, featuredImage: file }));
-        }
+        if (!file) return;
+
+        setFormData((prev) => ({ ...prev, featuredImage: file }));
+
+        setErrors((prev) => {
+            if (!prev.featuredImage) return prev;
+            const next = { ...prev };
+            delete next.featuredImage;
+            return next;
+        });
     };
 
     // -----------------------------------------------------------
@@ -115,6 +136,11 @@ const Admin_BlogCreate = () => {
             nextErrors.officialTitle = 'Official Title is required.';
         }
 
+        // Featured image is required (both draft and publish)
+        if (!formData.featuredImage) {
+            nextErrors.featuredImage = 'Featured image is required.';
+        }
+
         if (requireBody && !stripHtml(formData.articleBody)) {
             nextErrors.articleBody = 'Article Body / Event Description is required.';
         }
@@ -132,33 +158,55 @@ const Admin_BlogCreate = () => {
     };
 
     // -----------------------------------------------------------
-    // 7. ACTION HANDLERS  ← THE ONLY LOGIC THAT CHANGED
+    // 7. ACTION HANDLERS
     // -----------------------------------------------------------
-    const buildPayload = (status) => ({
-        postType:      formData.postType,
-        officialTitle: formData.officialTitle,
-        tags:          formData.tags,
-        articleBody:   formData.articleBody,
-        eventDate:     formData.eventDate || null,
-        venue:         formData.venue     || null,
-        status, // 'draft' | 'published'
-    });
+
+    // Uploads the picked image and returns its public URL.
+    const uploadFeaturedImage = async () => {
+        if (!formData.featuredImage) return null;
+        const res = await blogAPI.uploadImage(formData.featuredImage);
+        return res.data?.url || null;
+    };
+
+    // Builds the payload. The image URL is embedded at the TOP of
+    // the article body as an <img> tag, so it's stored inside the
+    // existing Content column — no schema change needed.
+    const buildPayload = (status, imageUrl) => {
+        const safeAlt = (formData.officialTitle || 'Post image').replace(/"/g, '&quot;');
+        const imageTag = imageUrl
+            ? `<img src="http://localhost:5000${imageUrl}" alt="${safeAlt}" style="max-width:100%;height:auto;border-radius:8px;margin-bottom:16px;display:block;" />`
+            : '';
+
+        return {
+            postType:      formData.postType,
+            officialTitle: formData.officialTitle,
+            tags:          formData.tags,
+            articleBody:   `${imageTag}${formData.articleBody || ''}`,
+            eventDate:     formData.eventDate || null,
+            venue:         formData.venue     || null,
+            status,
+        };
+    };
 
     const handleSaveDraft = async () => {
         const nextErrors = validate({ requireBody: false });
 
         if (Object.keys(nextErrors).length > 0) {
             setErrors(nextErrors);
-            alert('Please fix the highlighted fields before saving a draft.');
+            showToast('error', 'Please fix the highlighted fields before saving a draft.');
             return;
         }
 
         try {
-            await blogAPI.createPost(buildPayload('draft'));
-            alert('Draft saved successfully!');
-            navigate('/admin/blog-management');
+            const imageUrl = await uploadFeaturedImage();
+            await blogAPI.createPost(buildPayload('draft', imageUrl));
+            showToast('success', `Draft "${formData.officialTitle}" saved successfully.`);
+
+            window.setTimeout(() => {
+                navigate('/admin/blog-management');
+            }, 900);
         } catch (err) {
-            alert(err.response?.data?.error || err.message);
+            showToast('error', err.response?.data?.error || err.message || 'Failed to save draft.');
         }
     };
 
@@ -167,17 +215,21 @@ const Admin_BlogCreate = () => {
 
         if (Object.keys(nextErrors).length > 0) {
             setErrors(nextErrors);
-            alert('Please complete all required fields before publishing.');
+            showToast('error', 'Please complete all required fields before publishing.');
             return;
         }
 
         setErrors({});
         try {
-            await blogAPI.createPost(buildPayload('published'));
-            alert('Post published successfully!');
-            navigate('/admin/blog-management');
+            const imageUrl = await uploadFeaturedImage();
+            await blogAPI.createPost(buildPayload('published', imageUrl));
+            showToast('success', `${formData.postType} published successfully.`);
+
+            window.setTimeout(() => {
+                navigate('/admin/blog-management');
+            }, 900);
         } catch (err) {
-            alert(err.response?.data?.error || err.message);
+            showToast('error', err.response?.data?.error || err.message || 'Failed to publish post.');
         }
     };
 
@@ -198,7 +250,7 @@ const Admin_BlogCreate = () => {
             editorRef.current.innerHTML = '';
         }
 
-        alert('Form has been reset');
+        showToast('success', 'Form has been reset.');
     };
 
     useEffect(() => {
@@ -210,7 +262,7 @@ const Admin_BlogCreate = () => {
     const postTypeOptions = ['Blog Post', 'Event', 'Announcement', 'News'];
 
     // -----------------------------------------------------------
-    // 8. RENDER (unchanged)
+    // 8. RENDER
     // -----------------------------------------------------------
     return (
         <div className="admin-blogcreate-layout">
@@ -220,6 +272,17 @@ const Admin_BlogCreate = () => {
                 isMobileMenuOpen={isMobileMenuOpen}
                 notificationCount={3}
             />
+
+            {/* In-page toast (replaces alert) */}
+            {toast && (
+                <div
+                    className={`blogcreate-toast blogcreate-toast--${toast.type}`}
+                    role="status"
+                    aria-live="polite"
+                >
+                    {toast.text}
+                </div>
+            )}
 
             <div className="admin-blogcreate-body">
                 <Admin_Sidebar
@@ -395,10 +458,10 @@ const Admin_BlogCreate = () => {
 
                         {/* RIGHT COLUMN */}
                         <div className="blogcreate-right">
-                            {/* Featured Image */}
+                            {/* Featured Image — required */}
                             <div className="blogcreate-card">
                                 <h3 className="card-title">Featured Display Image</h3>
-                                <div className="upload-area">
+                                <div className={`upload-area ${errors.featuredImage ? 'upload-area--error' : ''}`}>
                                     <input
                                         type="file"
                                         id="imageUpload"
@@ -433,9 +496,12 @@ const Admin_BlogCreate = () => {
                                         </div>
                                     </label>
                                 </div>
+                                {errors.featuredImage && (
+                                    <span className="field-error">{errors.featuredImage}</span>
+                                )}
                             </div>
 
-                            {/* EVENT LOGISTICS */}
+                            {/* EVENT LOGISTICS — conditional */}
                             {isEvent && (
                                 <div className="blogcreate-card event-card">
                                     <h3 className="card-title">

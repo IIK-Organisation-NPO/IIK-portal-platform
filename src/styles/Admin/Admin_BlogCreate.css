@@ -815,3 +815,49 @@
 .rich-text-toolbar .toolbar-btn {
   user-select: none;
 }
+
+/* ============================================================
+   Blog Create — in-page toast (replaces alert)
+   ============================================================ */
+.blogcreate-toast {
+  position: fixed;
+  top: 90px;
+  right: 30px;
+  padding: 14px 22px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 500;
+  z-index: 9999;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  max-width: 400px;
+  animation: toastSlideIn 0.25s ease-out;
+}
+
+.blogcreate-toast--success {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.blogcreate-toast--error {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+@keyframes toastSlideIn {
+  from {
+    transform: translateX(120%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Upload area error state — red border when image is missing */
+.upload-area--error .upload-label {
+  border: 2px solid #dc2626;
+  background: #fff5f5;
+}

@@ -1518,45 +1518,51 @@ class AdminController {
         }
     }
 
-    // ============================================
-    // GET CENTRE STATISTICS
-    // ============================================
-    static async getCentreStats(req, res) {
-        try {
-            console.log('Fetching centre statistics...');
+// ============================================
+// GET CENTRE STATISTICS
+// ============================================
+static async getCentreStats(req, res) {
+  try {
+    console.log('Fetching centre statistics...');
 
-            const [centres] = await pool.execute(
-                `SELECT 
-                    dc.digital_centre_name as name,
-                    COUNT(DISTINCT u.User_id) as learner_count
-                FROM digital_centres dc
-                LEFT JOIN user u ON u.digital_centre_id = dc.id AND u.role_id = 2
-                GROUP BY dc.id, dc.digital_centre_name
-                ORDER BY learner_count DESC`
-            );
+    const [centres] = await pool.execute(
+      `SELECT
+          COALESCE(dc.center_name, 'Unassigned') AS name,
+          COUNT(li.interest_id)                  AS learner_count
+       FROM learner_interests li
+       LEFT JOIN Digital_Center dc
+              ON dc.digital_center_id = li.digital_center_id
+       WHERE li.status != 'Not Interested'
+       GROUP BY COALESCE(dc.center_name, 'Unassigned')
+       ORDER BY learner_count DESC`
+    );
 
-            const maxCount = centres.length > 0 ? Math.max(...centres.map(r => r.learner_count || 0)) : 1;
+    const maxCount = centres.length > 0
+      ? Math.max(...centres.map(r => Number(r.learner_count) || 0))
+      : 1;
 
-            const result = centres.map(centre => ({
-                name: centre.name || 'Unknown Centre',
-                count: centre.learner_count || 0,
-                percentage: maxCount > 0 ? ((centre.learner_count / maxCount) * 100) : 0
-            }));
+    const result = centres.map(centre => ({
+      name: centre.name || 'Unknown Centre',
+      count: Number(centre.learner_count) || 0,
+      percentage: maxCount > 0
+        ? ((Number(centre.learner_count) / maxCount) * 100)
+        : 0,
+    }));
 
-            res.status(200).json({
-                success: true,
-                data: result
-            });
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
 
-        } catch (error) {
-            console.error('Error fetching centre stats:', error);
-            res.status(200).json({
-                success: true,
-                data: [],
-                message: 'No centre data available'
-            });
-        }
-    }
+  } catch (error) {
+    console.error('Error fetching centre stats:', error);
+    res.status(200).json({
+      success: true,
+      data: [],
+      message: 'No centre data available',
+    });
+  }
+}
 
     // ============================================
     // GET PROGRAMME STATISTICS

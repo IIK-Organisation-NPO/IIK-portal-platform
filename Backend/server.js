@@ -1,6 +1,8 @@
 // backend/server.js
 const express = require('express');
 const cors = require('cors');
+const uploadRoutes = require('./routes/uploadRoutes');
+const path = require('path');
 const cookieParser = require('cookie-parser');
 const session = require('express-session');
 const authRoutes = require('./routes/authRoutes');
@@ -27,7 +29,7 @@ app.use(session({
     name: 'sessionId'
 }));
 
-// ===== CORS CONFIGURATION =====
+// ===== CORS CONFIGURATION (must come BEFORE routes) =====
 app.use(cors({
     origin: [
         'http://localhost:3000',
@@ -102,6 +104,9 @@ const authLimiter = rateLimit({
     legacyHeaders: false,
 });
 
+// ===== STATIC FILES =====
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // ===== REGISTER ROUTES =====
 console.log('📦 Registering routes...');
 
@@ -116,19 +121,20 @@ console.log(' Admin routes registered at /api/admin');
 app.use('/api/learner', learnerRoutes);
 console.log(' Learner routes registered at /api/learner');
 
-// NEW: Programme routes
 app.use('/api', programmeRoutes);
 console.log(' Programme routes registered at /api/programmes');
 
 app.use('/api', staffRoutes);
 
-// NEW: Blog routes
 app.use('/api/blog', blogRoutes);
 console.log(' Blog routes registered at /api/blog');
 
-// NEW: Navigation routes
 app.use('/api/navigation', navigationRoutes);
 console.log(' Navigation routes registered at /api/navigation');
+
+// NEW: Upload routes — moved here, AFTER CORS
+app.use('/api/upload', uploadRoutes);
+console.log(' Upload routes registered at /api/upload');
 
 // ===== TEST ROUTE =====
 app.get('/api/test', (req, res) => {
@@ -146,14 +152,8 @@ app.get('/api/test', (req, res) => {
             learner: '/api/learner',
             programmes: '/api/programmes',
             blog: '/api/blog',
-            navigation: '/api/navigation'
-        },
-        security: {
-            cookies: 'HTTP-only, Secure, SameSite=Lax',
-            rateLimiting: '15 minutes, 100 requests',
-            authLimiting: '15 minutes, 20 attempts',
-            headers: 'XSS, Frame, Content-Type protection enabled',
-            captcha: 'SVG CAPTCHA enabled with session storage'
+            navigation: '/api/navigation',
+            upload: '/api/upload'
         }
     });
 });
@@ -202,6 +202,7 @@ app.listen(PORT, () => {
     console.log(`📡 Programme routes: http://localhost:${PORT}/api/programmes`);
     console.log(`📡 Blog routes: http://localhost:${PORT}/api/blog`);
     console.log(`📡 Navigation routes: http://localhost:${PORT}/api/navigation`);
+    console.log(`📡 Upload routes: http://localhost:${PORT}/api/upload`);
     console.log(`📡 Test route: http://localhost:${PORT}/api/test`);
     console.log(`\n🔒 Security Features Enabled:`);
     console.log(`   ✅ HTTP-only cookies ready`);

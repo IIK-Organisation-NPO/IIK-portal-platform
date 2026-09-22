@@ -3,7 +3,17 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
 
-/* GET /api/blog?tab=All&search=foo */
+/* ================================================================
+   Helper: detect whether a stored HTML body contains an <img>
+   (used to enrich the API response — no DB change needed)
+================================================================ */
+const hasEmbeddedImage = (html) => /<img\s[^>]*src=/i.test(html || '');
+
+/* ================================================================
+   GET /api/blog?tab=All&search=foo
+   Returns posts (content included, so the public page can render
+   the embedded featured image).
+================================================================ */
 router.get('/', async (req, res) => {
   try {
     const { tab, search } = req.query;
@@ -12,7 +22,7 @@ router.get('/', async (req, res) => {
       SELECT bp.BlogPost_id  AS id,
              bp.Title        AS title,
              bp.Type         AS type,
-             bp.Content      AS content, 
+             bp.Content      AS content,
              a.Name          AS author,
              bp.Status       AS status,
              COALESCE(bp.DatePublished, bp.DateCreated) AS rawDate
@@ -37,13 +47,14 @@ router.get('/', async (req, res) => {
     const [rows] = await pool.query(sql, params);
 
     const posts = rows.map((r) => ({
-      id:     r.id,
-      title:  r.title,
-      type:   r.type,
-      author: r.author,
-      status: r.status,
-      content: r.content,
-      date:   r.rawDate
+      id:        r.id,
+      title:     r.title,
+      type:      r.type,
+      author:    r.author,
+      status:    r.status,
+      content:   r.content,
+      hasImage:  hasEmbeddedImage(r.content),
+      date:      r.rawDate
         ? new Date(r.rawDate).toLocaleDateString('en-US', {
             month: 'short', day: 'numeric', year: 'numeric',
           })
@@ -57,7 +68,9 @@ router.get('/', async (req, res) => {
   }
 });
 
-/* GET /api/blog/:id */
+/* ================================================================
+   GET /api/blog/:id
+================================================================ */
 router.get('/:id', async (req, res) => {
   try {
     const [rows] = await pool.query(
@@ -75,7 +88,9 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-/* PUT /api/blog/:id */
+/* ================================================================
+   PUT /api/blog/:id
+================================================================ */
 router.put('/:id', async (req, res) => {
   const { title, type, status, date, author } = req.body;
 
@@ -110,7 +125,9 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-/* DELETE /api/blog/:id */
+/* ================================================================
+   DELETE /api/blog/:id
+================================================================ */
 router.delete('/:id', async (req, res) => {
   try {
     await pool.query('DELETE FROM BlogPosts WHERE BlogPost_id = ?', [req.params.id]);
@@ -121,7 +138,11 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-/* POST /api/blog */
+/* ================================================================
+   POST /api/blog
+   The featured image is already embedded as an <img> tag inside
+   `articleBody` by the frontend, so it lands safely in `Content`.
+================================================================ */
 router.post('/', async (req, res) => {
   const {
     postType, officialTitle, tags, articleBody,
@@ -135,6 +156,13 @@ router.post('/', async (req, res) => {
     req.session?.user?.Admin_ID ||
     req.session?.user?.id ||
     1;
+
+  // Soft dev-time check — warn if body has no image, but still save.
+  if (process.env.NODE_ENV !== 'production' && !hasEmbeddedImage(articleBody)) {
+    console.warn(
+      `[POST /api/blog] Post "${officialTitle}" has no embedded image in Content.`
+    );
+  }
 
   try {
     const [result] = await pool.query(

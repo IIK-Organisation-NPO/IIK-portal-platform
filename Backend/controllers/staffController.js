@@ -127,12 +127,86 @@ exports.createStaff = async (req, res) => {
     }
 };
 // ============================================
+//  DELETE STAFF (hard delete from the Admin table)
+//  DELETE /api/staff/:id
+// ============================================
+exports.deleteStaff = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { pool } = require('../config/database');
+
+        // Don't allow deleting yourself (optional but recommended)
+        const sessionAdminId =
+            req.session?.adminId ||
+            req.session?.admin?.Admin_ID ||
+            req.session?.Admin_ID ||
+            null;
+
+        if (sessionAdminId && String(sessionAdminId) === String(id)) {
+            return res.status(400).json({
+                success: false,
+                message: 'You cannot delete your own account.',
+            });
+        }
+
+        // Confirm the row exists first
+        const [rows] = await pool.execute(
+            'SELECT Admin_ID, Name, Surname FROM Admin WHERE Admin_ID = ? LIMIT 1',
+            [id]
+        );
+
+        if (rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Staff member not found.',
+            });
+        }
+
+        // Try to delete. If the FK from other tables blocks it,
+        // we catch that specific error and give a friendly message.
+        try {
+            await pool.execute('DELETE FROM Admin WHERE Admin_ID = ?', [id]);
+        } catch (fkErr) {
+            // MySQL error code for FK constraint
+            if (fkErr.code === 'ER_ROW_IS_REFERENCED_2' || fkErr.errno === 1451) {
+                return res.status(409).json({
+                    success: false,
+                    message:
+                        'Cannot delete this staff member because they have related records (e.g. blog posts). Deactivate them instead.',
+                });
+            }
+            throw fkErr;
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: 'Staff member deleted successfully.',
+        });
+    } catch (error) {
+        console.error('Delete staff error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to delete staff member. Please try again later.',
+        });
+    }
+};
+// ============================================
 //  GET MY PROFILE (logged-in admin)
 //  GET /api/staff/me
 // ============================================
 exports.getMyAdminProfile = async (req, res) => {
     try {
-        const adminId = req.user?.userId;
+        // Read the admin id from whatever key the auth middleware used.
+        // Different middleware implementations set different keys.
+        const adminId =
+            req.user?.userId     ??
+            req.user?.id         ??
+            req.user?.Admin_ID   ??
+            req.user?.adminId    ??
+            req.session?.adminId ??
+            req.session?.admin?.Admin_ID ??
+            null;
+
         if (!adminId) {
             return res.status(401).json({
                 success: false,
@@ -175,7 +249,15 @@ exports.getMyAdminProfile = async (req, res) => {
 // ============================================
 exports.updateMyAdminProfile = async (req, res) => {
     try {
-        const adminId = req.user?.userId;
+        const adminId =
+            req.user?.userId     ??
+            req.user?.id         ??
+            req.user?.Admin_ID   ??
+            req.user?.adminId    ??
+            req.session?.adminId ??
+            req.session?.admin?.Admin_ID ??
+            null;
+
         if (!adminId) {
             return res.status(401).json({
                 success: false,
@@ -240,7 +322,6 @@ exports.updateMyAdminProfile = async (req, res) => {
         });
     }
 };
-
 // ============================================
 //  CHANGE MY PASSWORD
 //  PUT /api/staff/me/password

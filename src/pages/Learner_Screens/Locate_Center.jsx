@@ -35,8 +35,15 @@ const activeCenterIcon = L.divIcon({
 });
 
 // ============================================
-// Fetch real road route from OSRM (free, no key)
+// Fetch real road route from OSRM
+//
+// Public OSRM demo only serves the "driving" profile.
+// We take the driving road geometry and compute both
+// walking and driving times ourselves.
 // ============================================
+const WALKING_SPEED_KMH = 5;   // average pedestrian pace
+const DRIVING_SPEED_KMH = 60;  // average urban driving speed
+
 const fetchRoute = async (from, to) => {
   const url =
     `https://router.project-osrm.org/route/v1/driving/` +
@@ -54,11 +61,31 @@ const fetchRoute = async (from, to) => {
   const route = data.routes[0];
   const latLngs = route.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
 
+  const distanceKm = route.distance / 1000;
+  const walkingMin = (distanceKm / WALKING_SPEED_KMH) * 60;
+  const drivingMin = (distanceKm / DRIVING_SPEED_KMH) * 60;
+
   return {
     latLngs,
-    distanceKm: route.distance / 1000,
-    durationMin: route.duration / 60,
+    distanceKm,
+    walkingMin,
+    drivingMin,
   };
+};
+
+// ============================================
+// Format minutes into a readable string.
+//   45    → "45 min"
+//   75    → "1 h 15 min"
+//   291   → "4 h 51 min"
+// ============================================
+const formatDuration = (minutes) => {
+  if (!minutes || minutes < 1) return '< 1 min';
+  const total = Math.round(minutes);
+  if (total < 60) return `${total} min`;
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  return m === 0 ? `${h} h` : `${h} h ${m} min`;
 };
 
 // ============================================
@@ -238,9 +265,11 @@ const MapController = ({ target, userLocation, focusUser, onRouteInfo }) => {
           map.fitBounds(line.getBounds(), { padding: [80, 80], maxZoom: 15 });
         }
 
+        // ⬇️ Forward BOTH walking and driving times to the UI
         onRouteInfo({
           distanceKm: route.distanceKm,
-          durationMin: route.durationMin,
+          walkingMin: route.walkingMin,
+          drivingMin: route.drivingMin,
         });
       } catch (err) {
         console.error('Route fetch failed:', err);
@@ -294,15 +323,12 @@ const LocateCenter = () => {
 
   const [userLocation, setUserLocation] = useState({ lat: -29.5, lng: 30.5 });
 
-  // Programme the learner came from — passed by the dashboard / programmes
-  // page through router state. Falls back to sessionStorage if needed.
   const [programmeContext, setProgrammeContext] = useState(null);
 
   // -------------------------------------------------------------------------
   // Read programme context on mount
   // -------------------------------------------------------------------------
   useEffect(() => {
-    // Preferred source: router state passed by navigate()
     const stateProgrammeId = location.state?.programmeId ?? null;
     const stateProgrammeTitle = location.state?.programmeTitle ?? null;
 
@@ -314,7 +340,6 @@ const LocateCenter = () => {
       return;
     }
 
-    // Fallback: legacy sessionStorage staging
     const raw = sessionStorage.getItem('pendingProgrammeInterest');
     if (!raw) return;
 
@@ -432,11 +457,6 @@ const LocateCenter = () => {
     findNearest();
   };
 
-  // ============================================
-  // Submit / remove centre interest
-  // The POST body now carries the programme id (if any) so the
-  // learner_interests row links both programme and centre.
-  // ============================================
   const handleInterest = async (centerId, e) => {
     if (e) e.stopPropagation();
     const already = interestedCenters.includes(centerId);
@@ -459,7 +479,6 @@ const LocateCenter = () => {
       setInterestedCenters([...interestedCenters, centerId]);
 
       if (programmeContext?.programmeId) {
-        // Clear the staged context now that the interest is saved
         sessionStorage.removeItem('pendingProgrammeInterest');
         setProgrammeContext(null);
       }
@@ -563,7 +582,6 @@ const LocateCenter = () => {
         </div>
       </section>
 
-      {/* Programme context banner — tells the learner why they're here */}
       {programmeContext?.programmeId && (
         <div
           style={{
@@ -680,21 +698,51 @@ const LocateCenter = () => {
 
               {routeInfo && (
                 <div className="route-info-box">
-                  <div className="route-info-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2">
-                      <circle cx="12" cy="5" r="2" />
-                      <path d="M12 7v6l4 2" />
-                      <path d="M7 21l3-5 2-3" />
-                      <path d="M17 21l-3-5" />
-                    </svg>
+                  {/* Walking mode */}
+                  <div className="route-info-mode">
+                    <div className="route-info-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2">
+                        <circle cx="12" cy="5" r="2" />
+                        <path d="M12 7v6l4 2" />
+                        <path d="M7 21l3-5 2-3" />
+                        <path d="M17 21l-3-5" />
+                      </svg>
+                    </div>
+                    <div>
+                      <div className="route-info-time">
+                        {formatDuration(routeInfo.walkingMin)}
+                      </div>
+                      <div className="route-info-label">walking</div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="route-info-time">
-                      {Math.round(routeInfo.durationMin)} min
+
+                  {/* Driving mode */}
+                  <div className="route-info-mode">
+                    <div className="route-info-icon">
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="#0f766e"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M5 17h14M5 17a2 2 0 1 1 4 0M15 17a2 2 0 1 1 4 0M3 13l1.5-4.5A2 2 0 0 1 6.4 7h11.2a2 2 0 0 1 1.9 1.5L21 13v4H3v-4z" />
+                      </svg>
                     </div>
-                    <div className="route-info-distance">
-                      {routeInfo.distanceKm.toFixed(1)} km
+                    <div>
+                      <div className="route-info-time">
+                        {formatDuration(routeInfo.drivingMin)}
+                      </div>
+                      <div className="route-info-label">driving</div>
                     </div>
+                  </div>
+
+                  {/* Distance */}
+                  <div className="route-info-distance-row">
+                    {routeInfo.distanceKm.toFixed(1)} km
                   </div>
                 </div>
               )}

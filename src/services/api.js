@@ -8,7 +8,7 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
   timeout: 10000, // 10 seconds timeout
-  withCredentials: true, // ← ADDED: send cookies (accessToken, refreshToken) cross-origin
+  withCredentials: true, // send cookies (accessToken, refreshToken) cross-origin
 });
 
 // Request interceptor - Add token to requests
@@ -102,9 +102,18 @@ export const blogAPI = {
   createPost: (data)        => api.post('/blog', data),
   updatePost: (id, data)    => api.put(`/blog/${id}`, data),
   deletePost: (id)          => api.delete(`/blog/${id}`),
+
+  // Upload the featured image, returns { success, url }
+  uploadImage: (file) => {
+    const fd = new FormData();
+    fd.append('image', file);
+    return api.post('/upload/blog', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
 };
 
-// API methods for navigation  ← NEW
+// API methods for navigation
 export const navigationAPI = {
   getAdminNav: () => api.get('/navigation/admin'),
 };
