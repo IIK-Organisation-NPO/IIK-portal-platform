@@ -334,8 +334,8 @@ const Signup = () => {
                     onChange={(e) => setAgreeTerms(e.target.checked)}
                   />
                   <span>
-                    I agree to the <Link to="/terms">Terms of Service</Link> and{" "}
-                    <Link to="/privacy">Privacy Policy</Link> (POPIA compliant).
+                     I agree to the <Link to="/terms_and_conditions">Terms and conditions</Link>{" "}
+                    (POPIA compliant).
                   </span>
                 </label>
                 {errors.terms && (

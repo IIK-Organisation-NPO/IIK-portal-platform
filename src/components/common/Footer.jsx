@@ -19,9 +19,7 @@ const Footer = () => {
           <div>
             <h4>LEGAL</h4>
             <div className="footer-links">
-              <Link to="#">Privacy Policy</Link>
-              <Link to="#">Terms of Service</Link>
-              <Link to="#">POPIA Compliance</Link>
+              <Link to="/terms_and_conditions">Terms and Conditions</Link>
             </div>
           </div>
           <div>

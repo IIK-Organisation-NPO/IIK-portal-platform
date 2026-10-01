@@ -1,0 +1,529 @@
+/* =========================================================
+   Terms and Conditions Page - Black & White Theme
+   ========================================================= */
+
+.terms-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #ffffff;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* =========================================================
+   Header (scoped with terms- prefix to avoid collisions)
+   ========================================================= */
+.terms-header-bar {
+  background-color: #ffffff;
+  border-bottom: 2px solid #000000;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.terms-header-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0.85rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  position: relative;
+}
+
+/* --- Logo block --- */
+.terms-header-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.terms-header-logo img {
+  height: 42px;
+  width: auto;
+  object-fit: contain;
+}
+
+.terms-header-logo span {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #000000;
+  letter-spacing: 0.3px;
+}
+
+/* --- Navigation links (desktop default) --- */
+.terms-header-nav {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.terms-header-nav a {
+  text-decoration: none;
+  color: #000000;
+  font-weight: 500;
+  font-size: 0.95rem;
+  position: relative;
+}
+
+/* No hover effects on header links (per design requirement) */
+
+/* --- Hamburger toggle (hidden on desktop, shown on mobile) --- */
+.terms-menu-toggle {
+  display: none; /* hidden by default; enabled in mobile media query */
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.35rem;
+  margin-left: auto;
+}
+
+/* The three bars that make up the hamburger icon */
+.terms-menu-icon {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 26px;
+  height: 20px;
+  position: relative;
+}
+
+.terms-menu-icon span {
+  display: block;
+  height: 3px;
+  width: 100%;
+  background-color: #000000;
+  border-radius: 0;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+/* When the menu is open, morph the bars into an "X" */
+.terms-menu-icon.open span:nth-child(1) {
+  transform: translateY(8.5px) rotate(45deg);
+}
+
+.terms-menu-icon.open span:nth-child(2) {
+  opacity: 0;
+}
+
+.terms-menu-icon.open span:nth-child(3) {
+  transform: translateY(-8.5px) rotate(-45deg);
+}
+
+/* =========================================================
+   Main content area
+   ========================================================= */
+.terms-main {
+  flex: 1;
+  padding: 0;
+}
+
+.terms-container {
+  max-width: 860px;
+  margin: 0 auto;
+  background-color: #ffffff;
+  padding: 0 3rem 4rem;
+}
+
+/* =========================================================
+   Hero logo + horizontal rule
+   ========================================================= */
+.terms-hero {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 2.5rem 0 0;
+  margin-bottom: 2rem;
+}
+
+.terms-hero-logo {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.terms-hero-logo img {
+  height: 90px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+}
+
+.terms-hero-line {
+  flex: 1;
+  height: 5px;
+  background-color: #000000;
+}
+
+/* =========================================================
+   Title block
+   ========================================================= */
+.terms-title-block {
+  text-align: left;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+}
+
+.terms-title-block h1 {
+  font-size: 1.5rem;
+  color: #000000;
+  margin: 0 0 0.5rem;
+  font-weight: 700;
+}
+
+.terms-updated {
+  font-size: 0.9rem;
+  color: #000000;
+  font-weight: 600;
+  margin: 0;
+}
+
+/* =========================================================
+   Section content
+   ========================================================= */
+.terms-content {
+  max-height: none;
+}
+
+.terms-section {
+  margin-bottom: 1.75rem;
+}
+
+.terms-section h3 {
+  font-size: 1.05rem;
+  color: #000000;
+  margin: 0 0 0.6rem;
+  font-weight: 700;
+}
+
+.terms-section p {
+  font-size: 0.92rem;
+  line-height: 1.7;
+  color: #000000;
+  margin: 0 0 0.6rem;
+}
+
+.terms-section ul {
+  margin: 0.4rem 0 0.8rem;
+  padding-left: 1.4rem;
+}
+
+.terms-section ul li {
+  font-size: 0.92rem;
+  line-height: 1.7;
+  color: #000000;
+  margin-bottom: 0.3rem;
+  position: relative;
+}
+
+.terms-section ul li::marker {
+  color: #000000;
+}
+
+/* =========================================================
+   Declaration section (read-only)
+   ========================================================= */
+.declaration-section {
+  background-color: #f5f5f5;
+  border: 2px solid #000000;
+  border-radius: 0;
+  padding: 1.5rem 1.75rem;
+  margin-top: 2rem;
+}
+
+.declaration-section h3 {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 0.75rem;
+}
+
+.declaration-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin-top: 1rem;
+}
+
+.declaration-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: #000000;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid #000000;
+  background-color: #ffffff;
+  cursor: default;
+  user-select: none;
+}
+
+.declaration-bullet {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+  background-color: #000000;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 0;
+  line-height: 1;
+}
+
+/* =========================================================
+   Back button (below declaration section)
+   ========================================================= */
+.terms-back-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+}
+
+.terms-back-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 0.85rem 2rem;
+  background-color: #000000;
+  color: #ffffff;
+  border: 2px solid #000000;
+  border-radius: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: inherit;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 0.25s ease, color 0.25s ease,
+    transform 0.25s ease;
+  min-width: 220px;
+}
+
+.terms-back-btn:hover {
+  background-color: #ffffff;
+  color: #000000;
+  transform: translateY(-2px);
+}
+
+.terms-back-btn:active {
+  transform: translateY(0);
+}
+
+.terms-back-btn svg {
+  display: block;
+  flex-shrink: 0;
+  transition: stroke 0.25s ease;
+}
+
+.terms-back-btn:hover svg path {
+  stroke: #000000;
+}
+
+/* =========================================================
+   Floating scroll-to-top button
+   ========================================================= */
+.terms-scroll-to-top {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  width: 48px;
+  height: 48px;
+  background-color: #000000;
+  color: #ffffff;
+  border: 2px solid #ffffff;
+  border-radius: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 200;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  transition: transform 0.25s ease, background-color 0.25s ease;
+  padding: 0;
+}
+
+.terms-scroll-to-top:hover {
+  background-color: #333333;
+  transform: translateY(-3px);
+}
+
+.terms-scroll-to-top:active {
+  transform: translateY(-1px);
+}
+
+.terms-scroll-to-top svg {
+  display: block;
+}
+
+/* =========================================================
+   Responsive — Tablet (≤ 768px)
+   ========================================================= */
+@media (max-width: 768px) {
+  .terms-header-container {
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 0.75rem 1rem;
+  }
+
+  /* Show hamburger */
+  .terms-menu-toggle {
+    display: block;
+  }
+
+  /* Hide the nav links by default on mobile */
+  .terms-header-nav {
+    display: none;
+    width: 100%;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-top: 0.85rem;
+    padding-top: 0.85rem;
+    border-top: 1px solid #000000;
+  }
+
+  /* When the toggle is clicked, show the dropdown */
+  .terms-header-nav.mobile-open {
+    display: flex;
+  }
+
+  .terms-header-nav a {
+    font-size: 0.95rem;
+    padding: 0.35rem 0;
+    width: 100%;
+  }
+
+  .terms-header-logo span {
+    font-size: 1rem;
+  }
+
+  .terms-container {
+    padding: 0 1.25rem 3rem;
+  }
+
+  .terms-hero {
+    padding-top: 1.5rem;
+    gap: 1rem;
+  }
+
+  .terms-hero-logo img {
+    height: 65px;
+  }
+
+  .terms-title-block h1 {
+    font-size: 1.2rem;
+  }
+
+  .declaration-section {
+    padding: 1rem 1rem;
+  }
+
+  .terms-back-wrapper {
+    margin-top: 1.75rem;
+    padding-top: 1.25rem;
+  }
+
+  .terms-back-btn {
+    width: 100%;
+    min-width: 0;
+    padding: 0.85rem 1.25rem;
+    font-size: 0.9rem;
+  }
+
+  .terms-scroll-to-top {
+    bottom: 1.25rem;
+    right: 1.25rem;
+    width: 44px;
+    height: 44px;
+  }
+}
+
+/* =========================================================
+   Responsive — Phone (≤ 480px)
+   ========================================================= */
+@media (max-width: 480px) {
+  .terms-main {
+    padding: 0;
+  }
+
+  .terms-container {
+    padding: 0 1rem 3rem;
+  }
+
+  .terms-hero {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .terms-hero-logo img {
+    height: 55px;
+  }
+
+  .terms-hero-line {
+    width: 100%;
+    height: 4px;
+  }
+
+  .terms-section h3 {
+    font-size: 0.98rem;
+  }
+
+  .terms-section p,
+  .terms-section ul li,
+  .declaration-item {
+    font-size: 0.87rem;
+  }
+
+  .terms-back-wrapper {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+  }
+
+  .terms-back-btn {
+    width: 100%;
+    min-width: 0;
+    padding: 0.8rem 1rem;
+    font-size: 0.85rem;
+    gap: 0.5rem;
+  }
+
+  .terms-back-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+/* =========================================================
+   Responsive — Extra small phones (≤ 360px)
+   ========================================================= */
+@media (max-width: 360px) {
+  .terms-back-btn {
+    font-size: 0.8rem;
+    padding: 0.75rem 0.85rem;
+    letter-spacing: 0.03em;
+  }
+
+  .terms-back-btn svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .terms-header-logo img {
+    height: 34px;
+  }
+
+  .terms-header-logo span {
+    font-size: 0.9rem;
+  }
+}

@@ -27,12 +27,11 @@ import SettingsPage from '../pages/Learner_Screens/Learner _Settings';
 import LearnerProgrammes from '../pages/Learner_Screens/Learner_Programmes';
 import AdminBlogCreate from '../pages/Admin_Screens/Admin_blogCreate';
 import AdminStaffManagement from '../pages/Admin_Screens/Admin_StaffManagement';
-
+import TermsAndConditions from "../components/auth/terms_and_conditions";
 const AppRoutes = () => {
   return (
     <Router>
       <Routes>
-        {/* Public routes */}
         {/* Public routes */}
         <Route path="/" element={<Login />} />
         <Route path="/login" element={<Login />} />
@@ -44,6 +43,7 @@ const AppRoutes = () => {
         <Route path="/homepage" element={<Homepage />} />
         <Route path="/about" element={<About />} />
         <Route path="/blog" element={<Blog />} />
+        <Route path="/terms_and_conditions" element={<TermsAndConditions />} />
         {/* Learner routes */}
         <Route path="/learner-dashboard" element={<LearnerDashBoard />} />
         <Route path="/learner/profile" element={<LearnerProfile />} />
