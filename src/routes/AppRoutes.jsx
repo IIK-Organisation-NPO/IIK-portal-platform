@@ -36,6 +36,7 @@ import AdminStaffManagement from '../pages/Admin_Screens/Admin_StaffManagement';
 import RoleRoute from '../components/auth/RoleRoute';
 import NotFound from '../pages/NotFound';
 
+import TermsAndConditions from "../components/auth/terms_and_conditions";
 const AppRoutes = () => {
   return (
     <Router>

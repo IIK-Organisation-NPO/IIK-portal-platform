@@ -11,6 +11,13 @@ const Homepage = () => {
   const [programmes, setProgrammes] = useState([]);
   const [loadingProgrammes, setLoadingProgrammes] = useState(true);
 
+  // Handles navigation to the signup page when "View Programmes" is clicked
+  const handleViewProgrammes = () => {
+    navigate("/signup");
+  };
+
+  // Set up the scroll listener when the component mounts,
+  // and clean it up when the component unmounts
   useEffect(() => {
     let cancelled = false;
 
@@ -97,12 +104,20 @@ const Homepage = () => {
             Digital Marketing and more. Earn your certificate today.
           </p>
           <div className="hero-buttons">
+            {/* Primary CTA: routes to signup page */}
             <Link to="/signup" className="btn-hero-primary">
               Get Started
             </Link>
-            <Link to="/learn-more" className="btn-hero-secondary">
+            {/* Secondary CTA: external link to the About page */}
+            
+            <a
+              href="https://www.iik.co.za/About-Us"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-hero-secondary"
+            >
               Learn More
-            </Link>
+            </a>
           </div>
         </div>
       </section>
@@ -149,6 +164,7 @@ const Homepage = () => {
         >
           <h2>What Our Learners Say</h2>
           <div className="testimonials-grid">
+            {/* Testimonial 1 */}
             <div className="testimonial-card">
               <p className="quote">
                 "The Microsoft 365 course completely transformed how I organize
@@ -158,6 +174,8 @@ const Homepage = () => {
               <p className="author">Thomas Clamini</p>
               <p className="author-role">Customer Analyst</p>
             </div>
+
+            {/* Testimonial 2 */}
             <div className="testimonial-card">
               <p className="quote">
                 "Excellent content delivery. Getting my Digital Literacy
@@ -167,6 +185,8 @@ const Homepage = () => {
               <p className="author">Nicole Smith</p>
               <p className="author-role">Administrative Head</p>
             </div>
+
+            {/* Testimonial 3 */}
             <div className="testimonial-card">
               <p className="quote">
                 "The Digital Marketing modules were cutting-edge. It helped us
@@ -186,6 +206,7 @@ const Homepage = () => {
         >
           <h2>Ready to start your learning journey?</h2>
           <p>Join thousands of professionals who have upskilled with IIK.</p>
+          {/* Routes to the signup page */}
           <Link to="/signup" className="btn-cta">
             Sign Up Now
           </Link>
