@@ -5,18 +5,12 @@ import { FaChevronRight } from "react-icons/fa";
 import Footer from "../../components/common/Footer";
 import "../../styles/pages/learner.css";
 import logo from "../../assets/images/small Mki.png";
-
-const API_BASE =
-  (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_BASE_URL) ||
-  "http://localhost:5000";
+import { API_BASE } from "../../config/api";
 
 const Homepage = () => {
   const [programmes, setProgrammes] = useState([]);
   const [loadingProgrammes, setLoadingProgrammes] = useState(true);
 
-  // -------------------------------------------------------------------------
-  // Fetch programmes from the DB — only Active and Upcoming
-  // -------------------------------------------------------------------------
   useEffect(() => {
     let cancelled = false;
 
@@ -59,12 +53,10 @@ const Homepage = () => {
     };
   }, []);
 
-  // Limit to the first 6 so the grid stays clean regardless of DB size
   const displayedProgrammes = programmes.slice(0, 6);
 
   return (
     <div className="learner-home">
-      {/* Header */}
       <header className="home-header">
         <div className="header-container">
           <div className="header-logo">
@@ -94,7 +86,6 @@ const Homepage = () => {
         </div>
       </header>
 
-      {/* Hero Section */}
       <section className="hero-section">
         <div
           className="container"
@@ -116,7 +107,6 @@ const Homepage = () => {
         </div>
       </section>
 
-      {/* Programmes Section */}
       <section className="programmes-section">
         <div
           className="container"
@@ -152,7 +142,6 @@ const Homepage = () => {
         </div>
       </section>
 
-      {/* Testimonials Section */}
       <section className="testimonials-section">
         <div
           className="container"
@@ -190,7 +179,6 @@ const Homepage = () => {
         </div>
       </section>
 
-      {/* CTA Section */}
       <section className="cta-section">
         <div
           className="container"

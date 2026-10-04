@@ -1,18 +1,67 @@
 // backend/controllers/adminController.js
 const { pool } = require('../config/database');
 const emailService = require('../services/emailService');
+const { getPrefs } = require('../utils/notificationPrefs');
+const { getPrefs: getAdminPrefs } = require('../utils/adminNotificationPrefs');
 const fs = require('fs');
 const path = require('path');
+const {
+    getCentreScope,
+    learnerInterestedInCentreSql,
+    assertLearnerInAdminCentre,
+    getCentreName
+} = require('../utils/centreScope');
 
 class AdminController {
-       // ===== GET DASHBOARD STATS =====
+    // GET DASHBOARD STATS 
     static async getStats(req, res) {
         try {
             console.log('Fetching admin stats...');
+            const scope = getCentreScope(req);
+            const centreName = scope.applyFilter
+                ? await getCentreName(pool, scope.centreId)
+                : null;
+            const scopedPayload = {
+                scopedCentre: scope.applyFilter
+                    ? { id: scope.centreId, name: centreName }
+                    : null
+            };
 
-            const [totalUsers] = await pool.execute('SELECT COUNT(*) as count FROM user');
+            if (scope.denyAll) {
+                return res.status(200).json({
+                    success: true,
+                    data: {
+                        totalUsers: 0,
+                        totalLearners: 0,
+                        totalAdmins: 0,
+                        totalSuperAdmins: 0,
+                        totalProgrammes: 0,
+                        totalCertificates: 0,
+                        pendingCertificates: 0,
+                        verifiedUsers: 0,
+                        totalEnrollments: 0,
+                        completedEnrollments: 0,
+                        enrolledEnrollments: 0,
+                        inProgressEnrollments: 0,
+                        activeEnrolments: 0,
+                        totalInterests: 0,
+                        ...scopedPayload
+                    }
+                });
+            }
+
+            const learnerScopeSql = scope.applyFilter
+                ? ` AND ${learnerInterestedInCentreSql('u.User_id')}`
+                : '';
+            const learnerScopeParams = scope.applyFilter ? [scope.centreId] : [];
+
+            const [totalUsers] = await pool.execute(
+                `SELECT COUNT(*) as count FROM user u WHERE 1=1${learnerScopeSql}`,
+                learnerScopeParams
+            );
             const [totalLearners] = await pool.execute(
-                'SELECT COUNT(*) as count FROM user WHERE role_id = 2'
+                `SELECT COUNT(DISTINCT u.User_id) as count FROM user u WHERE u.role_id = 2${learnerScopeSql}`,
+                learnerScopeParams
             );
             const [totalAdmins] = await pool.execute(
                 'SELECT COUNT(*) as count FROM user WHERE role_id = 1'
@@ -30,27 +79,58 @@ class AdminController {
             }
 
             const [verifiedUsers] = await pool.execute(
-                'SELECT COUNT(*) as count FROM user WHERE email_verify = 1'
+                `SELECT COUNT(*) as count FROM user u WHERE u.email_verify = 1${learnerScopeSql}`,
+                learnerScopeParams
             );
 
-            // ---- Certificates: total + pending (future issue dates) ----
+            // ==============================================================
+            //Get Certificates ttal
+            // ==============================================================
             let totalCertificates = 0;
             let pendingCertificates = 0;
             try {
-                const [result] = await pool.execute(
-                    'SELECT COUNT(*) as count FROM Certificate'
-                );
-                totalCertificates = result[0]?.count || 0;
+                if (scope.applyFilter) {
+                    const [result] = await pool.execute(
+                        `SELECT COUNT(*) AS count
+                           FROM Certificate c
+                           INNER JOIN Enrolment e
+                               ON e.User_id = c.User_id
+                              AND e.Programme_id = c.Programme_id
+                              AND e.Completion_status = 'Completed'
+                          WHERE e.digital_center_id = ?`,
+                        [scope.centreId]
+                    );
+                    totalCertificates = result[0]?.count || 0;
 
-                const [pendingResult] = await pool.execute(
-                    'SELECT COUNT(*) as count FROM Certificate WHERE DATE(Date_issued) > CURDATE()'
-                );
-                pendingCertificates = pendingResult[0]?.count || 0;
+                    const [pendingResult] = await pool.execute(
+                        `SELECT COUNT(*) AS count
+                           FROM Certificate c
+                           INNER JOIN Enrolment e
+                               ON e.User_id = c.User_id
+                              AND e.Programme_id = c.Programme_id
+                              AND e.Completion_status = 'Completed'
+                          WHERE e.digital_center_id = ?
+                            AND DATE(c.Date_issued) > CURDATE()`,
+                        [scope.centreId]
+                    );
+                    pendingCertificates = pendingResult[0]?.count || 0;
+                } else {
+                    const [result] = await pool.execute(
+                        'SELECT COUNT(*) as count FROM Certificate'
+                    );
+                    totalCertificates = result[0]?.count || 0;
+
+                    const [pendingResult] = await pool.execute(
+                        `SELECT COUNT(*) as count FROM Certificate
+                         WHERE DATE(Date_issued) > CURDATE()`
+                    );
+                    pendingCertificates = pendingResult[0]?.count || 0;
+                }
             } catch (err) {
-                console.log('Certificate table not found, using 0');
+                console.log('Certificate count query failed:', err.message);
             }
 
-            // ---- Enrolments ----
+            // ---- Enrolments from learner_interests  by a specific centre ----
             let totalEnrollments = 0;
             let completedEnrollments = 0;
             let enrolledEnrollments = 0;
@@ -58,36 +138,52 @@ class AdminController {
             let activeEnrolments = 0;
 
             try {
-                const [result] = await pool.execute(
-                    'SELECT COUNT(*) as count FROM Enrolment'
-                );
-                totalEnrollments = result[0]?.count || 0;
+                const centreFilter = scope.applyFilter
+                    ? ' AND digital_center_id = ?'
+                    : '';
+                const centreParams = scope.applyFilter ? [scope.centreId] : [];
 
+                // Total enrolments at this centre
+                const [total] = await pool.execute(
+                    `SELECT COUNT(*) AS count
+                       FROM learner_interests
+                      WHERE status = 'Enrolled'${centreFilter}`,
+                    centreParams
+                );
+                totalEnrollments = total[0]?.count || 0;
+                enrolledEnrollments = totalEnrollments;
+                activeEnrolments = totalEnrollments;
+
+                // In progress  Contacted (
+                const [inProgress] = await pool.execute(
+                    `SELECT COUNT(*) AS count
+                       FROM learner_interests
+                      WHERE status = 'Contacted'${centreFilter}`,
+                    centreParams
+                );
+                inProgressEnrollments = inProgress[0]?.count || 0;
+
+                // Completed 
                 const [completed] = await pool.execute(
-                    'SELECT COUNT(*) as count FROM Enrolment WHERE Completion_status = "Completed"'
+                    `SELECT COUNT(*) AS count
+                       FROM learner_interests
+                      WHERE status = 'Completed'${centreFilter}`,
+                    centreParams
                 );
                 completedEnrollments = completed[0]?.count || 0;
 
-                // Active enrolments — matches the actual ENUM value in the
-                // Enrolment table ('Active'), not the old 'Enrolled' string.
-                const [active] = await pool.execute(
-                    'SELECT COUNT(*) as count FROM Enrolment WHERE Completion_status = "Active"'
-                );
-                activeEnrolments = active[0]?.count || 0;
-
-                // Keep these two fields in the response for backwards compat
-                // (they're derived from the same number now)
-                enrolledEnrollments = activeEnrolments;
-                inProgressEnrollments = 0;
-
             } catch (err) {
-                console.log('Enrolment table not found, using 0');
+                console.log('Enrolment stats query failed:', err.message);
             }
 
             let totalInterests = 0;
             try {
+                const interestSql = scope.applyFilter
+                    ? 'SELECT COUNT(*) as count FROM learner_interests WHERE status != "Not Interested" AND digital_center_id = ?'
+                    : 'SELECT COUNT(*) as count FROM learner_interests WHERE status != "Not Interested"';
                 const [result] = await pool.execute(
-                    'SELECT COUNT(*) as count FROM learner_interests WHERE status != "Not Interested"'
+                    interestSql,
+                    scope.applyFilter ? [scope.centreId] : []
                 );
                 totalInterests = result[0]?.count || 0;
             } catch (err) {
@@ -110,7 +206,8 @@ class AdminController {
                     enrolledEnrollments: enrolledEnrollments,
                     inProgressEnrollments: inProgressEnrollments,
                     activeEnrolments: activeEnrolments,
-                    totalInterests: totalInterests
+                    totalInterests: totalInterests,
+                    ...scopedPayload
                 }
             });
 
@@ -122,6 +219,7 @@ class AdminController {
             });
         }
     }
+
     // ===== GET PROGRAMMES FROM DATABASE =====
     static async getProgrammes(req, res) {
         try {
@@ -245,14 +343,38 @@ class AdminController {
         }
     }
 
-    // ============================================
+ // ============================================
     // GET LEARNERS
-    // Programme, enrolment date, and status fall back
-    // to learner_interests when no Enrolment row exists.
     // ============================================
     static async getLearners(req, res) {
         try {
             console.log('Fetching learners...');
+
+            const adminCentreId = req.user?.centreId ?? null;
+            const isSuperAdmin = req.user?.roleId === 3;
+            const centreFilter = !isSuperAdmin && adminCentreId;
+
+            const params = [];
+            let extraWhere = '';
+
+            if (centreFilter) {
+                
+                params.push(adminCentreId); 
+                params.push(adminCentreId); 
+                params.push(adminCentreId); 
+                params.push(adminCentreId); 
+                params.push(adminCentreId); 
+
+                extraWhere = `
+                    AND EXISTS (
+                        SELECT 1 FROM learner_interests lx
+                        WHERE lx.user_id = u.User_id
+                          AND lx.status != 'Not Interested'
+                          AND lx.digital_center_id = ?
+                    )
+                `;
+                params.push(adminCentreId); 
+            }
 
             const [rows] = await pool.execute(
                 `SELECT 
@@ -267,17 +389,20 @@ class AdminController {
                     r.role_type as role,
 
                     COALESCE(
-                        (SELECT GROUP_CONCAT(p.Programme_name SEPARATOR ', ')
-                         FROM Enrolment e 
-                         JOIN Programmes p ON e.Programme_id = p.Programme_id 
-                         WHERE e.User_id = u.User_id 
-                         AND e.Completion_status != 'Withdrawn'
-                         ORDER BY e.Enrolment_date DESC),
+                        (SELECT p.Programme_name
+                         FROM Enrolment e
+                         JOIN Programmes p ON e.Programme_id = p.Programme_id
+                         WHERE e.User_id = u.User_id
+                           AND e.Completion_status != 'Withdrawn'
+                           ${centreFilter ? 'AND e.digital_center_id = ?' : ''}
+                         ORDER BY e.Enrolment_date DESC
+                         LIMIT 1),
                         (SELECT p2.Programme_name
                          FROM learner_interests li
                          JOIN Programmes p2 ON li.programme_id = p2.Programme_id
                          WHERE li.user_id = u.User_id
-                         AND li.status != 'Not Interested'
+                           AND li.status != 'Not Interested'
+                           ${centreFilter ? 'AND li.digital_center_id = ?' : ''}
                          ORDER BY li.interest_date DESC
                          LIMIT 1)
                     ) as programme_name,
@@ -293,28 +418,54 @@ class AdminController {
                          AND li2.status != 'Not Interested')
                     ) as enrolment_date,
 
+                    -- -----------------------------------------------------------------
+                    -- Status derivation.
+                    --
+                    -- Priority 1: the learner has a certificate for a Completed
+                    --   enrolment at THIS admin's centre → 'Completed'.
+                    --   (For super admins, the centre filter is skipped, so the
+                    --    check is against any completion anywhere.)
+                    --
+                    -- Priority 2: learner_interests.status drives the display.
+                    --
+                    -- Priority 3 (fallback): Enrolment table, for learners with
+                    --   no live interest record.
+                    -- -----------------------------------------------------------------
                     COALESCE(
-                        (SELECT 
-                            CASE
-                                WHEN MAX(e3.Completion_status) = 'Completed' THEN 'Completed'
-                                WHEN MAX(e3.Completion_status) = 'Enrolled' THEN 'Active'
-                                WHEN MAX(e3.Completion_status) = 'In Progress' THEN 'Active'
-                                WHEN MAX(e3.Completion_status) = 'Withdrawn' THEN 'Inactive'
-                                WHEN MAX(e3.Completion_status) = 'Inactive' THEN 'Inactive'
-                                ELSE MAX(e3.Completion_status)
-                            END
-                         FROM Enrolment e3
-                         WHERE e3.User_id = u.User_id),
                         (SELECT
                             CASE
-                                WHEN MAX(li3.status) = 'Enrolled' THEN 'Active'
-                                WHEN MAX(li3.status) = 'Contacted' THEN 'Inactive'
-                                WHEN MAX(li3.status) = 'New' THEN 'Inactive'
+                                WHEN EXISTS (
+                                    SELECT 1
+                                    FROM Certificate c
+                                    INNER JOIN Enrolment e
+                                        ON e.User_id = c.User_id
+                                       AND e.Programme_id = c.Programme_id
+                                       AND e.Completion_status = 'Completed'
+                                    WHERE c.User_id = u.User_id
+                                      ${centreFilter ? 'AND e.digital_center_id = ?' : ''}
+                                ) THEN 'Completed'
+
+                                WHEN MAX(li3.status) = 'Enrolled'  THEN 'Active'
+                                WHEN MAX(li3.status) = 'Contacted' THEN 'Active'
+                                WHEN MAX(li3.status) = 'New'       THEN 'Active'
                                 ELSE 'Inactive'
                             END
                          FROM learner_interests li3
                          WHERE li3.user_id = u.User_id
-                         AND li3.status != 'Not Interested')
+                           AND li3.status != 'Not Interested'
+                           ${centreFilter ? 'AND li3.digital_center_id = ?' : ''}),
+                        (SELECT
+                            CASE
+                                WHEN MAX(e3.Completion_status) = 'Completed'   THEN 'Completed'
+                                WHEN MAX(e3.Completion_status) = 'Enrolled'    THEN 'Active'
+                                WHEN MAX(e3.Completion_status) = 'In Progress' THEN 'Active'
+                                WHEN MAX(e3.Completion_status) = 'Withdrawn'   THEN 'Inactive'
+                                WHEN MAX(e3.Completion_status) = 'Inactive'    THEN 'Inactive'
+                                ELSE MAX(e3.Completion_status)
+                            END
+                         FROM Enrolment e3
+                         WHERE e3.User_id = u.User_id
+                           ${centreFilter ? 'AND e3.digital_center_id = ?' : ''})
                     ) as status,
 
                     (SELECT COUNT(*) 
@@ -336,7 +487,9 @@ class AdminController {
                 LEFT JOIN gender g ON u.gender_id = g.gender_id
                 LEFT JOIN role r ON u.role_id = r.role_id
                 WHERE u.role_id = 2
-                ORDER BY u.User_id DESC`
+                ${extraWhere}
+                ORDER BY u.User_id DESC`,
+                params
             );
 
             res.status(200).json({
@@ -353,13 +506,8 @@ class AdminController {
         }
     }
 
-        // ============================================
+    // ============================================
     // UPDATE LEARNER
-    // Two paths:
-    //   1. { status: 'Inactive' } -> marks every ACTIVE enrolment for this
-    //      learner as 'Inactive'. Rows are preserved, not deleted. The
-    //      derived status in getLearners then shows 'Inactive'.
-    //   2. Name / surname / email / phone -> profile update only.
     // ============================================
     static async updateLearner(req, res) {
         try {
@@ -368,7 +516,7 @@ class AdminController {
 
             console.log('Updating learner:', { id, name, surname, email, phone, status });
 
-            // ---- Path 1: Deactivate ----
+            //  Deactivate 
             if (status === 'Inactive') {
                 const [result] = await pool.execute(
                     `UPDATE Enrolment
@@ -390,7 +538,7 @@ class AdminController {
                 });
             }
 
-            // ---- Path 2: Profile update ----
+            //  Profile update ----
             const safeName    = (name !== undefined && name !== '') ? name : null;
             const safeSurname = (surname !== undefined && surname !== '') ? surname : null;
             const safeEmail   = (email !== undefined && email !== '') ? email : null;
@@ -444,19 +592,22 @@ class AdminController {
         }
     }
 
-       // ============================================
+    // ============================================
     // GET CERTIFICATES
-    // Derives the status from Date_issued at read time:
-    //   - today or past  -> 'Issued'
-    //   - future         -> 'Pending'
-    // No DB column needed; the status is computed on every request.
+    // Admin sees only certificates whose matching completion happened at their own centre.
+    // Super Admin sees every certificate.
     // ============================================
     static async getCertificates(req, res) {
         try {
             console.log('Fetching certificates...');
 
-            const [rows] = await pool.execute(
-                `SELECT 
+            const adminCentreId = req.user?.centreId ?? null;
+            const isSuperAdmin = req.user?.roleId === 3;
+            const centreFilter = !isSuperAdmin && adminCentreId;
+
+            const params = [];
+            let query = `
+                SELECT 
                     c.Certificate_id,
                     c.User_id,
                     c.Programme_id,
@@ -469,10 +620,28 @@ class AdminController {
                 FROM Certificate c
                 LEFT JOIN user u ON c.User_id = u.User_id
                 LEFT JOIN Programmes p ON c.Programme_id = p.Programme_id
-                ORDER BY c.Certificate_id DESC`
-            );
+            `;
 
-            // Normalize "today" to date-only so the comparison ignores time.
+            if (centreFilter) {
+                query += `
+                    INNER JOIN Enrolment e
+                        ON e.User_id = c.User_id
+                       AND e.Programme_id = c.Programme_id
+                       AND e.Completion_status = 'Completed'
+                `;
+            }
+
+            query += ` WHERE 1 = 1 `;
+
+            if (centreFilter) {
+                query += ` AND e.digital_center_id = ? `;
+                params.push(adminCentreId);
+            }
+
+            query += ` ORDER BY c.Certificate_id DESC`;
+
+            const [rows] = await pool.execute(query, params);
+
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
@@ -493,7 +662,10 @@ class AdminController {
                 };
             });
 
-            console.log(`Found ${data.length} certificates`);
+            console.log(
+                `Found ${data.length} certificates ` +
+                `(centreFilter: ${centreFilter}, centreId: ${adminCentreId})`
+            );
 
             res.status(200).json({
                 success: true,
@@ -508,255 +680,360 @@ class AdminController {
             });
         }
     }
-        // ============================================
-    // UPLOAD CERTIFICATE WITH FILE
-    // Overlays the learner's data onto the uploaded PDF template
-    // and saves it as cert-<Certificate_id>.pdf
-    // A learner can only have ONE certificate per programme.
-    // ============================================
-    static async uploadCertificate(req, res) {
+
+// ============================================
+// UPLOAD CERTIFICATE — generates PDF from the uploaded template
+// and stores the generated result as a BLOB in the DB.
+// ============================================
+static async uploadCertificate(req, res) {
+    try {
+        const { user_id, programme_id, issue_date, expiry_date } = req.body;
+        const file = req.file;
+
+        console.log('Uploading certificate for user:', user_id, 'programme:', programme_id);
+        console.log('Template file:', file ? file.originalname : 'No file');
+
+        if (!file) {
+            return res.status(400).json({
+                success: false,
+                message: 'Certificate template file is required'
+            });
+        }
+
+        if (!user_id || !programme_id) {
+            try { fs.unlinkSync(file.path); } catch (e) { /* ignore */ }
+            return res.status(400).json({
+                success: false,
+                message: 'Learner and programme are required'
+            });
+        }
+
+        // ---- Centre-scope guard ----
+        const adminCentreId = req.user?.centreId ?? null;
+        const isSuperAdmin = req.user?.roleId === 3;
+
+        if (!isSuperAdmin) {
+            if (!adminCentreId) {
+                try { fs.unlinkSync(file.path); } catch (e) { /* ignore */ }
+                return res.status(403).json({
+                    success: false,
+                    message: 'Your account is not assigned to a centre.'
+                });
+            }
+            const [completionCheck] = await pool.execute(
+                `SELECT Enrolment_id
+                 FROM Enrolment
+                 WHERE User_id = ?
+                   AND Programme_id = ?
+                   AND digital_center_id = ?
+                   AND Completion_status = 'Completed'
+                 LIMIT 1`,
+                [user_id, programme_id, adminCentreId]
+            );
+
+            if (completionCheck.length === 0) {
+                try { fs.unlinkSync(file.path); } catch (e) { /* ignore */ }
+                return res.status(403).json({
+                    success: false,
+                    message:
+                        'This learner has not completed this programme at your centre.'
+                });
+            }
+        }
+
+        // ---- Duplicate check ----
+        const [existing] = await pool.execute(
+            `SELECT Certificate_id
+             FROM Certificate
+             WHERE User_id = ? AND Programme_id = ?`,
+            [user_id, programme_id]
+        );
+
+        if (existing.length > 0) {
+            try { fs.unlinkSync(file.path); } catch (e) { /* ignore */ }
+            return res.status(409).json({
+                success: false,
+                message: 'This learner already has a certificate for this programme.'
+            });
+        }
+
+        const dateIssued = issue_date ? new Date(issue_date) : new Date();
+        const dateExpiry = expiry_date ? new Date(expiry_date) : null;
+
+        // ---- Fetch learner + programme details ----
+        const [detailsRows] = await pool.execute(
+            `SELECT 
+                u.name      AS learner_name,
+                u.surname   AS learner_surname,
+                u.id_number AS learner_id_number,
+                p.Programme_name
+             FROM user u
+             LEFT JOIN Programmes p ON p.Programme_id = ?
+             WHERE u.User_id = ?`,
+            [programme_id, user_id]
+        );
+
+        const details = detailsRows[0] || {};
+        const learnerName = `${details.learner_name || ''} ${details.learner_surname || ''}`.trim() || 'Learner';
+
+        // ---- Insert a placeholder row first, so we get the certificate ID ----
+        const [insertResult] = await pool.execute(
+            `INSERT INTO Certificate
+             (User_id, Programme_id, Date_issued, Expire_date)
+             VALUES (?, ?, ?, ?)`,
+            [user_id, programme_id, dateIssued, dateExpiry]
+        );
+
+        const certificateId = insertResult.insertId;
+        console.log(`Certificate row ${certificateId} created`);
+
+        // ---- Generate the completed PDF from the template ----
+        let pdfBuffer;
         try {
-            const { user_id, programme_id, issue_date, expiry_date } = req.body;
-            const file = req.file;
+            const CertificateService = require('../services/certificateService');
 
-            console.log('Uploading certificate for user:', user_id, 'programme:', programme_id);
-            console.log('File:', file ? file.originalname : 'No file');
+            pdfBuffer = await CertificateService.generateCertificate({
+                learnerName,
+                idNumber: details.learner_id_number || 'N/A',
+                completionDate: dateIssued,
+                programmeName: details.Programme_name || 'Programme',
+                certificateNumber: `CERT-${certificateId}`,
+                templatePath: file.path,
+            });
 
-            if (!file) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Certificate file is required'
-                });
-            }
+            console.log(`Generated certificate PDF: ${pdfBuffer.length} bytes`);
+        } catch (genError) {
+            console.error('Error generating certificate PDF:', genError);
 
-            if (!user_id || !programme_id) {
-                try { fs.unlinkSync(file.path); } catch (e) { /* ignore */ }
-                return res.status(400).json({
-                    success: false,
-                    message: 'Learner and programme are required'
-                });
-            }
-
-            // ---- Duplicate check ----
-            const [existing] = await pool.execute(
-                `SELECT Certificate_id 
-                 FROM Certificate 
-                 WHERE User_id = ? AND Programme_id = ?`,
-                [user_id, programme_id]
-            );
-
-            if (existing.length > 0) {
-                try { fs.unlinkSync(file.path); } catch (e) { /* ignore */ }
-                return res.status(409).json({
-                    success: false,
-                    message: 'This learner already has a certificate for this programme.'
-                });
-            }
-            // ---- End duplicate check ----
-
-            const dateIssued = issue_date ? new Date(issue_date) : new Date();
-            const dateExpiry = expiry_date ? new Date(expiry_date) : null;
-
-            const [result] = await pool.execute(
-                `INSERT INTO Certificate 
-                 (User_id, Programme_id, Date_issued, Expire_date)
-                 VALUES (?, ?, ?, ?)`,
-                [user_id, programme_id, dateIssued, dateExpiry]
-            );
-
-            const certificateId = result.insertId;
-            console.log(`Certificate row ${certificateId} created`);
-
-            // ---- Overlay learner data onto the UPLOADED template ----
-            const uploadDir = path.join(__dirname, '..', 'uploads', 'certificates');
-
-            // Make sure the directory exists
-            if (!fs.existsSync(uploadDir)) {
-                fs.mkdirSync(uploadDir, { recursive: true });
-            }
-
-            const finalPath = path.join(uploadDir, `cert-${certificateId}.pdf`);
-
+            // Roll back the inserted row
             try {
-                const [detailsRows] = await pool.execute(
-                    `SELECT 
-                        u.name      AS learner_name,
-                        u.surname   AS learner_surname,
-                        u.id_number AS learner_id_number,
-                        p.Programme_name
-                     FROM user u
-                     LEFT JOIN Programmes p ON p.Programme_id = ?
-                     WHERE u.User_id = ?`,
-                    [programme_id, user_id]
+                await pool.execute(
+                    'DELETE FROM Certificate WHERE Certificate_id = ?',
+                    [certificateId]
+                );
+            } catch (rollbackErr) {
+                console.error('Rollback failed:', rollbackErr.message);
+            }
+
+            try { fs.unlinkSync(file.path); } catch (e) { /* ignore */ }
+
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to generate the certificate PDF: ' + genError.message
+            });
+        }
+
+        // ---- Clean up the temporary template file ----
+        try { fs.unlinkSync(file.path); } catch (e) { /* ignore */ }
+
+        // ---- Save the generated PDF as a blob ----
+        try {
+            await pool.execute(
+                `UPDATE Certificate SET file_data = ? WHERE Certificate_id = ?`,
+                [pdfBuffer, certificateId]
+            );
+            console.log(`Saved certificate blob for cert ${certificateId} (${pdfBuffer.length} bytes)`);
+        } catch (blobErr) {
+            console.error('Failed to save certificate blob:', blobErr.message);
+
+            // Roll back
+            try {
+                await pool.execute(
+                    'DELETE FROM Certificate WHERE Certificate_id = ?',
+                    [certificateId]
+                );
+            } catch (rollbackErr) {
+                console.error('Rollback failed:', rollbackErr.message);
+            }
+
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to save certificate PDF: ' + blobErr.message
+            });
+        }
+
+        // ============================================
+        // NOTIFY LEARNER IF THEY OPTED IN
+        // ============================================
+        setImmediate(async () => {
+            try {
+                const prefs = getPrefs(user_id);
+                if (prefs.certificateIssued !== true) return;
+
+                const [rows] = await pool.execute(
+                    `SELECT name, surname, email
+                     FROM user
+                     WHERE User_id = ? AND role_id = 2
+                     LIMIT 1`,
+                    [user_id]
                 );
 
-                const details = detailsRows[0] || {};
-                const learnerName = `${details.learner_name || ''} ${details.learner_surname || ''}`.trim();
+                if (rows.length === 0 || !rows[0].email) return;
 
-                const CertificateService = require('../services/certificateService');
+                const learner = rows[0];
+                const fullName = `${learner.name || ''} ${learner.surname || ''}`.trim() || 'Learner';
 
-                const pdfBytes = await CertificateService.generateCertificate({
-                    learnerName,
-                    idNumber: details.learner_id_number || 'N/A',
-                    completionDate: dateIssued,
-                    programmeName: details.Programme_name || 'Programme',
-                    certificateNumber: `CERT-${certificateId}`,
-                    templatePath: file.path,   // <-- KEY: use the uploaded file as the base
-                });
-
-                fs.writeFileSync(finalPath, pdfBytes);
-                try { fs.unlinkSync(file.path); } catch (e) { /* ignore */ }
-
-                console.log(`Certificate PDF generated at: ${finalPath}`);
-
-            } catch (genError) {
-                console.error('Error generating certificate PDF:', genError);
-
-                // Roll back the DB row so the learner isn't stuck with a bad record
-                try {
-                    await pool.execute('DELETE FROM Certificate WHERE Certificate_id = ?', [certificateId]);
-                } catch (rollbackErr) {
-                    console.error('Rollback failed:', rollbackErr.message);
-                }
-                try { fs.unlinkSync(file.path); } catch (e) { /* ignore */ }
-
-                return res.status(500).json({
-                    success: false,
-                    message: 'Failed to generate the certificate PDF: ' + genError.message
-                });
+                await emailService.sendCertificateIssuedNotification(
+                    learner.email,
+                    fullName,
+                    {
+                        programmeName: details.Programme_name || 'Programme',
+                        certificateNumber: `CERT-${certificateId}`,
+                        issueDate: dateIssued,
+                    }
+                );
+            } catch (err) {
+                console.error('Background certificate email failed:', err.message);
             }
+        });
 
-            res.status(201).json({
-                success: true,
-                message: 'Certificate issued and uploaded successfully',
-                data: {
-                    certificate_id: certificateId,
-                    date_issued: dateIssued
-                }
-            });
-
-        } catch (error) {
-            console.error('Error uploading certificate:', error);
-
-            if (error.code === 'ER_DUP_ENTRY') {
-                return res.status(409).json({
-                    success: false,
-                    message: 'This learner already has a certificate for this programme.'
-                });
+        res.status(201).json({
+            success: true,
+            message: 'Certificate issued successfully',
+            data: {
+                certificate_id: certificateId,
+                date_issued: dateIssued,
+                file_size: pdfBuffer.length,
             }
+        });
 
-            res.status(500).json({
+    } catch (error) {
+        console.error('Error uploading certificate:', error);
+
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({
                 success: false,
-                message: 'Failed to upload certificate: ' + error.message
+                message: 'This learner already has a certificate for this programme.'
             });
         }
+
+        res.status(500).json({
+            success: false,
+            message: 'Failed to upload certificate: ' + error.message
+        });
     }
-
-       // ============================================
-    // VIEW CERTIFICATE
-    // Streams the stored cert-<id>.pdf (which was generated
-    // from the uploaded template). Does NOT regenerate.
+}
     // ============================================
-    static async viewCertificate(req, res) {
-        try {
-            const { id } = req.params;
+// VIEW CERTIFICATE — streams PDF inline from the DB blob
+// ============================================
+static async viewCertificate(req, res) {
+    try {
+        const { id } = req.params;
 
-            console.log('Viewing certificate ID:', id);
+        console.log('Viewing certificate ID:', id);
 
-            // Confirm the row exists
-            const [rows] = await pool.execute(
-                'SELECT Certificate_id FROM Certificate WHERE Certificate_id = ?',
-                [id]
-            );
+        const [rows] = await pool.execute(
+            `SELECT 
+                Certificate_id,
+                file_data
+             FROM Certificate
+             WHERE Certificate_id = ?`,
+            [id]
+        );
 
-            if (rows.length === 0) {
-                return res.status(404).json({
-                    success: false,
-                    message: 'Certificate not found'
-                });
-            }
-
-            // Stream the stored file
-            const filePath = path.join(
-                __dirname, '..', 'uploads', 'certificates', `cert-${id}.pdf`
-            );
-
-            if (!fs.existsSync(filePath)) {
-                return res.status(404).json({
-                    success: false,
-                    message: 'Certificate file is missing on the server.'
-                });
-            }
-
-            res.setHeader('Content-Type', 'application/pdf');
-            res.setHeader('Content-Disposition', 'inline; filename="certificate.pdf"');
-            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-
-            fs.createReadStream(filePath).pipe(res);
-
-        } catch (error) {
-            console.error('Error viewing certificate:', error);
-            res.status(500).json({
+        if (rows.length === 0) {
+            return res.status(404).json({
                 success: false,
-                message: 'Failed to view certificate: ' + error.message
+                message: 'Certificate not found'
             });
         }
-    }
 
-    // ============================================
-    // DOWNLOAD CERTIFICATE
-    // Streams the stored cert-<id>.pdf as an attachment.
-    // Does NOT regenerate.
-    // ============================================
-    static async downloadCertificate(req, res) {
-        try {
-            const { id } = req.params;
+        const cert = rows[0];
 
-            console.log('Downloading certificate ID:', id);
-
-            const [rows] = await pool.execute(
-                `SELECT c.Certificate_id, u.name as learner_name, u.surname as learner_surname
-                 FROM Certificate c
-                 LEFT JOIN user u ON c.User_id = u.User_id
-                 WHERE c.Certificate_id = ?`,
-                [id]
-            );
-
-            if (rows.length === 0) {
-                return res.status(404).json({
-                    success: false,
-                    message: 'Certificate not found'
-                });
-            }
-
-            const filePath = path.join(
-                __dirname, '..', 'uploads', 'certificates', `cert-${id}.pdf`
-            );
-
-            if (!fs.existsSync(filePath)) {
-                return res.status(404).json({
-                    success: false,
-                    message: 'Certificate file is missing on the server.'
-                });
-            }
-
-            const learnerName = `${rows[0].learner_name || 'Learner'} ${rows[0].learner_surname || ''}`.trim();
-            const fileName = `Certificate_${learnerName.replace(/\s/g, '_')}.pdf`;
-
-            res.setHeader('Content-Type', 'application/pdf');
-            res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-
-            fs.createReadStream(filePath).pipe(res);
-
-        } catch (error) {
-            console.error('Error downloading certificate:', error);
-            res.status(500).json({
+        if (!cert.file_data) {
+            return res.status(404).json({
                 success: false,
-                message: 'Failed to download certificate: ' + error.message
+                message: 'Certificate file is not available in the database.'
             });
         }
+
+        const buffer = Buffer.isBuffer(cert.file_data)
+            ? cert.file_data
+            : Buffer.from(cert.file_data);
+
+        res.writeHead(200, {
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': `inline; filename="certificate-${id}.pdf"`,
+            'Content-Length': buffer.length,
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+        });
+
+        res.end(buffer);
+
+    } catch (error) {
+        console.error('Error viewing certificate:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to view certificate: ' + error.message
+        });
     }
+}
+
+// ============================================
+// DOWNLOAD CERTIFICATE — streams PDF as attachment from the DB blob
+// ============================================
+static async downloadCertificate(req, res) {
+    try {
+        const { id } = req.params;
+
+        console.log('Downloading certificate ID:', id);
+
+        const [rows] = await pool.execute(
+            `SELECT 
+                c.Certificate_id,
+                c.file_data,
+                u.name    AS learner_name,
+                u.surname AS learner_surname
+             FROM Certificate c
+             LEFT JOIN user u ON c.User_id = u.User_id
+             WHERE c.Certificate_id = ?`,
+            [id]
+        );
+
+        if (rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Certificate not found'
+            });
+        }
+
+        const cert = rows[0];
+
+        if (!cert.file_data) {
+            return res.status(404).json({
+                success: false,
+                message: 'Certificate file is not available in the database.'
+            });
+        }
+
+        const learnerName = `${cert.learner_name || 'Learner'} ${cert.learner_surname || ''}`.trim();
+        const fileName = `Certificate_${learnerName.replace(/\s+/g, '_')}_${cert.Certificate_id}.pdf`;
+
+        const buffer = Buffer.isBuffer(cert.file_data)
+            ? cert.file_data
+            : Buffer.from(cert.file_data);
+
+        res.writeHead(200, {
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': `attachment; filename="${fileName}"`,
+            'Content-Length': buffer.length,
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+        });
+
+        res.end(buffer);
+
+    } catch (error) {
+        console.error('Error downloading certificate:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to download certificate: ' + error.message
+        });
+    }
+}
     // ============================================
     // UPDATE CERTIFICATE
     // ============================================
@@ -835,7 +1112,6 @@ class AdminController {
     // ============================================
     // GET INTERESTED LEARNERS
     // ============================================
-       
     static async getInterestedLearners(req, res) {
         try {
             console.log('Fetching interested learners...');
@@ -882,6 +1158,14 @@ class AdminController {
 
             const params = [];
 
+            const adminCentreId = req.user?.centreId ?? null;
+            const isSuperAdmin = req.user?.roleId === 3;
+
+            if (!isSuperAdmin && adminCentreId) {
+                query += ' AND li.digital_center_id = ?';
+                params.push(adminCentreId);
+            }
+
             if (programme) {
                 query += ` AND p.Programme_name = ?`;
                 params.push(programme);
@@ -905,19 +1189,11 @@ class AdminController {
             });
         }
     }
-    //===========================================
+
+
+
+    // ============================================
     // UPDATE INTERESTED LEARNER STATUS
-    // Transitions:
-    //   New         -> just sets status = 'New'
-    //   Contacted   -> sets status = 'Contacted' + contacted_date = NOW()
-    //   Enrolled    -> sets status = 'Enrolled' + enrolled_date = NOW()
-    //                  + creates/updates the Enrolment row
-    //   Not Interested -> just sets the status
-    //
-    // Rules:
-    //   - Only one ACTIVE enrolment per learner per calendar day
-    //   - Enrolment.Completion_status uses only ENUM values
-    //     ('Active', 'Inactive', 'Completed') — never 'Enrolled' / 'In Progress'
     // ============================================
     static async updateInterestedLearnerStatus(req, res) {
         try {
@@ -941,9 +1217,8 @@ class AdminController {
                 });
             }
 
-            // ---- Look up the interest record ----
             const [existing] = await pool.execute(
-                'SELECT user_id, programme_id FROM learner_interests WHERE interest_id = ?',
+                'SELECT user_id, programme_id, digital_center_id FROM learner_interests WHERE interest_id = ?',
                 [id]
             );
             if (existing.length === 0) {
@@ -952,35 +1227,53 @@ class AdminController {
                     message: 'Interest record not found'
                 });
             }
-            const { user_id, programme_id } = existing[0];
+            const { user_id, programme_id, digital_center_id } = existing[0];
 
-            // =====================================================
-            // RULE: only one ACTIVE enrolment per learner per day
-            // (a completed enrolment from earlier today doesn't block
-            //  a fresh one — only an enrolment still marked Active does)
-            // =====================================================
+            const adminCentreId = req.user?.centreId ?? null;
+            const isSuperAdmin = req.user?.roleId === 3;
+
+            if (!isSuperAdmin && adminCentreId && String(digital_center_id) !== String(adminCentreId)) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'You can only manage learners in your own centre.'
+                });
+            }
+
+
+            
             if (status === 'Enrolled') {
-                const [todayEnrolments] = await pool.execute(
-                    `SELECT Enrolment_id FROM Enrolment
-                     WHERE User_id = ?
-                       AND DATE(Enrolment_date) = CURDATE()
-                       AND Completion_status = 'Active'`,
-                    [user_id]
+                const [activeEnrolments] = await pool.execute(
+                    `SELECT li.interest_id,
+                            li.programme_id,
+                            p.Programme_name AS programme_name,
+                            dc.center_name   AS centre_name
+                     FROM learner_interests li
+                     LEFT JOIN Programmes p ON p.Programme_id = li.programme_id
+                     LEFT JOIN Digital_Center dc ON dc.digital_center_id = li.digital_center_id
+                     WHERE li.user_id = ?
+                       AND li.status = 'Enrolled'
+                       AND li.interest_id != ?
+                     LIMIT 1`,
+                    [user_id, id]
                 );
-                if (todayEnrolments.length > 0) {
+
+                if (activeEnrolments.length > 0) {
+                    const active = activeEnrolments[0];
                     return res.status(409).json({
                         success: false,
                         message:
-                            'This learner already has an active enrolment today. Only one enrolment per day is allowed.'
+                            `This learner is already enrolled in "${active.programme_name}" ` +
+                            `at ${active.centre_name}. Complete or remove that enrolment before ` +
+                            `enrolling them in another programme.`
                     });
                 }
             }
 
-            // =====================================================
-            // Enrolment side-effect — only when status = 'Enrolled'
-            // =====================================================
+            
             if (status === 'Enrolled') {
                 try {
+                    const enrolmentCentreId = isSuperAdmin ? null : adminCentreId;
+
                     const [existingEnrolment] = await pool.execute(
                         `SELECT Enrolment_id FROM Enrolment
                          WHERE User_id = ? AND Programme_id = ?`,
@@ -988,22 +1281,20 @@ class AdminController {
                     );
 
                     if (existingEnrolment.length === 0) {
-                        // Completion_status must be one of the ENUM values:
-                        //   'Active', 'Inactive', 'Completed'
                         await pool.execute(
                             `INSERT INTO Enrolment
-                                (User_id, Programme_id, Enrolment_date, Completion_status)
-                             VALUES (?, ?, NOW(), 'Active')`,
-                            [user_id, programme_id]
+                                (User_id, Programme_id, digital_center_id, Enrolment_date, Completion_status)
+                             VALUES (?, ?, ?, NOW(), 'Active')`,
+                            [user_id, programme_id, enrolmentCentreId]
                         );
                     } else {
-                        // Re-activate an existing row for this learner/programme
                         await pool.execute(
                             `UPDATE Enrolment
                              SET Completion_status = 'Active',
-                                 Enrolment_date = NOW()
+                                 Enrolment_date = NOW(),
+                                 digital_center_id = COALESCE(?, digital_center_id)
                              WHERE User_id = ? AND Programme_id = ?`,
-                            [user_id, programme_id]
+                            [enrolmentCentreId, user_id, programme_id]
                         );
                     }
                 } catch (enrolmentError) {
@@ -1017,9 +1308,6 @@ class AdminController {
                 }
             }
 
-            // =====================================================
-            // Update the interest record (status + matching timestamp)
-            // =====================================================
             const updateFields = ['status = ?'];
             const values = [status];
 
@@ -1055,6 +1343,170 @@ class AdminController {
             });
         }
     }
+
+
+     
+    // MARK AN ENROLMENT AS COMPLETED
+    
+    static async markEnrolmentComplete(req, res) {
+        try {
+            const { id } = req.params;
+
+            if (!id) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Enrolment ID is required.'
+                });
+            }
+
+            const adminCentreId = req.user?.centreId ?? null;
+            const isSuperAdmin = req.user?.roleId === 3;
+            const actorAdminId = req.user?.userId ?? req.user?.Admin_ID ?? null;
+            const actorName = `${req.user?.name || ''} ${req.user?.surname || ''}`.trim() || 'Admin';
+
+            // ---- Look up the enrolment ----
+            const [enrolments] = await pool.execute(
+                `SELECT
+                    e.Enrolment_id,
+                    e.User_id,
+                    e.Programme_id,
+                    e.digital_center_id,
+                    e.Completion_status,
+                    e.Completion_date,
+                    u.name          AS learner_name,
+                    u.surname       AS learner_surname,
+                    p.Programme_name,
+                    dc.center_name
+                 FROM Enrolment e
+                 INNER JOIN user u ON u.User_id = e.User_id
+                 INNER JOIN Programmes p ON p.Programme_id = e.Programme_id
+                 LEFT JOIN Digital_Center dc ON dc.digital_center_id = e.digital_center_id
+                 WHERE e.Enrolment_id = ?
+                 LIMIT 1`,
+                [id]
+            );
+
+            if (enrolments.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Enrolment not found.'
+                });
+            }
+
+            const enrolment = enrolments[0];
+
+            
+            if (!isSuperAdmin) {
+                if (!adminCentreId) {
+                    return res.status(403).json({
+                        success: false,
+                        message: 'Your account is not assigned to a centre.'
+                    });
+                }
+
+                if (String(enrolment.digital_center_id) !== String(adminCentreId)) {
+                    return res.status(403).json({
+                        success: false,
+                        message: 'This enrolment does not belong to your centre.'
+                    });
+                }
+            }
+
+            
+            if (enrolment.Completion_status === 'Completed') {
+                return res.status(200).json({
+                    success: true,
+                    message: 'This enrolment is already marked as completed.',
+                    data: {
+                        Enrolment_id: enrolment.Enrolment_id,
+                        Completion_status: 'Completed',
+                        Completion_date: enrolment.Completion_date
+                    }
+                });
+            }
+
+            
+            await pool.execute(
+                `UPDATE Enrolment
+                 SET Completion_status = 'Completed',
+                     Completion_date = NOW()
+                 WHERE Enrolment_id = ?`,
+                [id]
+            );
+
+            console.log(
+                `Enrolment ${id} marked Completed by admin ${actorAdminId}. ` +
+                `Learner ${enrolment.User_id}, programme ${enrolment.Programme_id}, ` +
+                `centre ${enrolment.digital_center_id}.`
+            );
+
+            // ---- Notify the centre's admins 
+            const centreIdForNotify = enrolment.digital_center_id;
+            const learnerName = `${enrolment.learner_name || ''} ${enrolment.learner_surname || ''}`.trim() || 'Learner';
+            const programmeName = enrolment.Programme_name || 'Programme';
+            const centreName = enrolment.center_name || 'your centre';
+
+            if (centreIdForNotify) {
+                setImmediate(async () => {
+                    try {
+                        const [admins] = await pool.execute(
+                            `SELECT Admin_ID, Name, Surname, Email_address
+                             FROM Admin
+                             WHERE Centre_ID = ?
+                               AND Email_address IS NOT NULL
+                               AND Email_address != ''`,
+                            [centreIdForNotify]
+                        );
+
+                        if (admins.length === 0) {
+                            console.log(`📧 No admins at centre ${centreIdForNotify} to notify.`);
+                            return;
+                        }
+
+                        
+                        const opted = admins.filter(
+    (a) => getAdminPrefs(a.Admin_ID).notifyOnCertificate === true
+);
+
+                        if (opted.length === 0) {
+                            console.log('📧 No opted-in admins to notify about this completion.');
+                            return;
+                        }
+
+                        await emailService.sendLearnerCompletedToAdmins(opted, {
+                            learnerName,
+                            programmeName,
+                            centreName,
+                            completedAt: new Date(),
+                            markedByName: actorName,
+                        });
+                    } catch (err) {
+                        console.error(' Background learner-completed email failed:', err.message);
+                    }
+                });
+            } else {
+                console.log(' Enrolment has no centre — skipping admin notification.');
+            }
+
+            return res.status(200).json({
+                success: true,
+                message: 'Enrolment marked as completed.',
+                data: {
+                    Enrolment_id: enrolment.Enrolment_id,
+                    Completion_status: 'Completed',
+                    Completion_date: new Date()
+                }
+            });
+
+        } catch (error) {
+            console.error('Error marking enrolment complete:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to mark enrolment as completed: ' + error.message
+            });
+        }
+    }
+
     // ============================================
     // SEND BULK EMAIL
     // ============================================
@@ -1145,6 +1597,8 @@ class AdminController {
         }
     }
 
+    
+
     // ============================================
     // GET ELIGIBLE LEARNERS FOR BULK CERTIFICATES
     // ============================================
@@ -1153,6 +1607,10 @@ class AdminController {
             console.log('Fetching eligible learners from Enrolment table...');
 
             const { programme_id, status } = req.query;
+
+            const adminCentreId = req.user?.centreId ?? null;
+            const isSuperAdmin = req.user?.roleId === 3;
+            const centreFilter = !isSuperAdmin && adminCentreId;
 
             let query = `
                 SELECT 
@@ -1166,34 +1624,40 @@ class AdminController {
                     e.Enrolment_date,
                     e.Completion_status,
                     e.Completion_date,
+                    e.digital_center_id,
                     p.Programme_id,
                     p.Programme_name,
-                    dc.digital_center_id,
+                    dc.digital_center_id AS centre_id,
                     dc.center_name
                 FROM Enrolment e
                 INNER JOIN user u ON e.User_id = u.User_id
                 INNER JOIN Programmes p ON e.Programme_id = p.Programme_id
                 LEFT JOIN Digital_Center dc ON e.digital_center_id = dc.digital_center_id
                 WHERE u.role_id = 2
+                  AND e.Completion_status = 'Completed'
             `;
 
             const params = [];
+
+            if (centreFilter) {
+                // Only completions recorded at this admin's centre
+                query += ` AND e.digital_center_id = ?`;
+                params.push(adminCentreId);
+            }
 
             if (programme_id) {
                 query += ` AND e.Programme_id = ?`;
                 params.push(programme_id);
             }
 
-            if (status && status !== 'All') {
-                query += ` AND e.Completion_status = ?`;
-                params.push(status);
-            }
-
             query += ` ORDER BY e.Completion_date DESC, u.name ASC`;
 
             const [rows] = await pool.execute(query, params);
 
-            console.log(`Found ${rows.length} eligible learners`);
+            console.log(
+                `Found ${rows.length} eligible learners ` +
+                `(centreFilter: ${centreFilter}, centreId: ${adminCentreId})`
+            );
 
             res.status(200).json({
                 success: true,
@@ -1210,190 +1674,338 @@ class AdminController {
         }
     }
 
-        // ============================================
-    // BULK UPLOAD CERTIFICATES
-    // Overlays one uploaded template PDF onto every selected learner's data.
-    // Expects multipart form-data:
-    //   - file field "template" (single PDF)
-    //   - body field "certificates" (JSON string of [{ user_id, programme_id, issue_date, expiry_date }])
     // ============================================
-    static async bulkUploadCertificates(req, res) {
-        const templateFile = req.file;
-        const cleanupTemplate = () => {
-            if (templateFile) { try { fs.unlinkSync(templateFile.path); } catch (e) {} }
-        };
+// BULK UPLOAD CERTIFICATES — generates each PDF from the
+// uploaded template and stores the generated bytes as a blob.
+// ============================================
+static async bulkUploadCertificates(req, res) {
+    const templateFile = req.file;
+    const cleanupTemplate = () => {
+        if (templateFile) { try { fs.unlinkSync(templateFile.path); } catch (e) { /* ignore */ } }
+    };
 
+    try {
+        const adminCentreId = req.user?.centreId ?? null;
+        const isSuperAdmin = req.user?.roleId === 3;
+        const centreFilter = !isSuperAdmin && adminCentreId;
+
+        let certData;
         try {
-            // ---- Parse the certificates array (multipart sends it as a string) ----
-            let certData;
-            try {
-                certData = typeof req.body.certificates === 'string'
-                    ? JSON.parse(req.body.certificates)
-                    : req.body.certificates;
-            } catch (parseErr) {
-                cleanupTemplate();
-                return res.status(400).json({
-                    success: false,
-                    message: 'Invalid certificates payload'
-                });
-            }
-
-            if (!Array.isArray(certData) || certData.length === 0) {
-                cleanupTemplate();
-                return res.status(400).json({
-                    success: false,
-                    message: 'No certificate data provided'
-                });
-            }
-
-            if (!templateFile) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Certificate template PDF is required'
-                });
-            }
-
-            const CertificateService = require('../services/certificateService');
-            const uploadDir = path.join(__dirname, '..', 'uploads', 'certificates');
-
-            if (!fs.existsSync(uploadDir)) {
-                fs.mkdirSync(uploadDir, { recursive: true });
-            }
-
-            console.log(`Bulk issuing ${certData.length} certificates using template: ${templateFile.originalname}`);
-
-            const results = [];
-            const errors = [];
-
-            for (const data of certData) {
-                let insertedCertificateId = null;
-
-                try {
-                    const { user_id, programme_id, issue_date, expiry_date } = data;
-
-                    // ---- Learner must have completed the programme ----
-                    const [completedEnrolment] = await pool.execute(
-                        `SELECT Enrolment_id FROM Enrolment
-                         WHERE User_id = ? AND Programme_id = ? AND Completion_status = 'Completed'
-                         LIMIT 1`,
-                        [user_id, programme_id]
-                    );
-                    if (completedEnrolment.length === 0) {
-                        errors.push({
-                            user_id,
-                            programme_id,
-                            error: 'Learner has not completed this programme'
-                        });
-                        console.log(`Skipped user ${user_id}: not completed`);
-                        continue;
-                    }
-
-                    // ---- No duplicate ----
-                    const [existing] = await pool.execute(
-                        `SELECT Certificate_id FROM Certificate WHERE User_id = ? AND Programme_id = ?`,
-                        [user_id, programme_id]
-                    );
-                    if (existing.length > 0) {
-                        errors.push({
-                            user_id,
-                            programme_id,
-                            error: 'Certificate already exists for this learner and programme'
-                        });
-                        console.log(`Skipped duplicate for user ${user_id}, programme ${programme_id}`);
-                        continue;
-                    }
-
-                    const dateIssued = issue_date ? new Date(issue_date) : new Date();
-                    const dateExpiry = expiry_date ? new Date(expiry_date) : null;
-
-                    // ---- Insert the certificate row ----
-                    const [result] = await pool.execute(
-                        `INSERT INTO Certificate 
-                         (User_id, Programme_id, Date_issued, Expire_date)
-                         VALUES (?, ?, ?, ?)`,
-                        [user_id, programme_id, dateIssued, dateExpiry]
-                    );
-
-                    insertedCertificateId = result.insertId;
-
-                    // ---- Load learner details for the overlay ----
-                    const [detailsRows] = await pool.execute(
-                        `SELECT 
-                            u.name      AS learner_name,
-                            u.surname   AS learner_surname,
-                            u.id_number AS learner_id_number,
-                            p.Programme_name
-                         FROM user u
-                         LEFT JOIN Programmes p ON p.Programme_id = ?
-                         WHERE u.User_id = ?`,
-                        [programme_id, user_id]
-                    );
-
-                    const details = detailsRows[0] || {};
-                    const learnerName = `${details.learner_name || ''} ${details.learner_surname || ''}`.trim();
-
-                    // ---- Overlay the learner's data onto the uploaded template ----
-                    const pdfBytes = await CertificateService.generateCertificate({
-                        learnerName,
-                        idNumber: details.learner_id_number || 'N/A',
-                        completionDate: dateIssued,
-                        programmeName: details.Programme_name || 'Programme',
-                        certificateNumber: `CERT-${insertedCertificateId}`,
-                        templatePath: templateFile.path
-                    });
-
-                    const finalPath = path.join(uploadDir, `cert-${insertedCertificateId}.pdf`);
-                    fs.writeFileSync(finalPath, pdfBytes);
-
-                    results.push({
-                        user_id,
-                        certificate_id: insertedCertificateId,
-                        pdf: `cert-${insertedCertificateId}.pdf`
-                    });
-
-                    console.log(`Certificate ${insertedCertificateId} issued for user ${user_id}`);
-
-                } catch (err) {
-                    console.error(`Bulk cert failed for user ${data.user_id}:`, err.message);
-
-                    // Roll back the DB row if PDF generation failed
-                    if (insertedCertificateId) {
-                        try {
-                            await pool.execute(
-                                'DELETE FROM Certificate WHERE Certificate_id = ?',
-                                [insertedCertificateId]
-                            );
-                        } catch (rollbackErr) {
-                            console.error('Rollback failed:', rollbackErr.message);
-                        }
-                    }
-
-                    errors.push({
-                        user_id: data.user_id,
-                        programme_id: data.programme_id,
-                        error: err.message
-                    });
-                }
-            }
-
+            certData = typeof req.body.certificates === 'string'
+                ? JSON.parse(req.body.certificates)
+                : req.body.certificates;
+        } catch (parseErr) {
             cleanupTemplate();
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid certificates payload'
+            });
+        }
 
-            res.status(200).json({
+        if (!Array.isArray(certData) || certData.length === 0) {
+            cleanupTemplate();
+            return res.status(400).json({
+                success: false,
+                message: 'No certificate data provided'
+            });
+        }
+
+        if (!templateFile) {
+            return res.status(400).json({
+                success: false,
+                message: 'Certificate template PDF is required'
+            });
+        }
+
+        const CertificateService = require('../services/certificateService');
+
+        console.log(`Bulk issuing ${certData.length} certificates using template: ${templateFile.originalname}`);
+        console.log(`Scope: centreFilter=${centreFilter}, centreId=${adminCentreId}`);
+
+        const results = [];
+        const errors = [];
+
+        for (const data of certData) {
+            let insertedCertificateId = null;
+
+            try {
+                const { user_id, programme_id, issue_date, expiry_date } = data;
+
+                // ---- Reject past issue dates ----
+                if (issue_date) {
+                    const parsed = new Date(issue_date);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    parsed.setHours(0, 0, 0, 0);
+
+                    if (parsed < today) {
+                        errors.push({
+                            user_id,
+                            programme_id,
+                            error: 'Issue date cannot be in the past.'
+                        });
+                        console.log(`Skipped user ${user_id}: past issue date (${issue_date})`);
+                        continue;
+                    }
+                }
+
+                // ---- Check completed enrolment ----
+                let completionSql = `
+                    SELECT Enrolment_id
+                    FROM Enrolment
+                    WHERE User_id = ?
+                      AND Programme_id = ?
+                      AND Completion_status = 'Completed'
+                `;
+                const completionParams = [user_id, programme_id];
+
+                if (centreFilter) {
+                    completionSql += ` AND digital_center_id = ?`;
+                    completionParams.push(adminCentreId);
+                }
+
+                completionSql += ` LIMIT 1`;
+
+                const [completedEnrolment] = await pool.execute(
+                    completionSql,
+                    completionParams
+                );
+
+                if (completedEnrolment.length === 0) {
+                    errors.push({
+                        user_id,
+                        programme_id,
+                        error: centreFilter
+                            ? 'Learner has not completed this programme at your centre'
+                            : 'Learner has not completed this programme'
+                    });
+                    console.log(`Skipped user ${user_id}: not completed (centre scoped: ${centreFilter})`);
+                    continue;
+                }
+
+                // ---- Duplicate check ----
+                const [existing] = await pool.execute(
+                    `SELECT Certificate_id FROM Certificate WHERE User_id = ? AND Programme_id = ?`,
+                    [user_id, programme_id]
+                );
+                if (existing.length > 0) {
+                    errors.push({
+                        user_id,
+                        programme_id,
+                        error: 'Certificate already exists for this learner and programme'
+                    });
+                    console.log(`Skipped duplicate for user ${user_id}, programme ${programme_id}`);
+                    continue;
+                }
+
+                const dateIssued = issue_date ? new Date(issue_date) : new Date();
+                const dateExpiry = expiry_date ? new Date(expiry_date) : null;
+
+                // ---- Insert placeholder row to get the certificate ID ----
+                const [result] = await pool.execute(
+                    `INSERT INTO Certificate 
+                     (User_id, Programme_id, Date_issued, Expire_date)
+                     VALUES (?, ?, ?, ?)`,
+                    [user_id, programme_id, dateIssued, dateExpiry]
+                );
+
+                insertedCertificateId = result.insertId;
+
+                // ---- Fetch learner + programme details ----
+                const [detailsRows] = await pool.execute(
+                    `SELECT 
+                        u.name      AS learner_name,
+                        u.surname   AS learner_surname,
+                        u.id_number AS learner_id_number,
+                        p.Programme_name
+                     FROM user u
+                     LEFT JOIN Programmes p ON p.Programme_id = ?
+                     WHERE u.User_id = ?`,
+                    [programme_id, user_id]
+                );
+
+                const details = detailsRows[0] || {};
+                const learnerName = `${details.learner_name || ''} ${details.learner_surname || ''}`.trim();
+
+                // ---- Generate the completed PDF from the template ----
+                const pdfBytes = await CertificateService.generateCertificate({
+                    learnerName,
+                    idNumber: details.learner_id_number || 'N/A',
+                    completionDate: dateIssued,
+                    programmeName: details.Programme_name || 'Programme',
+                    certificateNumber: `CERT-${insertedCertificateId}`,
+                    templatePath: templateFile.path
+                });
+
+                // ---- Save the generated PDF as a blob ----
+                await pool.execute(
+                    `UPDATE Certificate SET file_data = ? WHERE Certificate_id = ?`,
+                    [pdfBytes, insertedCertificateId]
+                );
+
+                console.log(`Certificate ${insertedCertificateId} generated and stored (${pdfBytes.length} bytes)`);
+
+                results.push({
+                    user_id,
+                    certificate_id: insertedCertificateId,
+                    file_size: pdfBytes.length
+                });
+
+                // ============================================
+                // NOTIFY LEARNER IF THEY OPTED IN
+                // ============================================
+                setImmediate(async () => {
+                    try {
+                        const prefs = getPrefs(user_id);
+                        if (prefs.certificateIssued !== true) return;
+
+                        const [rows] = await pool.execute(
+                            `SELECT name, surname, email
+                             FROM user
+                             WHERE User_id = ? AND role_id = 2
+                             LIMIT 1`,
+                            [user_id]
+                        );
+
+                        if (rows.length === 0 || !rows[0].email) return;
+
+                        const learner = rows[0];
+                        const fullName = `${learner.name || ''} ${learner.surname || ''}`.trim() || 'Learner';
+
+                        await emailService.sendCertificateIssuedNotification(
+                            learner.email,
+                            fullName,
+                            {
+                                programmeName: details.Programme_name || 'Programme',
+                                certificateNumber: `CERT-${insertedCertificateId}`,
+                                issueDate: dateIssued,
+                            }
+                        );
+                    } catch (err) {
+                        console.error('Background certificate email failed:', err.message);
+                    }
+                });
+
+            } catch (err) {
+                console.error(`Bulk cert failed for user ${data.user_id}:`, err.message);
+
+                // Roll back the DB row if it was inserted
+                if (insertedCertificateId) {
+                    try {
+                        await pool.execute(
+                            'DELETE FROM Certificate WHERE Certificate_id = ?',
+                            [insertedCertificateId]
+                        );
+                    } catch (rollbackErr) {
+                        console.error('Rollback failed:', rollbackErr.message);
+                    }
+                }
+
+                errors.push({
+                    user_id: data.user_id,
+                    programme_id: data.programme_id,
+                    error: err.message
+                });
+            }
+        }
+
+        cleanupTemplate();
+
+        res.status(200).json({
+            success: true,
+            message: `Issued ${results.length} of ${certData.length} certificates`,
+            data: {
+                successful: results,
+                failed: errors,
+                total: certData.length
+            }
+        });
+
+    } catch (error) {
+        console.error('Error bulk uploading certificates:', error);
+        cleanupTemplate();
+        res.status(500).json({
+            success: false,
+            message: 'Failed to bulk upload certificates: ' + error.message
+        });
+    }
+}
+    // ============================================
+    // SEND WEEKLY SUMMARY NOW 
+    // ============================================
+    static async sendWeeklySummaryNow(req, res) {
+        try {
+            const adminId = req.user?.userId ?? req.user?.Admin_ID ?? null;
+            const roleId = req.user?.roleId ?? null;
+            const centreId = req.user?.centreId ?? null;
+
+            if (!adminId) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Not authenticated.'
+                });
+            }
+
+            const {
+                getCentreSummary,
+                getGlobalSummary,
+            } = require('../services/weeklySummaryService');
+            const emailService = require('../services/emailService');
+
+            // Pull the admin's name + email for the email body
+            const [rows] = await pool.execute(
+                `SELECT Admin_ID, Name, Surname, Email_address, role_ID, Centre_ID
+                 FROM Admin
+                 WHERE Admin_ID = ?
+                 LIMIT 1`,
+                [adminId]
+            );
+
+            if (rows.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Admin account not found.'
+                });
+            }
+
+            const admin = rows[0];
+            const isSuperAdmin = Number(admin.role_ID) === 3;
+
+            const summary = isSuperAdmin
+                ? await getGlobalSummary()
+                : (admin.Centre_ID ? await getCentreSummary(admin.Centre_ID) : null);
+
+            if (!summary) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Your account is not assigned to a centre and is not a super admin.'
+                });
+            }
+
+            const adminName =
+                `${admin.Name || ''} ${admin.Surname || ''}`.trim() || 'Admin';
+
+            
+            await emailService.sendWeeklySummary(
+                admin.Email_address,
+                adminName,
+                summary
+            );
+
+            return res.status(200).json({
                 success: true,
-                message: `Issued ${results.length} of ${certData.length} certificates`,
+                message: 'Weekly summary sent.',
                 data: {
-                    successful: results,
-                    failed: errors,
-                    total: certData.length
+                    sentTo: admin.Email_address,
+                    scope: summary.scope,
+                    period: `${summary.periodStartStr} → ${summary.periodEndStr}`,
                 }
             });
-
         } catch (error) {
-            console.error('Error bulk uploading certificates:', error);
-            cleanupTemplate();
-            res.status(500).json({
+            console.error('Error sending weekly summary now:', error);
+            return res.status(500).json({
                 success: false,
-                message: 'Failed to bulk upload certificates: ' + error.message
+                message: 'Failed to send weekly summary: ' + error.message
             });
         }
     }
@@ -1518,51 +2130,51 @@ class AdminController {
         }
     }
 
-// ============================================
-// GET CENTRE STATISTICS
-// ============================================
-static async getCentreStats(req, res) {
-  try {
-    console.log('Fetching centre statistics...');
+    // ============================================
+    // GET CENTRE STATISTICS
+    // ============================================
+    static async getCentreStats(req, res) {
+        try {
+            console.log('Fetching centre statistics...');
 
-    const [centres] = await pool.execute(
-      `SELECT
-          COALESCE(dc.center_name, 'Unassigned') AS name,
-          COUNT(li.interest_id)                  AS learner_count
-       FROM learner_interests li
-       LEFT JOIN Digital_Center dc
-              ON dc.digital_center_id = li.digital_center_id
-       WHERE li.status != 'Not Interested'
-       GROUP BY COALESCE(dc.center_name, 'Unassigned')
-       ORDER BY learner_count DESC`
-    );
+            const [centres] = await pool.execute(
+                `SELECT
+                    COALESCE(dc.center_name, 'Unassigned') AS name,
+                    COUNT(li.interest_id)                  AS learner_count
+                 FROM learner_interests li
+                 LEFT JOIN Digital_Center dc
+                        ON dc.digital_center_id = li.digital_center_id
+                 WHERE li.status != 'Not Interested'
+                 GROUP BY COALESCE(dc.center_name, 'Unassigned')
+                 ORDER BY learner_count DESC`
+            );
 
-    const maxCount = centres.length > 0
-      ? Math.max(...centres.map(r => Number(r.learner_count) || 0))
-      : 1;
+            const maxCount = centres.length > 0
+                ? Math.max(...centres.map(r => Number(r.learner_count) || 0))
+                : 1;
 
-    const result = centres.map(centre => ({
-      name: centre.name || 'Unknown Centre',
-      count: Number(centre.learner_count) || 0,
-      percentage: maxCount > 0
-        ? ((Number(centre.learner_count) / maxCount) * 100)
-        : 0,
-    }));
+            const result = centres.map(centre => ({
+                name: centre.name || 'Unknown Centre',
+                count: Number(centre.learner_count) || 0,
+                percentage: maxCount > 0
+                    ? ((Number(centre.learner_count) / maxCount) * 100)
+                    : 0,
+            }));
 
-    res.status(200).json({
-      success: true,
-      data: result,
-    });
+            res.status(200).json({
+                success: true,
+                data: result,
+            });
 
-  } catch (error) {
-    console.error('Error fetching centre stats:', error);
-    res.status(200).json({
-      success: true,
-      data: [],
-      message: 'No centre data available',
-    });
-  }
-}
+        } catch (error) {
+            console.error('Error fetching centre stats:', error);
+            res.status(200).json({
+                success: true,
+                data: [],
+                message: 'No centre data available',
+            });
+        }
+    }
 
     // ============================================
     // GET PROGRAMME STATISTICS
@@ -1603,94 +2215,185 @@ static async getCentreStats(req, res) {
             });
         }
     }
-        // ============================================
+
+    // ============================================
     // GET COMPLETED PROGRAMMES FOR A SPECIFIC LEARNER
-    // Used by Admin_Certificates.jsx to populate the
-    // programme dropdown when issuing a certificate.
     // ============================================
     static async getLearnerCompletedProgrammes(req, res) {
+    try {
+        const { id } = req.params;
+
+        console.log('Fetching completed programmes for learner:', id);
+
+        // ---- Centre scope ----
+        const adminCentreId = req.user?.centreId ?? null;
+        const isSuperAdmin = req.user?.roleId === 3;
+        const centreFilter = !isSuperAdmin && adminCentreId;
+
+        const [users] = await pool.execute(
+            'SELECT User_id, name, surname, email FROM user WHERE User_id = ? AND role_id = 2',
+            [id]
+        );
+
+        if (users.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Learner not found'
+            });
+        }
+
+        
+        let query = `
+            SELECT
+                p.Programme_id,
+                p.Programme_name,
+                p.Programme_description,
+                p.Duration,
+                e.Enrolment_id,
+                e.Enrolment_date,
+                e.Completion_date,
+                e.Completion_status,
+                e.digital_center_id
+             FROM Enrolment e
+             INNER JOIN Programmes p ON e.Programme_id = p.Programme_id
+             WHERE e.User_id = ?
+               AND e.Completion_status = 'Completed'
+        `;
+
+        const params = [id];
+
+        if (centreFilter) {
+            query += ` AND e.digital_center_id = ?`;
+            params.push(adminCentreId);
+        }
+
+        query += ` ORDER BY e.Completion_date DESC, e.Enrolment_date DESC`;
+
+        const [rows] = await pool.execute(query, params);
+
+        console.log(
+            `Found ${rows.length} completed programmes for learner ${id} ` +
+            `(centreFilter: ${centreFilter}, centreId: ${adminCentreId})`
+        );
+
+        return res.status(200).json({
+            success: true,
+            learner: {
+                id: users[0].User_id,
+                name: users[0].name,
+                surname: users[0].surname,
+                email: users[0].email
+            },
+            data: rows.map(r => ({
+                id: r.Programme_id,
+                Programme_id: r.Programme_id,
+                name: r.Programme_name,
+                Programme_name: r.Programme_name,
+                description: r.Programme_description,
+                Programme_description: r.Programme_description,
+                duration: r.Duration,
+                Duration: r.Duration,
+                completionDate: r.Completion_date || r.Enrolment_date,
+                Completion_date: r.Completion_date,
+                Enrolment_date: r.Enrolment_date,
+                status: r.Completion_status,
+                Completion_status: r.Completion_status,
+                digital_center_id: r.digital_center_id
+            })),
+            completedProgrammes: rows.map(r => ({
+                id: r.Programme_id,
+                name: r.Programme_name,
+                description: r.Programme_description,
+                duration: r.Duration,
+                completionDate: r.Completion_date || r.Enrolment_date,
+                status: r.Completion_status
+            })),
+            count: rows.length
+        });
+
+    } catch (error) {
+        console.error('Error fetching learner completed programmes:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to fetch completed programmes: ' + error.message
+        });
+    }
+}
+    // ============================================
+    // SEND WEEKLY SUMMARY NOW 
+    // ============================================
+    static async sendWeeklySummaryNow(req, res) {
         try {
-            const { id } = req.params;
+            const adminId = req.user?.userId ?? req.user?.Admin_ID ?? null;
 
-            console.log('Fetching completed programmes for learner:', id);
-
-            // 1. Verify the learner exists and is a learner (role_id = 2)
-            const [users] = await pool.execute(
-                'SELECT User_id, name, surname, email FROM user WHERE User_id = ? AND role_id = 2',
-                [id]
-            );
-
-            if (users.length === 0) {
-                return res.status(404).json({
+            if (!adminId) {
+                return res.status(401).json({
                     success: false,
-                    message: 'Learner not found'
+                    message: 'Not authenticated.'
                 });
             }
 
-            // 2. Get completed enrolments
+            const {
+                getCentreSummary,
+                getGlobalSummary,
+            } = require('../services/weeklySummaryService');
+            const emailService = require('../services/emailService');
+
             const [rows] = await pool.execute(
-                `SELECT
-                    p.Programme_id,
-                    p.Programme_name,
-                    p.Programme_description,
-                    p.Duration,
-                    e.Enrolment_id,
-                    e.Enrolment_date,
-                    e.Completion_date,
-                    e.Completion_status
-                 FROM Enrolment e
-                 INNER JOIN Programmes p ON e.Programme_id = p.Programme_id
-                 WHERE e.User_id = ?
-                   AND e.Completion_status = 'Completed'
-                 ORDER BY e.Completion_date DESC, e.Enrolment_date DESC`,
-                [id]
+                `SELECT Admin_ID, Name, Surname, Email_address, role_ID, Centre_ID
+                 FROM Admin
+                 WHERE Admin_ID = ?
+                 LIMIT 1`,
+                [adminId]
             );
 
-            console.log(`Found ${rows.length} completed programmes for learner ${id}`);
+            if (rows.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Admin account not found.'
+                });
+            }
+
+            const admin = rows[0];
+            const isSuperAdmin = Number(admin.role_ID) === 3;
+
+            const summary = isSuperAdmin
+                ? await getGlobalSummary()
+                : (admin.Centre_ID ? await getCentreSummary(admin.Centre_ID) : null);
+
+            if (!summary) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Your account is not assigned to a centre and is not a super admin.'
+                });
+            }
+
+            const adminName =
+                `${admin.Name || ''} ${admin.Surname || ''}`.trim() || 'Admin';
+
+            await emailService.sendWeeklySummary(
+                admin.Email_address,
+                adminName,
+                summary
+            );
 
             return res.status(200).json({
                 success: true,
-                learner: {
-                    id: users[0].User_id,
-                    name: users[0].name,
-                    surname: users[0].surname,
-                    email: users[0].email
-                },
-                data: rows.map(r => ({
-                    id: r.Programme_id,
-                    Programme_id: r.Programme_id,
-                    name: r.Programme_name,
-                    Programme_name: r.Programme_name,
-                    description: r.Programme_description,
-                    Programme_description: r.Programme_description,
-                    duration: r.Duration,
-                    Duration: r.Duration,
-                    completionDate: r.Completion_date || r.Enrolment_date,
-                    Completion_date: r.Completion_date,
-                    Enrolment_date: r.Enrolment_date,
-                    status: r.Completion_status,
-                    Completion_status: r.Completion_status
-                })),
-                completedProgrammes: rows.map(r => ({
-                    id: r.Programme_id,
-                    name: r.Programme_name,
-                    description: r.Programme_description,
-                    duration: r.Duration,
-                    completionDate: r.Completion_date || r.Enrolment_date,
-                    status: r.Completion_status
-                })),
-                count: rows.length
+                message: 'Weekly summary sent.',
+                data: {
+                    sentTo: admin.Email_address,
+                    scope: summary.scope,
+                    period: `${summary.periodStartStr} → ${summary.periodEndStr}`,
+                }
             });
-
         } catch (error) {
-            console.error('Error fetching learner completed programmes:', error);
+            console.error('Error sending weekly summary now:', error);
             return res.status(500).json({
                 success: false,
-                message: 'Failed to fetch completed programmes: ' + error.message
+                message: 'Failed to send weekly summary: ' + error.message
             });
         }
     }
 }
-
 
 module.exports = AdminController;

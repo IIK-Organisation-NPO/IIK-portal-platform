@@ -1,11 +1,8 @@
+// src/components/Learner/Learner_Header.jsx
 import React, { useEffect, useState } from 'react';
 import '../../styles/Learner/Learner_Header.css';
 import logo from '../../assets/images/small Mki.png';
-
-const API_BASE =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
-  import.meta.env?.VITE_API_URL ||
-  'http://localhost:5000';
+import { API } from '../../config/api';
 
 // ---------------------------------------------------------------------------
 // Extract a display name from whatever shape the user object happens to be.
@@ -39,25 +36,22 @@ const readCachedUser = () => {
 };
 
 const Learner_Header = ({
-  userName,          // optional override — pages that already pass this still work
+  userName,
   onMenuToggle,
   isMobileMenuOpen
 }) => {
-  // Seed from cache so the first render shows the name instantly.
   const [resolvedName, setResolvedName] = useState(
     () => userName || resolveUserName(readCachedUser()) || ''
   );
 
-  // If a page explicitly passes userName, respect it (existing behaviour).
   useEffect(() => {
     if (userName) {
       setResolvedName(userName);
     }
   }, [userName]);
 
-  // Otherwise, fetch the profile once so we always have the freshest name.
   useEffect(() => {
-    if (userName) return; // page supplied a name; nothing to fetch
+    if (userName) return;
 
     const token = localStorage.getItem('token');
     if (!token) return;
@@ -66,7 +60,7 @@ const Learner_Header = ({
 
     const loadProfile = async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/learner/profile`, {
+        const res = await fetch(API.learner.profile, {
           headers: {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -79,7 +73,6 @@ const Learner_Header = ({
 
         if (!cancelled && name) {
           setResolvedName(name);
-          // Keep the cache in sync for other pages.
           localStorage.setItem('user', JSON.stringify(profile));
         }
       } catch {

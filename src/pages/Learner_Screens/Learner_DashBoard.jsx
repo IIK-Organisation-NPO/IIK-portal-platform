@@ -1,50 +1,11 @@
+// src/pages/Learner_Screens/Learner_DashBoard.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Learner_Header from '../../components/Learner/Learner_Header';
 import Learner_SideBar from '../../components/Learner/Learner_SideBar';
 import '../../styles/Learner/Learner_DashBoard.css';
-import api from '../../services/api';
+import { API, API_BASE } from '../../config/api';
 
-// ---------------------------------------------------------------------------
-// API base URL
-// ---------------------------------------------------------------------------
-const API_BASE =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
-  import.meta.env?.VITE_API_URL ||
-  'http://localhost:5000';
-
-// ---------------------------------------------------------------------------
-// Classify a raw start date against today (date-only).
-// Returns 'none' | 'today' | 'past' | 'future'
-// ---------------------------------------------------------------------------
-const classifyStartDate = (rawDate) => {
-  if (!rawDate) return 'none';
-  const d = new Date(rawDate);
-  if (isNaN(d.getTime())) return 'none';
-  d.setHours(0, 0, 0, 0);
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  if (d.getTime() === today.getTime()) return 'today';
-  return d < today ? 'past' : 'future';
-};
-
-// ---------------------------------------------------------------------------
-// A programme is actionable when:
-//   - status is Active, OR
-//   - status is Upcoming but its start date has arrived or passed
-// ---------------------------------------------------------------------------
-const isProgrammeActionable = (programme) => {
-  if (programme.status === 'Active') return true;
-  if (programme.status !== 'Upcoming') return false;
-  const kind = classifyStartDate(programme.startDateRaw);
-  return kind === 'today' || kind === 'past';
-};
-
-// ---------------------------------------------------------------------------
-// Format a raw date as "Sep 18, 2026"
-// ---------------------------------------------------------------------------
 const formatStartDate = (rawDate) => {
   if (!rawDate) return 'Not set';
   const d = new Date(rawDate);
@@ -69,10 +30,6 @@ const Learner_DashBoard = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [programmes, setProgrammes] = useState([]);
 
-  // Ticks every minute so an Upcoming programme unlocks automatically
-  // when its start date becomes today.
-  const [, setNowTick] = useState(Date.now());
-
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
@@ -81,9 +38,6 @@ const Learner_DashBoard = () => {
     setIsMobileMenuOpen(false);
   };
 
-  // ============================================
-  // HELPER: Pick an icon based on programme name
-  // ============================================
   const getProgrammeIcon = (name = '') => {
     const n = name.toLowerCase();
     if (n.includes('digital literacy')) return 'fa-laptop';
@@ -98,9 +52,48 @@ const Learner_DashBoard = () => {
     return 'fa-graduation-cap';
   };
 
-  // ============================================
-  // FETCH LEARNER DATA AND PROGRAMMES
-  // ============================================
+  const fetchArchivedProgrammes = useCallback(async () => {
+    try {
+      const stored = (() => {
+        try {
+          return JSON.parse(localStorage.getItem('user') || '{}');
+        } catch {
+          return {};
+        }
+      })();
+
+      const centreId =
+        stored.centreId ??
+        stored.digital_center_id ??
+        stored.centre_id ??
+        null;
+
+      if (!centreId) return [];
+
+      const res = await fetch(
+        `${API_BASE}/api/centres/${centreId}/programmes`
+      );
+
+      if (!res.ok) return [];
+
+      const data = await res.json();
+      const rows = Array.isArray(data?.data) ? data.data : [];
+
+      return rows
+        .filter((row) => row.centreStatus === 'Archived')
+        .map((row) => ({
+          id: row.id,
+          name: row.name,
+          description: row.description,
+          duration: row.duration,
+          Programme_status: 'Archived'
+        }));
+    } catch (err) {
+      console.error('Fetch archived programmes error:', err);
+      return [];
+    }
+  }, []);
+
   const fetchLearnerData = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
@@ -110,34 +103,31 @@ const Learner_DashBoard = () => {
         return;
       }
 
-      // ---------- Learner profile ----------
-      const profileResponse = await fetch(`${API_BASE}/api/learner/profile`, {
+      const profileResponse = await fetch(API.learner.profile, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
 
+      let profile = null;
       if (profileResponse.ok) {
         const data = await profileResponse.json();
-        setLearnerData(data.data);
-        localStorage.setItem('user', JSON.stringify(data.data));
+        profile = data.data;
+        setLearnerData(profile);
+        localStorage.setItem('user', JSON.stringify(profile));
       } else {
         setError('Failed to fetch learner profile');
         setLoading(false);
         return;
       }
 
-      // ---------- Programmes ----------
-      const programmesResponse = await fetch(
-        `${API_BASE}/api/learner/programmes`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
+      const programmesResponse = await fetch(API.learner.programmes, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
-      );
+      });
 
       let programmeRows = [];
 
@@ -163,8 +153,29 @@ const Learner_DashBoard = () => {
         }
       }
 
-      // Normalize + filter to Active and Upcoming.
-      const visible = programmeRows
+      const enrolled = Array.isArray(profile?.enrolledProgrammes)
+        ? profile.enrolledProgrammes.map((row) => ({
+            id: row.id ?? row.programmeId,
+            name: row.name,
+            description: row.description,
+            duration: row.duration,
+            Programme_status: 'Enrolled'
+          }))
+        : [];
+
+      const archived = await fetchArchivedProgrammes();
+
+      const existingIds = new Set(
+        programmeRows
+          .map((p) => p.id ?? p.Programme_id)
+          .filter((id) => id != null)
+      );
+      const extras = [...enrolled, ...archived].filter(
+        (p) => p.id != null && !existingIds.has(p.id)
+      );
+      const mergedRows = [...programmeRows, ...extras];
+
+      const visible = mergedRows
         .map((p) => {
           const rawStatus = p.status ?? p.Programme_status ?? 'Draft';
           const startDateRaw =
@@ -188,7 +199,13 @@ const Learner_DashBoard = () => {
             icon: getProgrammeIcon(title)
           };
         })
-        .filter((p) => p.status === 'Active' || p.status === 'Upcoming');
+        .filter(
+          (p) =>
+            p.status === 'Active' ||
+            p.status === 'Upcoming' ||
+            p.status === 'Archived' ||
+            p.status === 'Enrolled'
+        );
 
       setProgrammes(visible);
       setLoading(false);
@@ -197,24 +214,12 @@ const Learner_DashBoard = () => {
       setError('Connection error');
       setLoading(false);
     }
-  }, []);
+  }, [fetchArchivedProgrammes]);
 
   useEffect(() => {
     fetchLearnerData();
   }, [fetchLearnerData]);
 
-  // Re-evaluate the "is actionable" decision every minute
-  useEffect(() => {
-    const id = setInterval(() => setNowTick(Date.now()), 60 * 1000);
-    return () => clearInterval(id);
-  }, []);
-
-  // ============================================
-  // HANDLE "I'M INTERESTED" BUTTON
-  // Navigates to the Locate Center page and carries the programme
-  // context (id + title) so the centre interest can be linked back
-  // to the chosen programme.
-  // ============================================
   const handleInterest = (programme) => {
     navigate('/locate-center', {
       state: {
@@ -224,9 +229,6 @@ const Learner_DashBoard = () => {
     });
   };
 
-  // ============================================
-  // LEARNER STATS
-  // ============================================
   const getUserName = () => {
     if (!learnerData) return 'Learner';
     return (
@@ -240,7 +242,11 @@ const Learner_DashBoard = () => {
 
   const getEnrolledCount = () => {
     if (!learnerData) return 0;
-    return learnerData.totalEnrolled || learnerData.enrolledProgrammes?.length || 0;
+    return (
+      learnerData.totalEnrolled ||
+      learnerData.enrolledProgrammes?.length ||
+      0
+    );
   };
 
   const getCompletedCount = () => {
@@ -255,7 +261,6 @@ const Learner_DashBoard = () => {
 
   const userName = getUserName();
 
-  // Loading state
   if (loading) {
     return (
       <div className="dashboard-layout">
@@ -278,7 +283,6 @@ const Learner_DashBoard = () => {
     );
   }
 
-  // Error state
   if (error) {
     return (
       <div className="dashboard-layout">
@@ -307,7 +311,6 @@ const Learner_DashBoard = () => {
 
   return (
     <div className="dashboard-layout">
-      {/* Header */}
       <Learner_Header
         userName={userName}
         onMenuToggle={toggleMobileMenu}
@@ -315,7 +318,6 @@ const Learner_DashBoard = () => {
       />
 
       <div className="dashboard-body">
-        {/* Sidebar */}
         <Learner_SideBar
           active="dashboard"
           isMobileOpen={isMobileMenuOpen}
@@ -323,7 +325,6 @@ const Learner_DashBoard = () => {
         />
 
         <main className="learner-dashboard">
-          {/* Success Message */}
           {showSuccess && (
             <div
               className="success-toast"
@@ -345,7 +346,6 @@ const Learner_DashBoard = () => {
             </div>
           )}
 
-          {/* Error Message */}
           {showError && (
             <div
               className="error-toast"
@@ -367,7 +367,6 @@ const Learner_DashBoard = () => {
             </div>
           )}
 
-          {/* Welcome Section */}
           <div className="dashboard-welcome">
             <h1>
               Welcome back, <span>{userName}</span>
@@ -378,7 +377,6 @@ const Learner_DashBoard = () => {
             </p>
           </div>
 
-          {/* Stats Grid */}
           <div className="stats-grid">
             <div className="stat-card">
               <div className="stat-label">Enrolled Programmes</div>
@@ -394,51 +392,37 @@ const Learner_DashBoard = () => {
             </div>
           </div>
 
-          {/* Programmes Section */}
           <section className="programmes-section">
             <h2>Our Programmes</h2>
             <div className="programmes-grid">
               {programmes.length === 0 ? (
                 <p className="no-programmes">No programmes available yet.</p>
               ) : (
-                programmes.map((prog) => {
-                  const actionable = isProgrammeActionable(prog);
-
-                  return (
-                    <div className="programme-card" key={prog.id}>
-                      <div className="programme-icon">
-                        <i className={`fas ${prog.icon}`}></i>
-                      </div>
-                      <h3>{prog.title}</h3>
-                      <p className="programme-desc">{prog.desc}</p>
-                      <div className="programme-duration">
-                        <i className="far fa-clock"></i> Duration: {prog.duration}
-                      </div>
-                      <button
-                        className="btn-interest"
-                        data-programme={prog.id}
-                        onClick={() => actionable && handleInterest(prog)}
-                        disabled={!actionable}
-                        title={
-                          !actionable
-                            ? `Available from ${prog.startDate}`
-                            : undefined
-                        }
-                      >
-                        {!actionable
-                          ? `Available from ${prog.startDate}`
-                          : "I'm Interested"}
-                      </button>
+                programmes.map((prog) => (
+                  <div className="programme-card" key={prog.id}>
+                    <div className="programme-icon">
+                      <i className={`fas ${prog.icon}`}></i>
                     </div>
-                  );
-                })
+                    <h3>{prog.title}</h3>
+                    <p className="programme-desc">{prog.desc}</p>
+                    <div className="programme-duration">
+                      <i className="far fa-clock"></i> Duration: {prog.duration}
+                    </div>
+                    <button
+                      className="btn-interest"
+                      data-programme={prog.id}
+                      onClick={() => handleInterest(prog)}
+                    >
+                      I'm Interested
+                    </button>
+                  </div>
+                ))
               )}
             </div>
           </section>
         </main>
       </div>
 
-      {/* Add animation styles */}
       <style>{`
         @keyframes slideIn {
           from {
@@ -450,14 +434,10 @@ const Learner_DashBoard = () => {
             opacity: 1;
           }
         }
-        .btn-interest:disabled {
-          opacity: 0.7;
-          cursor: not-allowed;
-        }
         .btn-interest {
           transition: all 0.3s ease;
         }
-        .btn-interest:hover:not(:disabled) {
+        .btn-interest:hover {
           transform: translateY(-2px);
           box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
         }

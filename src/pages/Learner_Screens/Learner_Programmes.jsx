@@ -1,20 +1,11 @@
+// src/pages/Learner_Screens/Learner_Programmes.jsx
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Learner_Header from '../../components/Learner/Learner_Header';
 import Learner_SideBar from '../../components/Learner/Learner_SideBar';
 import '../../styles/Learner/Learner_Programmes.css';
+import { API_BASE } from '../../config/api';
 
-// ---------------------------------------------------------------------------
-// API base URL
-// ---------------------------------------------------------------------------
-const API_BASE =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
-  'http://localhost:5000';
-
-// ---------------------------------------------------------------------------
-// Classify a raw start date against today (date-only).
-// Returns 'none' | 'today' | 'past' | 'future'
-// ---------------------------------------------------------------------------
 const classifyStartDate = (rawDate) => {
   if (!rawDate) return 'none';
   const d = new Date(rawDate);
@@ -28,32 +19,23 @@ const classifyStartDate = (rawDate) => {
   return d < today ? 'past' : 'future';
 };
 
-// ---------------------------------------------------------------------------
-// A programme is only actionable when:
-//   - its status is Active, OR
-//   - its status is Upcoming but the start date has arrived/passed
-// ---------------------------------------------------------------------------
 const isProgrammeActionable = (programme) => {
   if (programme.status === 'Active') return true;
+  if (programme.status === 'Archived') return true;
   if (programme.status !== 'Upcoming') return false;
   const kind = classifyStartDate(programme.startDateRaw);
   return kind === 'today' || kind === 'past';
 };
 
-// ---------------------------------------------------------------------------
-// Normalize one API row into the shape the UI renders
-// ---------------------------------------------------------------------------
 const normalizeProgramme = (p = {}) => {
   const rawStatus = p.status ?? p.Programme_status ?? 'Draft';
 
-  // Keep the raw date (ISO or Date) for the actionable check.
   const startDateRaw =
     p.startDateRaw ??
     p.startDate ??
     p.Start_date ??
     null;
 
-  // Pretty date for display.
   let formattedStartDate = 'Not set';
   if (startDateRaw) {
     const d = new Date(startDateRaw);
@@ -88,15 +70,10 @@ const ProgrammesPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProgramme, setSelectedProgramme] = useState(null);
 
-  // -------------------------------------------------------------------------
-  // Programmes loaded from the database
-  // -------------------------------------------------------------------------
   const [programmes, setProgrammes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
 
-  // Ticks once a minute so an Upcoming programme whose start date becomes
-  // today unlocks automatically without a page refresh.
   const [nowTick, setNowTick] = useState(Date.now());
 
   const fetchProgrammes = useCallback(async () => {
@@ -110,10 +87,9 @@ const ProgrammesPage = () => {
         throw new Error(data.message || 'Failed to load programmes.');
       }
 
-      // Only Active and Upcoming — hide Draft and Archived.
       const visible = (data.programmes || [])
         .map(normalizeProgramme)
-        .filter(p => p.status === 'Active' || p.status === 'Upcoming');
+        .filter(p => p.status !== 'Draft');
 
       setProgrammes(visible);
     } catch (err) {
@@ -128,7 +104,6 @@ const ProgrammesPage = () => {
     fetchProgrammes();
   }, [fetchProgrammes]);
 
-  // Refresh the "is today" decision once a minute
   useEffect(() => {
     const id = setInterval(() => setNowTick(Date.now()), 60 * 1000);
     return () => clearInterval(id);
@@ -142,12 +117,13 @@ const ProgrammesPage = () => {
     setIsMobileMenuOpen(false);
   };
 
-  // -------------------------------------------------------------------------
-  // "I'm Interested" — navigate to Locate Center and carry the programme
-  // context (id + title) so the centre interest can be linked back to the
-  // chosen programme.
-  // -------------------------------------------------------------------------
   const handleInterest = (programme) => {
+    sessionStorage.setItem('pendingProgrammeInterest', JSON.stringify({
+      programmeId: programme.id,
+      programmeTitle: programme.title,
+      stagedAt: Date.now(),
+    }));
+
     navigate('/locate-center', {
       state: {
         programmeId: programme.id,
@@ -156,17 +132,11 @@ const ProgrammesPage = () => {
     });
   };
 
-  // -------------------------------------------------------------------------
-  // Categories derived from loaded programmes
-  // -------------------------------------------------------------------------
   const categories = useMemo(() => {
     const set = new Set(programmes.map(p => p.category).filter(Boolean));
     return ['All', ...Array.from(set)];
   }, [programmes]);
 
-  // -------------------------------------------------------------------------
-  // Filter by category + search
-  // -------------------------------------------------------------------------
   const filteredProgrammes = useMemo(() => {
     const search = (searchTerm || '').trim().toLowerCase();
 
@@ -181,7 +151,6 @@ const ProgrammesPage = () => {
 
       return matchesCategory && matchesSearch;
     });
-    // nowTick included so the actionable check re-runs each minute
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [programmes, activeFilter, searchTerm, nowTick]);
 
@@ -200,7 +169,6 @@ const ProgrammesPage = () => {
         />
 
         <main className="programmes-page">
-          {/* Header Section */}
           <section className="programmes-hero">
             <div className="hero-content">
               <h1>Our Programmes</h1>
@@ -210,7 +178,6 @@ const ProgrammesPage = () => {
             </div>
           </section>
 
-          {/* Filter and Search Section */}
           <section className="programmes-filter">
             <div className="filter-content">
               <div className="filter-left">
@@ -238,7 +205,6 @@ const ProgrammesPage = () => {
             </div>
           </section>
 
-          {/* Programmes Grid */}
           <section className="programmes-grid-section">
             <div className="grid-content">
               {isLoading ? (

@@ -6,30 +6,42 @@ const {
     createStaff,
     getAllStaff,
     updateStaffStatus,
-    deleteStaff,                 // ← NEW
+    deleteStaff,
     getMyAdminProfile,
     getAssignableRoles,
     updateMyAdminProfile,
-    changeMyPassword
+    changeMyPassword,
+    verifyMyPassword,
+    getMyNotificationPrefs,
+    updateMyNotificationPrefs
 } = require('../controllers/staffController');
 
-const { authenticate, isAdmin } = require('../middleware/auth');
+const { authenticate, isAdmin, isSuperAdmin, requireRole } = require('../middleware/auth');
 const { validateStaffSignup } = require('../middleware/validation');
 
 // ============================================
 // SELF-SERVICE ROUTES — must come before /staff/:id
 // ============================================
+
+// Any logged-in admin (Admin or Super Admin)
 router.get('/staff/me', authenticate, isAdmin, getMyAdminProfile);
 router.put('/staff/me', authenticate, isAdmin, updateMyAdminProfile);
 router.put('/staff/me/password', authenticate, isAdmin, changeMyPassword);
-router.get('/staff/roles', getAssignableRoles);
+router.post('/staff/me/verify-password', authenticate, isAdmin, verifyMyPassword);
+
+// Notification preferences
+router.get('/staff/me/notifications', authenticate, isAdmin, getMyNotificationPrefs);
+router.put('/staff/me/notifications', authenticate, isAdmin, updateMyNotificationPrefs);
+
+// Roles list — Super Admin only
+router.get('/staff/roles', authenticate, isSuperAdmin, getAssignableRoles);
 
 // ============================================
-// STAFF MANAGEMENT
+// STAFF MANAGEMENT — Super Admin only
 // ============================================
-router.post('/staff', validateStaffSignup, createStaff);
-router.get('/staff', getAllStaff);
-router.patch('/staff/:id/status', updateStaffStatus);
-router.delete('/staff/:id', deleteStaff);          // ← FIXED
+router.post('/staff', authenticate, isSuperAdmin, validateStaffSignup, createStaff);
+router.get('/staff', authenticate, isSuperAdmin, getAllStaff);
+router.patch('/staff/:id/status', authenticate, isSuperAdmin, updateStaffStatus);
+router.delete('/staff/:id', authenticate, isSuperAdmin, deleteStaff);
 
 module.exports = router;

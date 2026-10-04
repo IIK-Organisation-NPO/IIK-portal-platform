@@ -1,0 +1,27 @@
+{
+  "12": {
+    "notifyOnCertificate": true,
+    "notifyOnRegistration": true,
+    "notifyWeekly": true
+  },
+  "15": {
+    "notifyOnCertificate": true,
+    "notifyOnRegistration": true,
+    "notifyWeekly": false
+  },
+  "16": {
+    "notifyOnCertificate": true,
+    "notifyOnRegistration": true,
+    "notifyWeekly": false
+  },
+  "17": {
+    "notifyOnCertificate": true,
+    "notifyOnRegistration": true,
+    "notifyWeekly": true
+  },
+  "20": {
+    "notifyOnCertificate": true,
+    "notifyOnRegistration": true,
+    "notifyWeekly": true
+  }
+}

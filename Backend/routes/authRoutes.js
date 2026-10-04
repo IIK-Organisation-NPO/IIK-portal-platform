@@ -59,9 +59,9 @@ router.get('/captcha', (req, res) => {
             height: 60
         });
 
-        // ✅ Store CAPTCHA as-is (NO .toLowerCase())
+        // Store CAPTCHA as-is (NO .toLowerCase())
         req.session.captcha = captcha.text;
-        req.session.captchaExpiry = Date.now() + 5 * 60 * 1000; // 5 minutes
+        req.session.captchaExpiry = Date.now() + 5 * 60 * 1000; 
 
         console.log('🔐 CAPTCHA generated:', captcha.text);
 
@@ -86,11 +86,10 @@ router.get('/captcha/refresh', (req, res) => {
             height: 60
         });
 
-        // ✅ Store CAPTCHA as-is (NO .toLowerCase())
         req.session.captcha = captcha.text;
         req.session.captchaExpiry = Date.now() + 5 * 60 * 1000;
 
-        console.log('🔄 CAPTCHA refreshed:', captcha.text);
+        console.log('CAPTCHA refreshed:', captcha.text);
 
         res.json({
             success: true,

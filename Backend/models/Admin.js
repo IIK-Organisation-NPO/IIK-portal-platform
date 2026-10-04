@@ -6,14 +6,14 @@ class Admin {
     // ==========================================================
     // CREATE a new staff member in the Admin table
     // ==========================================================
-    static async create({ name, surname, email, phoneNumber, password, roleId = 1 }) {
+    static async create({ name, surname, email, phoneNumber, password, roleId = 1, centreId = null }) {
         const salt = await bcrypt.genSalt(10);
         const passwordHash = await bcrypt.hash(password, salt);
 
         const query = `
             INSERT INTO Admin
-                (role_ID, Name, Surname, Email_address, Phone_number, Password)
-            VALUES (?, ?, ?, ?, ?, ?)
+                (role_ID, Name, Surname, Email_address, Phone_number, Password, Centre_ID)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         `;
 
         const [result] = await pool.execute(query, [
@@ -22,7 +22,8 @@ class Admin {
             surname.trim(),
             email.toLowerCase().trim(),
             phoneNumber || null,
-            passwordHash
+            passwordHash,
+            centreId || null
         ]);
 
         return {
@@ -31,7 +32,8 @@ class Admin {
             surname: surname.trim(),
             email: email.toLowerCase().trim(),
             phone_number: phoneNumber || null,
-            role_id: roleId
+            role_id: roleId,
+            centre_id: centreId || null
         };
     }
 
@@ -50,9 +52,11 @@ class Admin {
     static async getById(id) {
         const query = `
             SELECT a.Admin_ID, a.Name, a.Surname, a.Email_address,
-                   a.Phone_number, a.role_ID, r.role_type
+                   a.Phone_number, a.role_ID, r.role_type,
+                   a.Centre_ID, dc.center_name
             FROM Admin a
             LEFT JOIN role r ON a.role_ID = r.role_id
+            LEFT JOIN digital_center dc ON a.Centre_ID = dc.digital_center_id
             WHERE a.Admin_ID = ?
         `;
         const [rows] = await pool.execute(query, [id]);
@@ -63,6 +67,7 @@ class Admin {
     // GET ALL STAFF (for the table)
     // Pulls created_at / last_login_at / Is_active if those
     // columns exist, silently falls back otherwise.
+    // Also joins the centre name from digital_center.
     // ==========================================================
     static async getAll() {
         const [createdCols] = await pool.query(
@@ -74,10 +79,14 @@ class Admin {
         const [isActiveCols] = await pool.query(
             "SHOW COLUMNS FROM Admin LIKE 'Is_active'"
         );
+        const [centreCols] = await pool.query(
+            "SHOW COLUMNS FROM Admin LIKE 'Centre_ID'"
+        );
 
         const createdSelect   = createdCols.length > 0   ? 'a.created_at'    : 'NULL AS created_at';
         const lastLoginSelect = lastLoginCols.length > 0 ? 'a.last_login_at' : 'NULL AS last_login_at';
         const isActiveSelect  = isActiveCols.length > 0  ? 'a.Is_active'     : '1 AS Is_active';
+        const centreSelect    = centreCols.length > 0    ? 'a.Centre_ID'     : 'NULL AS Centre_ID';
 
         const query = `
             SELECT
@@ -88,11 +97,14 @@ class Admin {
                 a.Phone_number,
                 a.role_ID,
                 r.role_type,
+                ${centreSelect},
+                dc.center_name,
                 ${createdSelect},
                 ${lastLoginSelect},
                 ${isActiveSelect}
             FROM Admin a
             LEFT JOIN role r ON a.role_ID = r.role_id
+            LEFT JOIN digital_center dc ON a.Centre_ID = dc.digital_center_id
             ORDER BY a.Admin_ID DESC
         `;
 
@@ -119,7 +131,6 @@ class Admin {
 
     // ==========================================================
     // UPDATE LAST LOGIN TIMESTAMP
-    // Only runs if the last_login_at column exists.
     // ==========================================================
     static async updateLastLogin(id) {
         const [cols] = await pool.query(
@@ -142,7 +153,8 @@ class Admin {
         );
         return result.affectedRows > 0;
     }
-        // ==========================================================
+
+    // ==========================================================
     // GET BY ID — includes hashed password (for password change)
     // ==========================================================
     static async getByIdWithPassword(id) {
@@ -152,7 +164,7 @@ class Admin {
     }
 
     // ==========================================================
-    // UPDATE PROFILE (name / surname only — email is immutable)
+    // UPDATE PROFILE (name / surname only)
     // ==========================================================
     static async update(id, data) {
         const { name, surname } = data;

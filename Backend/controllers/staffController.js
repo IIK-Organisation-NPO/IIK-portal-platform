@@ -2,18 +2,21 @@
 const { validationResult } = require('express-validator');
 const Admin = require('../models/Admin');
 const User = require('../models/User');
+const { getPrefs: getAdminPrefs, setPrefs: setAdminPrefs } = require('../utils/adminNotificationPrefs');
 
-// ============================================
-// IN-MEMORY DEACTIVATION FLAG
-// Tracks which staff IDs are currently deactivated.
-// Resets on server restart — see notes at the bottom.
-// ============================================
+
 const deactivatedStaff = new Set();
+const resolveSessionAdminId = (req) =>
+    req.user?.userId ??
+    req.user?.id ??
+    req.user?.Admin_ID ??
+    req.user?.adminId ??
+    req.session?.adminId ??
+    req.session?.admin?.Admin_ID ??
+    req.session?.Admin_ID ??
+    null;
 
-// ============================================
-//  GET ASSIGNABLE ROLES (only Administrator and Super Admin)
-//  GET /api/staff/roles
-// ============================================
+
 exports.getAssignableRoles = async (req, res) => {
     try {
         const { pool } = require('../config/database');
@@ -39,11 +42,11 @@ exports.getAssignableRoles = async (req, res) => {
 };
 
 // ============================================
-//  CREATE STAFF (register a new admin user)
+//  CREATE STAFF 
 // ============================================
 exports.createStaff = async (req, res) => {
     try {
-        // 1. Check validator results
+       
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             return res.status(400).json({
@@ -56,10 +59,9 @@ exports.createStaff = async (req, res) => {
             });
         }
 
-        const { name, surname, email, phone_number, role_id, password } = req.body;
+        const { name, surname, email, phone_number, role_id, password, centre } = req.body;
         const normalizedEmail = email.toLowerCase().trim();
 
-        // 2. Reject duplicate email — check BOTH tables
         const existingAdmin = await Admin.findByEmail(normalizedEmail);
         if (existingAdmin) {
             return res.status(409).json({
@@ -72,7 +74,6 @@ exports.createStaff = async (req, res) => {
             });
         }
 
-        // Also make sure it isn't already a learner account
         const existingLearner = await User.findByEmail(normalizedEmail);
         if (existingLearner) {
             return res.status(409).json({
@@ -85,9 +86,7 @@ exports.createStaff = async (req, res) => {
             });
         }
 
-        // 3. Normalize the phone before storing:
-        //    +27XXXXXXXXX  -> 0XXXXXXXXX
-        //    27XXXXXXXXX   -> 0XXXXXXXXX
+        
         let normalizedPhone = null;
         if (phone_number) {
             let cleaned = String(phone_number).replace(/[\s\-()]/g, '');
@@ -96,14 +95,16 @@ exports.createStaff = async (req, res) => {
             normalizedPhone = cleaned.replace(/\D/g, '');
         }
 
-        // 4. Create the staff member (password is hashed in the model)
+        
+        const centreId = centre ? parseInt(centre, 10) : null;
         const staff = await Admin.create({
             name,
             surname,
             email: normalizedEmail,
             phoneNumber: normalizedPhone,
             password,
-            roleId: parseInt(role_id, 10)
+            roleId: parseInt(role_id, 10),
+            centreId
         });
 
         return res.status(201).json({
@@ -115,7 +116,8 @@ exports.createStaff = async (req, res) => {
                 surname: staff.surname,
                 email: staff.email,
                 phone_number: staff.phone_number,
-                role_id: staff.role_id
+                role_id: staff.role_id,
+                centre_id: staff.centre_id
             }
         });
     } catch (error) {
@@ -126,30 +128,24 @@ exports.createStaff = async (req, res) => {
         });
     }
 };
+
 // ============================================
-//  DELETE STAFF (hard delete from the Admin table)
-//  DELETE /api/staff/:id
+//  DELETE STAFF 
 // ============================================
 exports.deleteStaff = async (req, res) => {
     try {
         const { id } = req.params;
         const { pool } = require('../config/database');
+        const sessionAdminId = resolveSessionAdminId(req);
 
-        // Don't allow deleting yourself (optional but recommended)
-        const sessionAdminId =
-            req.session?.adminId ||
-            req.session?.admin?.Admin_ID ||
-            req.session?.Admin_ID ||
-            null;
-
-        if (sessionAdminId && String(sessionAdminId) === String(id)) {
-            return res.status(400).json({
+        if (sessionAdminId != null && String(sessionAdminId) === String(id)) {
+            return res.status(403).json({
                 success: false,
                 message: 'You cannot delete your own account.',
             });
         }
 
-        // Confirm the row exists first
+       
         const [rows] = await pool.execute(
             'SELECT Admin_ID, Name, Surname FROM Admin WHERE Admin_ID = ? LIMIT 1',
             [id]
@@ -162,12 +158,11 @@ exports.deleteStaff = async (req, res) => {
             });
         }
 
-        // Try to delete. If the FK from other tables blocks it,
-        // we catch that specific error and give a friendly message.
+        
         try {
             await pool.execute('DELETE FROM Admin WHERE Admin_ID = ?', [id]);
         } catch (fkErr) {
-            // MySQL error code for FK constraint
+            
             if (fkErr.code === 'ER_ROW_IS_REFERENCED_2' || fkErr.errno === 1451) {
                 return res.status(409).json({
                     success: false,
@@ -177,6 +172,7 @@ exports.deleteStaff = async (req, res) => {
             }
             throw fkErr;
         }
+        deactivatedStaff.delete(String(id));
 
         return res.status(200).json({
             success: true,
@@ -190,22 +186,13 @@ exports.deleteStaff = async (req, res) => {
         });
     }
 };
+
 // ============================================
-//  GET MY PROFILE (logged-in admin)
-//  GET /api/staff/me
+//  GET MY PROFILE 
 // ============================================
 exports.getMyAdminProfile = async (req, res) => {
     try {
-        // Read the admin id from whatever key the auth middleware used.
-        // Different middleware implementations set different keys.
-        const adminId =
-            req.user?.userId     ??
-            req.user?.id         ??
-            req.user?.Admin_ID   ??
-            req.user?.adminId    ??
-            req.session?.adminId ??
-            req.session?.admin?.Admin_ID ??
-            null;
+        const adminId = resolveSessionAdminId(req);
 
         if (!adminId) {
             return res.status(401).json({
@@ -244,19 +231,11 @@ exports.getMyAdminProfile = async (req, res) => {
 };
 
 // ============================================
-//  UPDATE MY PROFILE (name + surname only)
-//  PUT /api/staff/me
+//  UPDATE MY PROFILE 
 // ============================================
 exports.updateMyAdminProfile = async (req, res) => {
     try {
-        const adminId =
-            req.user?.userId     ??
-            req.user?.id         ??
-            req.user?.Admin_ID   ??
-            req.user?.adminId    ??
-            req.session?.adminId ??
-            req.session?.admin?.Admin_ID ??
-            null;
+        const adminId = resolveSessionAdminId(req);
 
         if (!adminId) {
             return res.status(401).json({
@@ -267,7 +246,7 @@ exports.updateMyAdminProfile = async (req, res) => {
 
         const { name, surname } = req.body;
 
-        // ---- Validate each field the same way as createStaff ----
+        
         const validateName = (value, label) => {
             const v = (value || '').trim();
             if (!v) return `${label} is required`;
@@ -322,14 +301,13 @@ exports.updateMyAdminProfile = async (req, res) => {
         });
     }
 };
+
 // ============================================
 //  CHANGE MY PASSWORD
-//  PUT /api/staff/me/password
-//  Body: { currentPassword, newPassword, confirmPassword }
 // ============================================
 exports.changeMyPassword = async (req, res) => {
     try {
-        const adminId = req.user?.userId;
+        const adminId = resolveSessionAdminId(req);
         if (!adminId) {
             return res.status(401).json({
                 success: false,
@@ -339,7 +317,7 @@ exports.changeMyPassword = async (req, res) => {
 
         const { currentPassword, newPassword, confirmPassword } = req.body;
 
-        // ---- Validate ----
+        
         const errors = [];
 
         if (!currentPassword) {
@@ -384,7 +362,7 @@ exports.changeMyPassword = async (req, res) => {
             });
         }
 
-        // ---- Fetch admin row WITH password ----
+        
         const admin = await Admin.getByIdWithPassword(adminId);
         if (!admin) {
             return res.status(404).json({
@@ -393,18 +371,19 @@ exports.changeMyPassword = async (req, res) => {
             });
         }
 
-        // ---- Verify current password ----
+        
         const bcrypt = require('bcryptjs');
         const matches = await bcrypt.compare(currentPassword, admin.Password);
         if (!matches) {
-            return res.status(401).json({
+           
+            return res.status(400).json({
                 success: false,
                 message: 'Current password is incorrect',
                 errors: [{ field: 'currentPassword', message: 'Current password is incorrect' }]
             });
         }
 
-        // ---- Save the new password ----
+        
         await Admin.updatePassword(adminId, newPassword);
 
         return res.status(200).json({
@@ -421,9 +400,7 @@ exports.changeMyPassword = async (req, res) => {
 };
 
 // ============================================
-//  LIST STAFF (for the table)
-// Merges the in-memory deactivation flag into each row so the
-// frontend receives an Is_active value without needing a DB column.
+//  LIST STAFF 
 // ============================================
 exports.getAllStaff = async (req, res) => {
     try {
@@ -448,10 +425,7 @@ exports.getAllStaff = async (req, res) => {
 };
 
 // ============================================
-//  UPDATE STAFF STATUS (activate / deactivate)
-// PATCH /api/staff/:id/status
-// Body: { is_active: true | false }
-// Uses the in-memory Set — no DB column required.
+//  UPDATE STAFF STATUS 
 // ============================================
 exports.updateStaffStatus = async (req, res) => {
     try {
@@ -465,7 +439,21 @@ exports.updateStaffStatus = async (req, res) => {
             });
         }
 
-        // Verify the row exists so we can return a clean 404
+       
+        const sessionAdminId = resolveSessionAdminId(req);
+
+        if (
+            is_active === false &&
+            sessionAdminId != null &&
+            String(sessionAdminId) === String(id)
+        ) {
+            return res.status(403).json({
+                success: false,
+                message: 'You cannot deactivate your own account.'
+            });
+        }
+
+        
         const existing = await Admin.getById(id);
         if (!existing) {
             return res.status(404).json({
@@ -491,6 +479,132 @@ exports.updateStaffStatus = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Internal server error.'
+        });
+    }
+};
+
+// ============================================
+//  VERIFY MY CURRENT PASSWORD.
+// ============================================
+exports.verifyMyPassword = async (req, res) => {
+    try {
+        const adminId = resolveSessionAdminId(req);
+
+        if (!adminId) {
+            return res.status(401).json({
+                success: false,
+                message: 'Not authenticated'
+            });
+        }
+
+        const { password } = req.body;
+
+        if (!password) {
+            return res.status(400).json({
+                success: false,
+                message: 'Password is required'
+            });
+        }
+
+        const admin = await Admin.getByIdWithPassword(adminId);
+        if (!admin) {
+            return res.status(404).json({
+                success: false,
+                message: 'Admin account not found'
+            });
+        }
+
+        const bcrypt = require('bcryptjs');
+        const matches = await bcrypt.compare(password, admin.Password);
+
+        return res.status(200).json({
+            success: true,
+            valid: matches
+        });
+    } catch (error) {
+        console.error('Verify password error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Internal server error.'
+        });
+    }
+};
+
+// ============================================
+//  GET MY NOTIFICATION PREFERENCES
+// ============================================
+exports.getMyNotificationPrefs = async (req, res) => {
+    try {
+        const adminId = resolveSessionAdminId(req);
+        if (!adminId) {
+            return res.status(401).json({
+                success: false,
+                message: 'Not authenticated'
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            data: getAdminPrefs(adminId)
+        });
+    } catch (error) {
+        console.error('Get admin notification prefs error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to load preferences: ' + error.message
+        });
+    }
+};
+
+// ============================================
+//  UPDATE MY NOTIFICATION PREFERENCES
+// ============================================
+exports.updateMyNotificationPrefs = async (req, res) => {
+    try {
+        const adminId = resolveSessionAdminId(req);
+        if (!adminId) {
+            return res.status(401).json({
+                success: false,
+                message: 'Not authenticated'
+            });
+        }
+
+        const { notifyOnCertificate, notifyOnRegistration, notifyWeekly } = req.body;
+
+        if (
+            typeof notifyOnCertificate !== 'boolean' ||
+            typeof notifyOnRegistration !== 'boolean' ||
+            typeof notifyWeekly !== 'boolean'
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: 'All three preferences must be booleans.'
+            });
+        }
+
+        const ok = setAdminPrefs(adminId, {
+            notifyOnCertificate,
+            notifyOnRegistration,
+            notifyWeekly,
+        });
+
+        if (!ok) {
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to save preferences.'
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: 'Preferences saved successfully',
+            data: getAdminPrefs(adminId)
+        });
+    } catch (error) {
+        console.error('Update admin notification prefs error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to save preferences: ' + error.message
         });
     }
 };

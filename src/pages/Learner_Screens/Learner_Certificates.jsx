@@ -6,6 +6,57 @@ import Learner_Header from "../../components/Learner/Learner_Header";
 import "../../styles/Learner/Learner_Certificates.css";
 import api from "../../services/api";
 
+
+
+const CertificatePreview = ({ certificateId }) => {
+    const [blobUrl, setBlobUrl] = useState(null);
+    const [failed, setFailed] = useState(false);
+
+    useEffect(() => {
+        let cancelled = false;
+        let objectUrl = null;
+
+        const load = async () => {
+            try {
+                const res = await api.get(
+                    `/learner/certificates/${certificateId}/download`,
+                    { responseType: 'blob' }
+                );
+                if (cancelled) return;
+
+                const blob = new Blob([res.data], { type: 'application/pdf' });
+                objectUrl = URL.createObjectURL(blob);
+                setBlobUrl(objectUrl);
+            } catch (err) {
+                console.error('Preview load error:', err);
+                if (!cancelled) setFailed(true);
+            }
+        };
+
+        load();
+
+        return () => {
+            cancelled = true;
+            if (objectUrl) URL.revokeObjectURL(objectUrl);
+        };
+    }, [certificateId]);
+
+    if (failed) {
+        return <span>CERTIFICATE PREVIEW</span>;
+    }
+    if (!blobUrl) {
+        return <span>Loading preview…</span>;
+    }
+
+    return (
+        <embed
+            src={`${blobUrl}#toolbar=0&navpanes=0&scrollbar=0&zoom=page-width&view=FitH`}
+            type="application/pdf"
+            className="cert-preview-embed"
+        />
+    );
+};
+
 const Learner_Certificates = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [activeNav] = useState("certificates");
@@ -86,7 +137,7 @@ const Learner_Certificates = () => {
         fetchCertificates();
     }, []);
 
-    // ---- FILTERING LOGIC ----
+
     const filteredCertificates = certificates.filter((cert) => {
         const matchesStatus = statusFilter === "All" || cert.status === statusFilter;
         const query = searchQuery.trim().toLowerCase();
@@ -109,7 +160,6 @@ const Learner_Certificates = () => {
 
             window.open(url, '_blank');
 
-            // Release the blob URL after the new tab has had time to load it
             setTimeout(() => URL.revokeObjectURL(url), 60000);
         } catch (err) {
             console.error('Error viewing certificate:', err);
@@ -144,7 +194,7 @@ const Learner_Certificates = () => {
         }
     };
 
-    // ---- LOADING STATE (keeps the same page shell) ----
+    
     if (loading) {
         return (
             <div className="learner-certificates-layout">
@@ -193,7 +243,7 @@ const Learner_Certificates = () => {
                         <p>View, verify, and download your accredited academic certificates.</p>
                     </div>
 
-                    {/* Error banner (only if the API call failed) */}
+                    {/* Error banner */}
                     {error && (
                         <div className="cert-no-results" style={{ color: '#dc3545' }}>
                             {error}
@@ -234,7 +284,11 @@ const Learner_Certificates = () => {
                                 return (
                                     <div className="cert-card" key={cert.id}>
                                         <div className={`cert-preview ${isIssued ? "" : "unavailable"}`}>
-                                            <span>{isIssued ? "CERTIFICATE PREVIEW" : "NOT AVAILABLE YET"}</span>
+                                            {isIssued ? (
+                                                <CertificatePreview certificateId={cert.certificateId} />
+                                            ) : (
+                                                <span>NOT AVAILABLE YET</span>
+                                            )}
                                         </div>
 
                                         <div className="cert-card-body">

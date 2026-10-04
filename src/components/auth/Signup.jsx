@@ -21,6 +21,7 @@ import {
 import Footer from '../common/Footer';
 import '../../styles/components/auth.css';
 import logo from '../../assets/images/small Mki.png';
+import { API, GOOGLE_CLIENT_ID } from '../../config/api';
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -48,15 +49,10 @@ const Signup = () => {
   const [genders, setGenders] = useState([]);
   const [passwordFocused, setPasswordFocused] = useState(false);
 
-  // ===== SECURITY FEATURE 1: CAPTCHA TRACKING =====
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [showCaptcha, setShowCaptcha] = useState(false);
   const [captchaToken, setCaptchaToken] = useState('');
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-  const GOOGLE_CLIENT_ID = '993718508487-6pfj9lrar0rvjkuum65s1m1jb1oeq6rf.apps.googleusercontent.com';
-
-  // Password requirements
   const passwordRequirements = [
     { id: 'length', label: 'At least 8 characters', test: (pwd) => pwd.length >= 8 },
     { id: 'lowercase', label: 'At least one lowercase letter', test: (pwd) => /[a-z]/.test(pwd) },
@@ -65,21 +61,18 @@ const Signup = () => {
     { id: 'special', label: 'At least one special character (@$!%*?&)', test: (pwd) => /[@$!%*?&]/.test(pwd) }
   ];
 
-  // Check if all password requirements are met
   const allRequirementsMet = passwordRequirements.every(req => req.test(formData.password));
 
-  // ===== SECURITY FEATURE 2: SHOW CAPTCHA AFTER 3 FAILED ATTEMPTS =====
   useEffect(() => {
     if (failedAttempts >= 3) {
       setShowCaptcha(true);
     }
   }, [failedAttempts]);
 
-  // Fetch genders from database
   useEffect(() => {
     const fetchGenders = async () => {
       try {
-        const response = await fetch(`${API_URL}/api/auth/genders`);
+        const response = await fetch(API.auth.genders);
         const data = await response.json();
         if (data.success) {
           setGenders(data.data);
@@ -95,11 +88,8 @@ const Signup = () => {
       }
     };
     fetchGenders();
-  }, [API_URL]);
+  }, []);
 
-  // ===== VALIDATION FUNCTIONS =====
-
-  // ===== SECURITY FEATURE 3: ENHANCED EMAIL VALIDATION WITH DISPOSABLE EMAIL BLOCKING =====
   const validateEmail = (email) => {
     if (!email.trim()) {
       return { valid: false, message: 'Email address is required' };
@@ -108,7 +98,6 @@ const Signup = () => {
       return { valid: false, message: 'Please enter a valid email address' };
     }
 
-    // ✅ SECURITY: Block disposable/temporary email domains
     const disposableDomains = [
       'tempmail.com', '10minutemail.com', 'guerrillamail.com',
       'mailinator.com', 'throwawaymail.com', 'temp-mail.org',
@@ -246,7 +235,6 @@ const Signup = () => {
     return { valid: true, message: 'Strong password' };
   };
 
-  // Load Google OAuth library
   useEffect(() => {
     const loadGoogleLibrary = () => {
       if (!window.google) {
@@ -255,7 +243,7 @@ const Signup = () => {
         script.async = true;
         script.defer = true;
         script.onload = () => {
-          console.log('✅ Google OAuth library loaded');
+          console.log('Google OAuth library loaded');
           renderGoogleButton();
         };
         document.head.appendChild(script);
@@ -268,6 +256,10 @@ const Signup = () => {
 
   const renderGoogleButton = () => {
     try {
+      if (!GOOGLE_CLIENT_ID) {
+        console.error('GOOGLE_CLIENT_ID is not configured');
+        return;
+      }
       if (window.google && window.google.accounts && !isGoogleInitialized) {
         window.google.accounts.id.initialize({
           client_id: GOOGLE_CLIENT_ID,
@@ -285,7 +277,7 @@ const Signup = () => {
             logo_alignment: 'left'
           }
         );
-        console.log(' Google Sign-In button rendered');
+        console.log('Google Sign-In button rendered');
       }
     } catch (error) {
       console.error('Error rendering Google button:', error);
@@ -547,22 +539,25 @@ const Signup = () => {
         newErrors[field] = result.message;
       }
     });
+
     if (!terms_accepted) {
-      newErrors.terms = 'You must agree to the Terms of Service';
+      newErrors.terms = 'You must agree to the Terms of Service and Privacy Policy to continue.';
       isValid = false;
+      setTouched(prev => ({ ...prev, terms: true }));
     }
 
-    // ===== SECURITY FEATURE 4: CHECK CAPTCHA IF SHOWN =====
     if (showCaptcha && !captchaToken) {
       newErrors.captcha = 'Please complete the CAPTCHA verification';
       isValid = false;
+      setTouched(prev => ({ ...prev, captcha: true }));
     }
 
     setErrors(prev => ({
       ...prev,
       ...newErrors
     }));
-    return isValid;
+
+    return { isValid, errors: newErrors };
   };
 
   const handleSubmit = async (e) => {
@@ -570,18 +565,25 @@ const Signup = () => {
     if (loading) return;
     setServerError('');
     setConnectionStatus('');
-    if (!validateForm()) {
-      const firstError = Object.keys(errors).find(key => errors[key]);
-      if (firstError) {
-        const element = document.getElementById(firstError);
+
+    const { isValid, errors: freshErrors } = validateForm();
+
+    if (!isValid) {
+      const firstErrorKey = Object.keys(freshErrors).find(key => freshErrors[key]);
+      if (firstErrorKey) {
+        const element = document.getElementById(firstErrorKey);
         if (element) {
           element.focus();
+          if (typeof element.scrollIntoView === 'function') {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
         }
       }
       return;
     }
+
     setLoading(true);
-    setConnectionStatus('⏳ Creating your account...');
+    setConnectionStatus('Creating your account...');
     try {
       const signupData = {
         name: formData.name.trim(),
@@ -590,14 +592,14 @@ const Signup = () => {
         phone_number: formData.phone_number.trim(),
         gender_id: parseInt(formData.gender_id),
         id_number: formData.id_number.trim(),
-        physicalAddress: formData.physicalAddress.trim() || null, // <-- NEW
+        physicalAddress: formData.physicalAddress.trim() || null,
         password: formData.password,
         confirmPassword: formData.confirmPassword,
         terms_accepted: terms_accepted,
         captchaToken: captchaToken
       };
-      console.log('📤 Sending signup data:', signupData);
-      const response = await fetch(`${API_URL}/api/auth/signup`, {
+      console.log('Sending signup data:', signupData);
+      const response = await fetch(API.auth.signup, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -605,9 +607,9 @@ const Signup = () => {
         body: JSON.stringify(signupData)
       });
       const data = await response.json();
-      console.log('📥 Signup response:', data);
+      console.log('Signup response:', data);
       if (response.ok && data.success) {
-        setConnectionStatus(' Account created! Redirecting to verification...');
+        setConnectionStatus('Account created! Redirecting to verification...');
         setLoading(false);
         if (data.data?.token) {
           localStorage.setItem('token', data.data.token);
@@ -630,7 +632,6 @@ const Signup = () => {
           }, 1500);
         }
       } else {
-        // ===== SECURITY FEATURE 6: TRACK FAILED ATTEMPTS FOR CAPTCHA =====
         setFailedAttempts(prev => prev + 1);
 
         if (data.errors && Array.isArray(data.errors)) {
@@ -650,17 +651,16 @@ const Signup = () => {
           setServerError(data.message || data.error || 'Signup failed. Please try again.');
         }
         setLoading(false);
-        setConnectionStatus(' Failed');
+        setConnectionStatus('Failed');
       }
     } catch (error) {
-      console.error(' Signup error:', error);
-      setConnectionStatus(` Error: ${error.message}`);
-      // ===== SECURITY FEATURE 7: INCREMENT FAILED ATTEMPTS ON NETWORK ERROR =====
+      console.error('Signup error:', error);
+      setConnectionStatus(`Error: ${error.message}`);
       setFailedAttempts(prev => prev + 1);
 
       if (error.message === 'Failed to fetch') {
         setServerError(
-          '❌ Cannot connect to server!\n\n' +
+          'Cannot connect to server!\n\n' +
           'Please make sure:\n' +
           '1. Backend is running: cd backend && npm run dev\n' +
           '2. Backend is on port 5000'
@@ -676,8 +676,8 @@ const Signup = () => {
     try {
       setGoogleLoading(true);
       const googleToken = response.credential;
-      console.log(' Google credential received');
-      const apiResponse = await fetch(`${API_URL}/api/auth/google-auth`, {
+      console.log('Google credential received');
+      const apiResponse = await fetch(API.auth.googleAuth, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -685,7 +685,7 @@ const Signup = () => {
         body: JSON.stringify({ googleToken })
       });
       const data = await apiResponse.json();
-      console.log('📥 Google auth response:', data);
+      console.log('Google auth response:', data);
       if (apiResponse.status === 409) {
         setServerError(' ' + (data.error || 'This email is already registered. Please login instead.'));
         setGoogleLoading(false);
@@ -700,7 +700,7 @@ const Signup = () => {
       }
       if (apiResponse.ok && data.success) {
         if (data.data?.requiresVerification) {
-          console.log(' Redirecting to email verification');
+          console.log('Redirecting to email verification');
           navigate('/verify-email', {
             state: {
               email: data.data.email,
@@ -774,7 +774,6 @@ const Signup = () => {
             </div>
           )}
 
-          {/* ===== SECURITY FEATURE 9: CAPTCHA NOTICE ===== */}
           {showCaptcha && (
             <div className="captcha-notice" style={{
               display: 'flex',
@@ -794,7 +793,6 @@ const Signup = () => {
           )}
 
           <form className="auth-form signup-form" onSubmit={handleSubmit} noValidate>
-            {/* Name and Surname */}
             <div className="form-row">
               <div className="form-group">
                 <label htmlFor="name">Name <span className="required">*</span></label>
@@ -836,7 +834,6 @@ const Signup = () => {
               </div>
             </div>
 
-            {/* Email and Phone */}
             <div className="form-row">
               <div className="form-group">
                 <label htmlFor="email">Email Address <span className="required">*</span></label>
@@ -878,7 +875,6 @@ const Signup = () => {
               </div>
             </div>
 
-            {/* Gender */}
             <div className="form-row">
               <div className="form-group full-width">
                 <label htmlFor="gender_id">Gender <span className="required">*</span></label>
@@ -905,7 +901,6 @@ const Signup = () => {
               </div>
             </div>
 
-            {/* ID Number */}
             <div className="form-row">
               <div className="form-group full-width">
                 <label htmlFor="id_number">ID Number / Passport Number <span className="required">*</span></label>
@@ -928,7 +923,6 @@ const Signup = () => {
               </div>
             </div>
 
-            {/* --- PHYSICAL ADDRESS FIELD --- */}
             <div className="form-row">
               <div className="form-group full-width">
                 <label htmlFor="physicalAddress">Physical Address</label>
@@ -980,7 +974,6 @@ const Signup = () => {
                 </div>
                 {hasError('password') && <span className="error-text">{errors.password}</span>}
 
-                {/* Password Requirements */}
                 {passwordFocused && !allRequirementsMet && formData.password && (
                   <div className="password-requirements">
                     <p className="requirements-title">Password must contain:</p>
@@ -1026,17 +1019,17 @@ const Signup = () => {
                 </div>
                 {hasError('confirmPassword') && <span className="error-text">{errors.confirmPassword}</span>}
                 {formData.confirmPassword && formData.password === formData.confirmPassword && !hasError('confirmPassword') && (
-                  <span className="valid-text">✓ Passwords match</span>
+                  <span className="valid-text">Passwords match</span>
                 )}
               </div>
             </div>
 
-            {/* Terms and Conditions */}
             <div className="form-row">
               <div className="form-group full-width terms-group">
                 <label className={`checkbox-label ${hasError('terms') ? 'error' : ''}`}>
                   <input
                     type="checkbox"
+                    id="terms"
                     checked={terms_accepted}
                     onChange={(e) => {
                       setTermsAccepted(e.target.checked);
@@ -1055,7 +1048,6 @@ const Signup = () => {
               </div>
             </div>
 
-            {/* ===== SECURITY FEATURE 10: CAPTCHA FIELD ===== */}
             {showCaptcha && (
               <div className="form-row">
                 <div className="form-group full-width">

@@ -15,8 +15,6 @@ const storage = multer.diskStorage({
         cb(null, uploadDir);
     },
     filename: (req, file, cb) => {
-        // Always save as .pdf — we only accept PDFs anyway, and this keeps
-        // the file extension consistent with the Content-Type we serve.
         const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1E9)}.pdf`;
         cb(null, uniqueName);
     }

@@ -2,17 +2,59 @@
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/database');
+const { authenticate, isAdmin } = require('../middleware/auth');
 
 /* ================================================================
    Helper: detect whether a stored HTML body contains an <img>
-   (used to enrich the API response — no DB change needed)
 ================================================================ */
 const hasEmbeddedImage = (html) => /<img\s[^>]*src=/i.test(html || '');
 
 /* ================================================================
-   GET /api/blog?tab=All&search=foo
-   Returns posts (content included, so the public page can render
-   the embedded featured image).
+   Helper: extract the FIRST embedded image from an HTML body.
+   Returns { buffer, mime } or null.
+   Handles: <img src="data:image/png;base64,...">
+================================================================ */
+const extractFirstImage = (html) => {
+  if (!html) return null;
+  const match = /<img[^>]+src=["']data:(image\/[a-zA-Z0-9+.-]+);base64,([^"']+)["']/i.exec(html);
+  if (!match) return null;
+
+  const mime = match[1];               // e.g. "image/png"
+  const base64 = match[2];
+  try {
+    return {
+      mime,
+      buffer: Buffer.from(base64, 'base64'),
+    };
+  } catch (err) {
+    console.error('Failed to decode embedded image base64:', err.message);
+    return null;
+  }
+};
+
+/* ================================================================
+   Helper: resolve the logged-in admin's id from the JWT.
+================================================================ */
+const resolveAdminId = (req) =>
+  req.user?.userId ??
+  req.user?.Admin_ID ??
+  req.user?.adminId ??
+  req.user?.id ??
+  null;
+
+/* ================================================================
+   DEBUG: log every request
+================================================================ */
+router.use((req, res, next) => {
+  console.log(
+    `${req.method} ${req.originalUrl} - Auth header:`,
+    req.headers.authorization ? 'present' : 'missing'
+  );
+  next();
+});
+
+/* ================================================================
+   GET /api/blog?tab=All&search=foo  (PUBLIC)
 ================================================================ */
 router.get('/', async (req, res) => {
   try {
@@ -36,6 +78,7 @@ router.get('/', async (req, res) => {
     else if (tab === 'News')   { sql += ' AND bp.Type = ?';   params.push('News'); }
     else if (tab === 'Events') { sql += ' AND bp.Type = ?';   params.push('Event'); }
     else if (tab === 'Drafts') { sql += ' AND bp.Status = ?'; params.push('Draft'); }
+    else                       { sql += " AND bp.Status != 'Draft'"; }
 
     if (search) {
       sql += ' AND (bp.Title LIKE ? OR a.Name LIKE ?)';
@@ -69,14 +112,46 @@ router.get('/', async (req, res) => {
 });
 
 /* ================================================================
-   GET /api/blog/:id
+   GET /api/blog/:id/image  (PUBLIC)
+   Serves the stored cover image blob for a post.
+================================================================ */
+router.get('/:id/image', async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT cover_image_data, cover_image_mime
+       FROM BlogPosts WHERE BlogPost_id = ?`,
+      [req.params.id]
+    );
+
+    if (!rows.length || !rows[0].cover_image_data) {
+      return res.status(404).json({ error: 'No image' });
+    }
+
+    const mime = rows[0].cover_image_mime || 'image/png';
+    const buffer = Buffer.isBuffer(rows[0].cover_image_data)
+      ? rows[0].cover_image_data
+      : Buffer.from(rows[0].cover_image_data);
+
+    res.setHeader('Content-Type', mime);
+    res.setHeader('Content-Length', buffer.length);
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.end(buffer);
+  } catch (err) {
+    console.error('[GET /api/blog/:id/image]', err);
+    res.status(500).json({ error: 'Failed to load image' });
+  }
+});
+
+/* ================================================================
+   GET /api/blog/:id  (PUBLIC)
 ================================================================ */
 router.get('/:id', async (req, res) => {
   try {
     const [rows] = await pool.query(
       `SELECT BlogPost_id AS id, Title AS title, Type AS type,
               Content AS content, Status AS status, Tags AS tags,
-              EventDate AS eventDate, Venue AS venue, DatePublished
+              EventDate AS eventDate, Venue AS venue, DatePublished,
+              CASE WHEN cover_image_data IS NOT NULL THEN 1 ELSE 0 END AS hasCoverImage
        FROM BlogPosts WHERE BlogPost_id = ?`,
       [req.params.id]
     );
@@ -89,34 +164,64 @@ router.get('/:id', async (req, res) => {
 });
 
 /* ================================================================
-   PUT /api/blog/:id
+   PUT /api/blog/:id  (ADMIN ONLY)
+   Updates title/type/status/date, and if the incoming body contains
+   an embedded image, refreshes the cover_image_data blob too.
 ================================================================ */
-router.put('/:id', async (req, res) => {
-  const { title, type, status, date, author } = req.body;
+router.put('/:id', authenticate, isAdmin, async (req, res) => {
+  const { title, type, status, date, articleBody } = req.body;
 
   try {
-    let adminId = null;
-    if (author) {
-      const [rows] = await pool.query(
-        'SELECT Admin_ID FROM Admin WHERE Name = ? LIMIT 1',
-        [author]
-      );
-      if (rows.length) adminId = rows[0].Admin_ID;
-    }
-
     const parsedDate  = date ? new Date(date) : null;
     const isPublished = status === 'Published';
 
-    await pool.query(
-      `UPDATE BlogPosts
-         SET Title         = ?,
-             Type          = ?,
-             Status        = ?,
-             DatePublished = ?,
-             Admin_id      = COALESCE(?, Admin_id)
-       WHERE BlogPost_id = ?`,
-      [title, type, status, isPublished ? parsedDate : null, adminId, req.params.id]
-    );
+    // Extract image from the incoming article HTML (if provided)
+    const extracted = articleBody ? extractFirstImage(articleBody) : null;
+
+    if (articleBody !== undefined && extracted) {
+      // Update everything including the image blob and content
+      await pool.query(
+        `UPDATE BlogPosts
+           SET Title             = ?,
+               Type              = ?,
+               Status            = ?,
+               DatePublished     = ?,
+               Content           = ?,
+               cover_image_data  = ?,
+               cover_image_mime  = ?
+         WHERE BlogPost_id = ?`,
+        [
+          title, type, status, isPublished ? parsedDate : null,
+          articleBody, extracted.buffer, extracted.mime,
+          req.params.id,
+        ]
+      );
+    } else if (articleBody !== undefined) {
+      // Update content but no image found — clear the blob
+      await pool.query(
+        `UPDATE BlogPosts
+           SET Title             = ?,
+               Type              = ?,
+               Status            = ?,
+               DatePublished     = ?,
+               Content           = ?,
+               cover_image_data  = NULL,
+               cover_image_mime  = NULL
+         WHERE BlogPost_id = ?`,
+        [title, type, status, isPublished ? parsedDate : null, articleBody, req.params.id]
+      );
+    } else {
+      // Content not sent — just update the metadata
+      await pool.query(
+        `UPDATE BlogPosts
+           SET Title         = ?,
+               Type          = ?,
+               Status        = ?,
+               DatePublished = ?
+         WHERE BlogPost_id = ?`,
+        [title, type, status, isPublished ? parsedDate : null, req.params.id]
+      );
+    }
 
     res.json({ ok: true });
   } catch (err) {
@@ -126,9 +231,9 @@ router.put('/:id', async (req, res) => {
 });
 
 /* ================================================================
-   DELETE /api/blog/:id
+   DELETE /api/blog/:id  (ADMIN ONLY)
 ================================================================ */
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticate, isAdmin, async (req, res) => {
   try {
     await pool.query('DELETE FROM BlogPosts WHERE BlogPost_id = ?', [req.params.id]);
     res.json({ ok: true });
@@ -139,25 +244,25 @@ router.delete('/:id', async (req, res) => {
 });
 
 /* ================================================================
-   POST /api/blog
-   The featured image is already embedded as an <img> tag inside
-   `articleBody` by the frontend, so it lands safely in `Content`.
+   POST /api/blog  (ADMIN ONLY)
+   Inserts the post AND stores the extracted cover image as a blob.
 ================================================================ */
-router.post('/', async (req, res) => {
+router.post('/', authenticate, isAdmin, async (req, res) => {
   const {
     postType, officialTitle, tags, articleBody,
     eventDate, venue, status,
   } = req.body;
 
-  // Try several common session key shapes, fall back to 1
-  const adminId =
-    req.session?.adminId ||
-    req.session?.admin?.Admin_ID ||
-    req.session?.user?.Admin_ID ||
-    req.session?.user?.id ||
-    1;
+  const adminId = resolveAdminId(req);
 
-  // Soft dev-time check — warn if body has no image, but still save.
+  if (!adminId) {
+    console.warn('[POST /api/blog] Rejected — no admin id on req.user:', req.user);
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  // Extract the first embedded image from the article HTML
+  const extracted = extractFirstImage(articleBody);
+
   if (process.env.NODE_ENV !== 'production' && !hasEmbeddedImage(articleBody)) {
     console.warn(
       `[POST /api/blog] Post "${officialTitle}" has no embedded image in Content.`
@@ -167,12 +272,15 @@ router.post('/', async (req, res) => {
   try {
     const [result] = await pool.query(
       `INSERT INTO BlogPosts
-         (Admin_id, Title, Content, Type, Tags, EventDate, Venue, Status, DatePublished)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (Admin_id, Title, Content, cover_image_data, cover_image_mime,
+          Type, Tags, EventDate, Venue, Status, DatePublished)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         adminId,
         officialTitle,
         articleBody,
+        extracted ? extracted.buffer : null,
+        extracted ? extracted.mime : null,
         postType,
         tags || null,
         eventDate || null,
@@ -181,7 +289,11 @@ router.post('/', async (req, res) => {
         status === 'published' ? new Date() : null,
       ]
     );
-    res.status(201).json({ id: result.insertId });
+
+    res.status(201).json({
+      id: result.insertId,
+      hasCoverImage: !!extracted,
+    });
   } catch (err) {
     console.error('[POST /api/blog]', err);
     res.status(500).json({ error: 'Failed to create post' });

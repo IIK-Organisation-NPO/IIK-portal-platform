@@ -4,17 +4,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import Admin_Sidebar from '../../components/Admin/Admin_Sidebar';
 import Admin_Header from '../../components/Admin/Admin_Header';
 import '../../styles/Admin/admin_Programmes.css';
+import { API, API_BASE, authHeaders } from '../../config/api';
 
-// ---------------------------------------------------------------------------
-// API base URL
-// ---------------------------------------------------------------------------
-const API_BASE =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
-  'http://localhost:5000';
-
-// ---------------------------------------------------------------------------
-// Safe normalizer
-// ---------------------------------------------------------------------------
 const normalizeProgramme = (p = {}) => {
   const rawStatus = p.status ?? p.Programme_status ?? 'Draft';
   const isArchived =
@@ -43,6 +34,7 @@ const normalizeProgramme = (p = {}) => {
     description: p.description ?? p.Programme_description ?? '',
     duration: p.duration ?? p.Duration ?? '',
     startDate: formattedStartDate,
+    rawStatus,
     status: isArchived ? 'Archived' : rawStatus,
     enrolled: Number(p.enrolled ?? p.Enrolled ?? 0),
     category: p.category ?? p.Category ?? '',
@@ -70,19 +62,16 @@ const AdminProgrammes = () => {
   const [editStatus, setEditStatus] = useState('');
   const [editError, setEditError] = useState('');
 
-  // -------------------------------------------------------------------------
-  // Total enrolments — fetched from /admin/stats
-  // -------------------------------------------------------------------------
   const [totalEnrolments, setTotalEnrolments] = useState(0);
 
-  // -------------------------------------------------------------------------
-  // Fetch programmes
-  // -------------------------------------------------------------------------
   const fetchProgrammes = useCallback(async () => {
     setIsLoading(true);
     setLoadError('');
     try {
-      const res = await fetch(`${API_BASE}/api/programmes`);
+      const res = await fetch(`${API_BASE}/api/programmes`, {
+        headers: authHeaders(),
+        credentials: 'include',
+      });
       const data = await res.json();
 
       if (!res.ok || !data.success) {
@@ -98,12 +87,60 @@ const AdminProgrammes = () => {
     }
   }, []);
 
-  // -------------------------------------------------------------------------
-  // Fetch aggregate stats (for the Total Enrolments card)
-  // -------------------------------------------------------------------------
+  const fetchCentreStatuses = useCallback(async () => {
+    const currentUser = (() => {
+      try {
+        return JSON.parse(localStorage.getItem('user') || '{}');
+      } catch {
+        return {};
+      }
+    })();
+
+    const isSuperAdmin = currentUser.roleId === 3;
+    const myCentreId = currentUser.centreId ?? null;
+
+    if (isSuperAdmin || !myCentreId) return;
+
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/centres/${myCentreId}/programmes`,
+        {
+          headers: authHeaders(),
+          credentials: 'include',
+        }
+      );
+      const data = await res.json();
+
+      if (data.success && Array.isArray(data.data)) {
+        const map = {};
+        data.data.forEach((row) => {
+          map[row.id] = row.centreStatus || 'Active';
+        });
+
+        setProgrammes((prev) =>
+          prev.map((p) => {
+            if (!map[p.id]) return p;
+
+            const pairArchived = map[p.id] === 'Archived';
+            return {
+              ...p,
+              archived: pairArchived,
+              status: pairArchived ? 'Archived' : (p.rawStatus || p.status),
+            };
+          })
+        );
+      }
+    } catch (err) {
+      console.error('Fetch centre statuses error:', err);
+    }
+  }, []);
+
   const fetchStats = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/admin/stats`);
+      const res = await fetch(API.admin.stats, {
+        headers: authHeaders(),
+        credentials: 'include',
+      });
       const data = await res.json();
 
       if (data.success && data.data) {
@@ -111,18 +148,17 @@ const AdminProgrammes = () => {
       }
     } catch (err) {
       console.error('Fetch stats error:', err);
-      // Silent — the card just shows 0 if this fails
     }
   }, []);
 
   useEffect(() => {
-    fetchProgrammes();
+    (async () => {
+      await fetchProgrammes();
+      await fetchCentreStatuses();
+    })();
     fetchStats();
-  }, [fetchProgrammes, fetchStats]);
+  }, [fetchProgrammes, fetchStats, fetchCentreStatuses]);
 
-  // -------------------------------------------------------------------------
-  // Router state passthrough
-  // -------------------------------------------------------------------------
   useEffect(() => {
     const incoming = location.state?.programme;
     if (!incoming) return;
@@ -149,9 +185,6 @@ const AdminProgrammes = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // -------------------------------------------------------------------------
-  // Filters
-  // -------------------------------------------------------------------------
   const categories = useMemo(
     () => [
       'Category',
@@ -197,42 +230,60 @@ const AdminProgrammes = () => {
     p => p.status === 'Active' && !p.archived
   ).length;
 
-  // -------------------------------------------------------------------------
-  // Archive / Unarchive
-  // -------------------------------------------------------------------------
   const handleArchive = async (id) => {
     const target = programmes.find(p => p.id === id);
     if (!target) return;
 
-    const endpoint = target.archived
-      ? `${API_BASE}/api/programmes/${id}/unarchive`
-      : `${API_BASE}/api/programmes/${id}/archive`;
+    const currentUser = (() => {
+      try {
+        return JSON.parse(localStorage.getItem('user') || '{}');
+      } catch {
+        return {};
+      }
+    })();
+
+    const isSuperAdmin = currentUser.roleId === 3;
+    const hasCentre = !!currentUser.centreId;
+    const useCentreScope = !isSuperAdmin && hasCentre;
 
     const previous = programmes;
-    setProgrammes(prev =>
-      prev.map(p =>
-        p.id === id
-          ? {
-              ...p,
-              archived: !p.archived,
-              status: !p.archived ? 'Archived' : p.status
-            }
-          : p
-      )
-    );
     setProgrammeToArchive(null);
 
     try {
-      const res = await fetch(endpoint, { method: 'PATCH' });
+      let res;
+
+      if (useCentreScope) {
+        const newStatus = target.archived ? 'Active' : 'Archived';
+
+        res = await fetch(
+          `${API_BASE}/api/programmes/${id}/my-centre/status`,
+          {
+            method: 'PUT',
+            headers: authHeaders({ 'Content-Type': 'application/json' }),
+            credentials: 'include',
+            body: JSON.stringify({ status: newStatus }),
+          }
+        );
+      } else {
+        const endpoint = target.archived
+          ? `${API_BASE}/api/programmes/${id}/unarchive`
+          : `${API_BASE}/api/programmes/${id}/archive`;
+
+        res = await fetch(endpoint, {
+          method: 'PATCH',
+          headers: authHeaders(),
+          credentials: 'include',
+        });
+      }
+
       const data = await res.json();
 
       if (!res.ok || !data.success) {
         throw new Error(data.message || 'Failed to update programme.');
       }
 
-      setProgrammes(prev =>
-        prev.map(p => (p.id === id ? normalizeProgramme(data.programme) : p))
-      );
+      await fetchProgrammes();
+      await fetchCentreStatuses();
     } catch (err) {
       console.error('Archive/unarchive error:', err);
       setProgrammes(previous);
@@ -240,9 +291,6 @@ const AdminProgrammes = () => {
     }
   };
 
-  // -------------------------------------------------------------------------
-  // Edit — open modal
-  // -------------------------------------------------------------------------
   const handleEdit = (programme) => {
     setEditingProgramme(programme);
     setEditName(programme.name);
@@ -251,9 +299,6 @@ const AdminProgrammes = () => {
     setShowEditModal(true);
   };
 
-  // -------------------------------------------------------------------------
-  // Save edit
-  // -------------------------------------------------------------------------
   const handleSaveEdit = async () => {
     if (!editingProgramme) return;
 
@@ -264,7 +309,8 @@ const AdminProgrammes = () => {
         `${API_BASE}/api/programmes/${editingProgramme.id}`,
         {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders({ 'Content-Type': 'application/json' }),
+          credentials: 'include',
           body: JSON.stringify({
             programmeName: trimmedName,
             status: editStatus
@@ -293,9 +339,6 @@ const AdminProgrammes = () => {
     }
   };
 
-  // -------------------------------------------------------------------------
-  // Delete
-  // -------------------------------------------------------------------------
   const handleDeleteProgramme = async () => {
     if (!programmeToDelete) return;
     const id = programmeToDelete.id;
@@ -306,7 +349,9 @@ const AdminProgrammes = () => {
 
     try {
       const res = await fetch(`${API_BASE}/api/programmes/${id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: authHeaders(),
+        credentials: 'include',
       });
       const data = await res.json();
 

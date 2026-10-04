@@ -585,6 +585,7 @@ const Admin_BulkUpload = () => {
                                 <input
                                     type="date"
                                     id="issueDate"
+                                    min={new Date().toISOString().split('T')[0]}
                                     value={issueDate}
                                     onChange={(e) => setIssueDate(e.target.value)}
                                     className={`issue-date-input ${issueDate ? 'has-value' : ''}`}

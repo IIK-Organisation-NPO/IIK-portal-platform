@@ -70,13 +70,13 @@ const Learner_Profile = () => {
       lastName: '',
       idNumber: '',
       phone: '',
-      address: '' // <-- backed by Physical_address
+      address: ''
     },
     completedProgrammes: [],
     currentlyEnrolled: ''
   });
 
-  // ===== Validation functions =====
+  //  Validation functions 
   const validateName = (name) => {
     if (!name.trim()) {
       return { valid: false, message: 'Name is required' };
@@ -194,10 +194,6 @@ const Learner_Profile = () => {
       if (response.data.status === 'success') {
         const data = response.data.data;
 
-        // Accept whichever key the backend returns for the address:
-        //   - physicalAddress (camelCase)
-        //   - Physical_address (DB column)
-        //   - address (legacy)
         const rawAddress =
           data.physicalAddress ??
           data.Physical_address ??
@@ -246,17 +242,17 @@ const Learner_Profile = () => {
         return false;
       }
 
-      // Map frontend field names to the keys the backend expects
+     
+      
       const fieldMap = {
         firstName: 'name',
         lastName: 'surname',
         phone: 'phone_number',
-        address: 'physicalAddress' // <-- CHANGED
+        address: 'physicalAddress'
       };
 
       const backendField = fieldMap[field] || field;
 
-      // Build update object
       const updateData = {};
 
       if (field === 'firstName') {
@@ -268,7 +264,7 @@ const Learner_Profile = () => {
       } else if (field === 'phone') {
         updateData.phone_number = value;
       } else if (field === 'address') {
-        updateData.physicalAddress = value; // <-- CHANGED
+        updateData.physicalAddress = value; 
       }
 
       const response = await api.put('/learner/profile', updateData);
@@ -306,7 +302,7 @@ const Learner_Profile = () => {
   const handleEditClick = (field, value) => {
     setFieldErrors({});
     setEditingField(field);
-    // Don't start the input with "Not provided"
+   
     setEditValue(value === 'Not provided' ? '' : value);
   };
 
@@ -427,7 +423,7 @@ const Learner_Profile = () => {
     fetchLearnerProfile();
   }, []);
 
-  // Render editable field
+  
   const renderEditableField = (label, field, value) => {
     const isEditing = editingField === field;
     const fieldError =
@@ -510,7 +506,7 @@ const Learner_Profile = () => {
     );
   };
 
-  // Loading state
+  
   if (loading) {
     return (
       <div className="profile-layout">
@@ -535,7 +531,7 @@ const Learner_Profile = () => {
     );
   }
 
-  // Error state
+  
   if (error && !learnerData.userEmail) {
     return (
       <div className="profile-layout">

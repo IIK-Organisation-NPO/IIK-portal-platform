@@ -15,6 +15,7 @@ import Footer from '../common/Footer';
 import Input from '../common/Input';
 import '../../styles/components/auth.css';
 import logo from '../../assets/images/small Mki.png';
+import { API } from '../../config/api';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -35,8 +36,6 @@ const Login = () => {
   const [captchaError, setCaptchaError] = useState('');
   const [captchaLoading, setCaptchaLoading] = useState(false);
   const captchaInputRef = useRef(null);
-
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
   // ============================================
   // ROLE-BASED REDIRECT FUNCTION
@@ -61,7 +60,7 @@ const Login = () => {
       setCaptchaLoading(true);
       setCaptchaError('');
 
-      const response = await fetch(`${API_URL}/api/auth/captcha`, {
+      const response = await fetch(API.auth.captcha, {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -95,7 +94,7 @@ const Login = () => {
       setCaptchaLoading(true);
       setCaptchaError('');
 
-      const response = await fetch(`${API_URL}/api/auth/captcha/refresh`, {
+      const response = await fetch(API.auth.captchaRefresh, {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -180,10 +179,10 @@ const Login = () => {
     setLockTimeLeft(0);
 
     try {
-      console.log('Sending login request to:', `${API_URL}/api/auth/login-with-captcha`);
+      console.log('Sending login request to:', API.auth.loginWithCaptcha);
       console.log('Email:', email.trim().toLowerCase());
 
-      const response = await fetch(`${API_URL}/api/auth/login-with-captcha`, {
+      const response = await fetch(API.auth.loginWithCaptcha, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -203,9 +202,6 @@ const Login = () => {
       if (response.ok && data.success) {
         console.log('Full response data:', JSON.stringify(data, null, 2));
 
-        // ----------------------------------------------------------
-        // Extract token + user from every plausible response shape
-        // ----------------------------------------------------------
         const token =
           data.data?.accessToken ||
           data.data?.token ||
@@ -218,11 +214,6 @@ const Login = () => {
         console.log('Token found:', token ? 'Yes' : 'No');
         console.log('User found:', user ? 'Yes' : 'No');
 
-        // ----------------------------------------------------------
-        // GUARD: never let 'undefined' leak into localStorage.
-        // If the backend didn't return a real token, show a clean
-        // error instead of poisoning the whole app with a bad token.
-        // ----------------------------------------------------------
         const isInvalidToken =
           !token ||
           typeof token !== 'string' ||
@@ -239,9 +230,6 @@ const Login = () => {
           return;
         }
 
-        // ----------------------------------------------------------
-        // Store the real token + user
-        // ----------------------------------------------------------
         localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(user));
         localStorage.setItem('userRole', user.role || 'USER');
@@ -312,17 +300,15 @@ const Login = () => {
 
   // ============ GOOGLE LOGIN ============
   const handleGoogleLogin = () => {
-    window.location.href = `${API_URL}/api/auth/google`;
+    window.location.href = API.auth.googleAuth;
   };
 
-  // Determine whether to highlight the CAPTCHA input red
   const isCaptchaError = Boolean(
     (error && errorType === 'captcha') || captchaError
   );
 
   return (
     <div className="login-page">
-      {/* Header */}
       <header className="login-header">
         <div className="header-container">
           <div className="header-logo">
@@ -344,7 +330,6 @@ const Login = () => {
         </div>
       </header>
 
-      {/* Login Form */}
       <div className="auth-container">
         <div className="auth-card">
           <div className="logo">
@@ -355,14 +340,12 @@ const Login = () => {
           <h2>Welcome Back</h2>
           <p className="subtitle">Enter your credentials to access your portal dashboard</p>
 
-          {/* Success Message */}
           {successMessage && (
             <div className="success-message">
               <span>{successMessage}</span>
             </div>
           )}
 
-          {/* Error Messages */}
           {error && errorType === 'captcha' && (
             <div className="server-error captcha-error login-error">
               <FaExclamationCircle />
@@ -557,7 +540,6 @@ const Login = () => {
         </div>
       </div>
 
-      {/* Footer */}
       <Footer />
     </div>
   );

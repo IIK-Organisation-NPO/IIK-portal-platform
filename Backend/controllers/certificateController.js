@@ -84,7 +84,6 @@ class CertificateController {
 
     // ============================================
     // VIEW CERTIFICATE
-    // Streams the stored PDF: cert-<id>.pdf
     // ============================================
     static async viewCertificate(req, res) {
         try {
@@ -133,7 +132,6 @@ class CertificateController {
 
     // ============================================
     // DOWNLOAD CERTIFICATE
-    // Streams the stored PDF as an attachment
     // ============================================
     static async downloadCertificate(req, res) {
         try {
@@ -185,8 +183,6 @@ class CertificateController {
 
     // ============================================
     // UPLOAD CERTIFICATE WITH FILE
-    // Fills the uploaded PDF with the learner's data and
-    // saves it as cert-<Certificate_id>.pdf
     // ============================================
     static async uploadCertificate(req, res) {
         try {
@@ -321,7 +317,7 @@ class CertificateController {
                     completionDate: dateIssued,
                     programmeName: details.Programme_name || 'Programme',
                     certificateNumber: `CERT-${certificateId}`,
-                    templatePath: file.path,   // use the uploaded file as the base
+                    templatePath: file.path,   
                 });
 
                 fs.writeFileSync(finalPath, pdfBytes);
@@ -367,7 +363,6 @@ class CertificateController {
 
     // ============================================
     // UPDATE CERTIFICATE
-    // Accepts Programme_id, Expire_date, neverExpires
     // ============================================
     static async updateCertificate(req, res) {
         try {
@@ -407,13 +402,12 @@ class CertificateController {
 
     // ============================================
     // DELETE CERTIFICATE
-    // Also removes cert-<id>.pdf from disk
     // ============================================
     static async deleteCertificate(req, res) {
         try {
             const { id } = req.params;
 
-            // Remove the PDF from disk if it exists
+            
             const filePath = path.join(
                 __dirname, '..', 'uploads', 'certificates', `cert-${id}.pdf`
             );
@@ -423,7 +417,6 @@ class CertificateController {
                 }
             } catch (fileError) {
                 console.error('Could not delete certificate file from disk:', fileError.message);
-                // Continue — the DB row is the primary record
             }
 
             await pool.execute(
@@ -445,19 +438,15 @@ class CertificateController {
         }
     }
 
-        // ============================================
+    // ============================================
     // BULK UPLOAD CERTIFICATES
-    // Generates a PDF for each learner using the uploaded template.
-    // Requires:
-    //   - multipart form-data with field "template" (single PDF)
-    //   - body.certificates = JSON string of [{ user_id, programme_id, issue_date }]
     // ============================================
     static async bulkUploadCertificates(req, res) {
         try {
-            const templateFile = req.file;                    // multer .single('template')
+            const templateFile = req.file;                   
             const rawCertificates = req.body.certificates;
 
-            // Parse the certificates array (sent as a JSON string in multipart form-data)
+           
             let certData;
             try {
                 certData = typeof rawCertificates === 'string'
@@ -502,7 +491,7 @@ class CertificateController {
                 try {
                     const { user_id, programme_id, issue_date, expiry_date } = data;
 
-                    // ---- Learner must have completed the programme ----
+                    
                     const [completedEnrolment] = await pool.execute(
                         `SELECT Enrolment_id FROM Enrolment
                          WHERE User_id = ? AND Programme_id = ? AND Completion_status = 'Completed'
@@ -518,7 +507,7 @@ class CertificateController {
                         continue;
                     }
 
-                    // ---- No duplicate ----
+                    
                     const [existing] = await pool.execute(
                         `SELECT Certificate_id FROM Certificate WHERE User_id = ? AND Programme_id = ?`,
                         [user_id, programme_id]
@@ -535,7 +524,7 @@ class CertificateController {
                     const dateIssued = issue_date ? new Date(issue_date) : new Date();
                     const dateExpiry = expiry_date ? new Date(expiry_date) : null;
 
-                    // ---- Insert the row ----
+                    
                     const [result] = await pool.execute(
                         `INSERT INTO Certificate 
                          (User_id, Programme_id, Date_issued, Expire_date)
@@ -545,7 +534,6 @@ class CertificateController {
 
                     insertedCertificateId = result.insertId;
 
-                    // ---- Generate the certificate PDF ----
                     const [detailsRows] = await pool.execute(
                         `SELECT 
                             u.name      AS learner_name,
@@ -582,7 +570,7 @@ class CertificateController {
                 } catch (err) {
                     console.error(`Bulk cert failed for user ${data.user_id}:`, err.message);
 
-                    // Roll back the DB row if the PDF generation failed
+                 
                     if (insertedCertificateId) {
                         try {
                             await pool.execute(

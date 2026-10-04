@@ -1,9 +1,19 @@
 // src/services/api.js
 import axios from 'axios';
 
+// Read the API base URL from the environment
+const API_BASE = import.meta.env.VITE_API_URL;
+
+if (!API_BASE) {
+  throw new Error(
+    'VITE_API_URL is not set. Create a .env.local file in the frontend root with:\n' +
+    'VITE_API_URL=http://localhost:5000'
+  );
+}
+
 // Create axios instance with base URL
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api', // Your backend URL
+  baseURL: `${API_BASE.replace(/\/+$/, '')}/api`,
   headers: {
     'Content-Type': 'application/json',
   },

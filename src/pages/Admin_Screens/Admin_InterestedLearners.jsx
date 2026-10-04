@@ -98,10 +98,7 @@ const Admin_InterestedLearners = () => {
     return 'status-new';
   };
 
-  // ============================================
-  // HELPER: Extract centre name from a learner row
-  // Backend returns `digital_center_name` — this handles all variants.
-  // ============================================
+ 
   const getCentre = (learner) => {
     return (
       learner.digital_center_name ||

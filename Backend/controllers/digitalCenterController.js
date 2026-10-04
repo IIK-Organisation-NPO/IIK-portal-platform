@@ -1,11 +1,56 @@
 // backend/controllers/digitalCenterController.js
 const { pool } = require('../config/database');
 
+
+async function getActiveCentreIds(programmeId = null) {
+    if (programmeId) {
+        const [rows] = await pool.query(
+            `SELECT pc.digital_center_id AS id
+             FROM Programme_Centre pc
+             INNER JOIN programmes p ON p.Programme_id = pc.Programme_id
+             WHERE pc.Programme_id = ?
+               AND pc.Status = 'Active'
+               AND p.Programme_status IN ('Active', 'Upcoming')`,
+            [programmeId]
+        );
+        return rows.map(r => r.id);
+    }
+
+    
+    const [rows] = await pool.query(
+        `SELECT DISTINCT pc.digital_center_id AS id
+         FROM Programme_Centre pc
+         INNER JOIN programmes p ON p.Programme_id = pc.Programme_id
+         WHERE pc.Status = 'Active'
+           AND p.Programme_status IN ('Active', 'Upcoming')`
+    );
+    return rows.map(r => r.id);
+}
+
 // ============================================
-// ✅ GET ALL DIGITAL CENTRES
+// GET ALL DIGITAL CENTRES
 // ============================================
 exports.getAllCenters = async (req, res) => {
     try {
+        const { programme_id } = req.query;
+
+        
+        const activeCentreIds = await getActiveCentreIds(programme_id || null);
+
+        
+        if (activeCentreIds.length === 0) {
+            return res.status(200).json({
+                success: true,
+                count: 0,
+                data: [],
+                message: programme_id
+                    ? 'No centres currently offer this programme.'
+                    : 'No centres currently offer any active programme.',
+            });
+        }
+
+      
+        const placeholders = activeCentreIds.map(() => '?').join(',');
         const [rows] = await pool.query(
             `SELECT 
                 digital_center_id AS id,
@@ -15,10 +60,11 @@ exports.getAllCenters = async (req, res) => {
                 longitude,
                 contact_number    AS phone
              FROM Digital_Center
-             ORDER BY center_name`
+             WHERE digital_center_id IN (${placeholders})
+             ORDER BY center_name`,
+            activeCentreIds
         );
 
-        // Ensure coordinates are real numbers (never strings)
         const data = rows.map((r) => ({
             ...r,
             latitude:  r.latitude  !== null ? parseFloat(r.latitude)  : null,
@@ -32,7 +78,7 @@ exports.getAllCenters = async (req, res) => {
             data,
         });
     } catch (error) {
-        console.error('❌ Error fetching digital centers:', error);
+        console.error(' Error fetching digital centers:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch digital centers: ' + error.message,
@@ -41,12 +87,11 @@ exports.getAllCenters = async (req, res) => {
 };
 
 // ============================================
-// ✅ FIND NEAREST DIGITAL CENTRES
-// Query: ?latitude=...&longitude=...
+// FIND NEAREST DIGITAL CENTRES
 // ============================================
 exports.getNearestCenters = async (req, res) => {
     try {
-        const { latitude, longitude } = req.query;
+        const { latitude, longitude, programme_id } = req.query;
 
         if (!latitude || !longitude) {
             return res.status(400).json({
@@ -65,6 +110,21 @@ exports.getNearestCenters = async (req, res) => {
             });
         }
 
+        
+        const activeCentreIds = await getActiveCentreIds(programme_id || null);
+
+        if (activeCentreIds.length === 0) {
+            return res.status(200).json({
+                success: true,
+                count: 0,
+                data: [],
+                message: programme_id
+                    ? 'No centres currently offer this programme.'
+                    : 'No centres currently offer any active programme.',
+            });
+        }
+
+        const placeholders = activeCentreIds.map(() => '?').join(',');
         const [rows] = await pool.query(
             `SELECT 
                 digital_center_id AS id,
@@ -83,9 +143,11 @@ exports.getNearestCenters = async (req, res) => {
                     )
                 ) AS distance_km
              FROM Digital_Center
-             WHERE latitude IS NOT NULL AND longitude IS NOT NULL
+             WHERE latitude IS NOT NULL
+               AND longitude IS NOT NULL
+               AND digital_center_id IN (${placeholders})
              ORDER BY distance_km ASC`,
-            [userLat, userLon, userLat]
+            [userLat, userLon, userLat, ...activeCentreIds]
         );
 
         const data = rows.map((r) => {
@@ -113,7 +175,7 @@ exports.getNearestCenters = async (req, res) => {
             data,
         });
     } catch (error) {
-        console.error('❌ Error finding nearest centers:', error);
+        console.error(' Error finding nearest centers:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to find nearest centers: ' + error.message,
@@ -122,11 +184,7 @@ exports.getNearestCenters = async (req, res) => {
 };
 
 // ============================================
-// ✅ SUBMIT INTEREST IN A DIGITAL CENTRE
-// Writes into learner_interests with:
-//   programme_id      = <programme id if provided, else NULL>
-//   digital_center_id = <the centre>
-//   status            = 'New'
+// SUBMIT INTEREST IN A DIGITAL CENTRE
 // ============================================
 exports.submitInterest = async (req, res) => {
     try {
@@ -147,7 +205,15 @@ exports.submitInterest = async (req, res) => {
             });
         }
 
-        // ---- Confirm the centre exists ----
+       
+        if (!programmeId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please select a programme before submitting interest in a centre.',
+            });
+        }
+
+      
         const [centers] = await pool.query(
             'SELECT digital_center_id, center_name FROM Digital_Center WHERE digital_center_id = ?',
             [centerId]
@@ -162,33 +228,52 @@ exports.submitInterest = async (req, res) => {
 
         const centerName = centers[0].center_name;
 
-        // ---- If a programme id was provided, confirm it exists ----
-        let validProgrammeId = null;
-        if (programmeId) {
-            const [programmes] = await pool.query(
-                'SELECT Programme_id FROM programmes WHERE Programme_id = ?',
-                [programmeId]
-            );
-            if (programmes.length > 0) {
-                validProgrammeId = programmes[0].Programme_id;
-            }
+        
+        const [programmes] = await pool.query(
+            `SELECT Programme_id
+             FROM programmes
+             WHERE Programme_id = ?
+               AND Programme_status IN ('Active', 'Upcoming')`,
+            [programmeId]
+        );
+
+        if (programmes.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'This programme is not currently accepting new interests.',
+            });
         }
 
-        // ---- Reject duplicates ----
-        // A duplicate is the same (user, centre, programme) combination.
-        // We treat NULL programme as its own case.
+        const validProgrammeId = programmes[0].Programme_id;
+
+        
+        const [pair] = await pool.query(
+            `SELECT Status
+             FROM Programme_Centre
+             WHERE Programme_id = ? AND digital_center_id = ?`,
+            [validProgrammeId, centerId]
+        );
+
+        if (pair.length === 0 || pair[0].Status !== 'Active') {
+            return res.status(400).json({
+                success: false,
+                message: `This programme is no longer offered at ${centerName}. Please choose another centre.`,
+            });
+        }
+
+        
         const [existing] = await pool.query(
             `SELECT interest_id, status FROM learner_interests
              WHERE user_id = ?
                AND digital_center_id = ?
-               AND ((programme_id = ?) OR (programme_id IS NULL AND ? IS NULL))`,
-            [userId, centerId, validProgrammeId, validProgrammeId]
+               AND programme_id = ?`,
+            [userId, centerId, validProgrammeId]
         );
 
         if (existing.length > 0) {
             return res.status(409).json({
                 success: false,
-                message: `You have already expressed interest in ${centerName}.`,
+                message: `You have already expressed interest in ${centerName} for this programme.`,
                 data: {
                     centerId,
                     centreName: centerName,
@@ -198,7 +283,6 @@ exports.submitInterest = async (req, res) => {
             });
         }
 
-        // ---- Insert into learner_interests ----
         const [result] = await pool.query(
             `INSERT INTO learner_interests
                 (user_id, programme_id, digital_center_id, interest_date, status)
@@ -207,8 +291,7 @@ exports.submitInterest = async (req, res) => {
         );
 
         console.log(
-            `✅ User ${userId} submitted interest in ${centerName}` +
-            (validProgrammeId ? ` for programme ${validProgrammeId}` : '')
+            ` User ${userId} submitted interest in ${centerName} for programme ${validProgrammeId}`
         );
 
         return res.status(201).json({
@@ -223,7 +306,7 @@ exports.submitInterest = async (req, res) => {
             },
         });
     } catch (error) {
-        console.error('❌ Error submitting interest:', error);
+        console.error(' Error submitting interest:', error);
         return res.status(500).json({
             success: false,
             message: 'Failed to submit interest: ' + error.message,
@@ -232,8 +315,7 @@ exports.submitInterest = async (req, res) => {
 };
 
 // ============================================
-// ✅ REMOVE INTEREST IN A DIGITAL CENTRE
-// Deletes the matching row from learner_interests.
+// REMOVE INTEREST IN A DIGITAL CENTRE
 // ============================================
 exports.removeInterest = async (req, res) => {
     try {
@@ -265,7 +347,7 @@ exports.removeInterest = async (req, res) => {
             message: 'Interest removed',
         });
     } catch (error) {
-        console.error('❌ Error removing interest:', error);
+        console.error('Error removing interest:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to remove interest: ' + error.message,
@@ -274,8 +356,7 @@ exports.removeInterest = async (req, res) => {
 };
 
 // ============================================
-// ✅ GET MY CENTER INTERESTS
-// Reads from learner_interests (centre rows only).
+// GET MY CENTER INTERESTS
 // ============================================
 exports.getMyCenterInterests = async (req, res) => {
     try {
@@ -312,7 +393,7 @@ exports.getMyCenterInterests = async (req, res) => {
             data: rows,
         });
     } catch (error) {
-        console.error('❌ Error fetching center interests:', error);
+        console.error('Error fetching center interests:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch interests: ' + error.message,

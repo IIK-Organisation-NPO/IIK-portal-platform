@@ -3,81 +3,71 @@ const express = require('express');
 const router = express.Router();
 const learnerController = require('../controllers/learnerController');
 const digitalCenterController = require('../controllers/digitalCenterController');
+const { getPrefs, setPrefs } = require('../utils/notificationPrefs');
 
 const { authenticate, isLearner } = require('../middleware/auth');
 
 // ============================================
-//  DEBUG: Log all requests
+// DEBUG: log all requests
 // ============================================
 router.use((req, res, next) => {
-    console.log(`📝 ${req.method} ${req.path} - Auth header:`, req.headers.authorization ? '✅ Present' : '❌ Missing');
+    console.log(
+        `${req.method} ${req.path} - Auth header:`,
+        req.headers.authorization ? 'present' : 'missing'
+    );
     next();
 });
 
-// All routes require authentication and learner role
+// ============================================
+// All routes require authentication.
+// isLearner is applied per-route below — NOT globally — so admins
+// can still fetch /digital-centers when registering staff.
+// ============================================
 router.use(authenticate);
-router.use(isLearner);
 
 // ============================================
-// PROFILE ROUTES
+// DIGITAL CENTRES — accessible to any authenticated user
+// (both learners picking a centre, and admins assigning one)
 // ============================================
 
-// Get learner profile
-router.get('/profile', learnerController.getLearnerProfile);
-
-// Update learner profile
-router.put('/profile', learnerController.updateLearnerProfile);
-
-// Change password
-router.put('/change-password', learnerController.changePassword);
-
-// Get learner stats
-router.get('/stats', learnerController.getLearnerStats);
-
-// List all centres
 router.get('/digital-centers', digitalCenterController.getAllCenters);
-
-// Nearest centres — must come before '/digital-centers/:id' if you add one later
 router.get('/digital-centers/nearest', digitalCenterController.getNearestCenters);
 
-// Submit / remove interest
-router.post('/digital-centers/interest', digitalCenterController.submitInterest);
-router.delete('/digital-centers/interest', digitalCenterController.removeInterest);
-
-// My interests
-router.get('/digital-centers/my-interests', digitalCenterController.getMyCenterInterests);
-
 // ============================================
-// PROGRAMME & INTEREST ROUTES
+// LEARNER-ONLY ROUTES
+// isLearner returns 404 for admins and any other role.
 // ============================================
 
-// Get all available programmes
-router.get('/programmes', learnerController.getProgrammes);
+// Profile
+router.get('/profile', isLearner, learnerController.getLearnerProfile);
+router.put('/profile', isLearner, learnerController.updateLearnerProfile);
+router.put('/change-password', isLearner, learnerController.changePassword);
+router.get('/stats', isLearner, learnerController.getLearnerStats);
 
-//  Record interest in a programme (Primary route)
-router.post('/interest', learnerController.recordInterest);
+// Notification preferences
+router.get('/notifications', isLearner, learnerController.getMyNotificationPrefs);
+router.put('/notifications', isLearner, learnerController.updateMyNotificationPrefs);
 
-//  Express interest (Alias for frontend compatibility)
-router.post('/express-interest', learnerController.recordInterest);
+// Interest in a centre
+router.post('/digital-centers/interest', isLearner, digitalCenterController.submitInterest);
+router.delete('/digital-centers/interest', isLearner, digitalCenterController.removeInterest);
+router.get('/digital-centers/my-interests', isLearner, digitalCenterController.getMyCenterInterests);
 
-// Get learner's interests
-router.get('/interests', learnerController.getLearnerInterests);
+// Programmes & interests
+router.get('/programmes', isLearner, learnerController.getProgrammes);
+router.post('/interest', isLearner, learnerController.recordInterest);
+router.post('/express-interest', isLearner, learnerController.recordInterest);
+router.get('/interests', isLearner, learnerController.getLearnerInterests);
+
+// Certificates
+router.get('/certificates', isLearner, learnerController.getMyCertificates);
+router.get('/certificates/:certificateId/download', isLearner, learnerController.downloadMyCertificate);
 
 // ============================================
-// CERTIFICATE ROUTES
-// ============================================
-
-// Get all certificates belonging to the logged-in learner
-router.get('/certificates', learnerController.getMyCertificates);
-
-// View or download a specific certificate PDF (only if owned by the learner)
-router.get('/certificates/:certificateId/download', learnerController.downloadMyCertificate);
-
-// ============================================
-//  DEBUG: Test token route
+// DEBUG ROUTES
 // ============================================
 router.get('/debug-token', authenticate, (req, res) => {
-    console.log(' Debug token route - User:', req.user);
+    console.log('Debug token route - User:', req.user);
     res.json({
         success: true,
         message: 'Token is valid!',
@@ -85,9 +75,6 @@ router.get('/debug-token', authenticate, (req, res) => {
     });
 });
 
-// ============================================
-// DEBUG: Public test route (NO authentication)
-// ============================================
 router.get('/public-test', (req, res) => {
     res.json({
         success: true,

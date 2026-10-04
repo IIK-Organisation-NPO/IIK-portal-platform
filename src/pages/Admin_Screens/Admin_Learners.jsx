@@ -158,19 +158,15 @@ const Admin_Learners = () => {
     }
   };
 
-  // ============================================
+  
   // DEACTIVATE LEARNER
-  // Updates the backend, then marks the row Inactive locally.
-  // The Programme and Enrolment Date cells will render N/A for
-  // inactive learners (guarded in the JSX below), so no refetch
-  // is required — which also avoids the 500s the refetch was hitting.
-  // ============================================
+ 
   const deactivateLearner = async (id) => {
     try {
       const response = await api.put(`/admin/learners/${id}`, { status: 'Inactive' });
 
       if (response.data.success) {
-        // Optimistic local update so the row reflects the change immediately
+        
         const patch = (l) =>
           l.id === id
             ? {

@@ -1,9 +1,20 @@
 // src/pages/Admin/Admin_AccountSettings.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import '../../styles/Admin/Admin_AccountSettings.css';
 import Admin_Sidebar from '../../components/Admin/Admin_Sidebar';
 import Admin_Header from '../../components/Admin/Admin_Header';
 import api from '../../services/api';
+
+// ---------------------------------------------------------------------------
+// Password requirements — mirror the staff registration rules
+// ---------------------------------------------------------------------------
+const PASSWORD_REQUIREMENTS = [
+  { id: 'length',    label: 'At least 8 characters',                    test: (p) => p.length >= 8 },
+  { id: 'lowercase', label: 'At least one lowercase letter',            test: (p) => /[a-z]/.test(p) },
+  { id: 'uppercase', label: 'At least one uppercase letter',            test: (p) => /[A-Z]/.test(p) },
+  { id: 'number',    label: 'At least one number',                      test: (p) => /\d/.test(p) },
+  { id: 'special',   label: 'At least one special character (@$!%*?&)', test: (p) => /[@$!%*?&]/.test(p) }
+];
 
 const Admin_AccountSettings = () => {
   // ============================================================
@@ -27,6 +38,10 @@ const Admin_AccountSettings = () => {
   const [passwordErrors, setPasswordErrors] = useState({});
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [passwordServerError, setPasswordServerError] = useState('');
+
+  // Live requirements panel visibility — shows while typing the new password
+  // and hides once every requirement is met.
+  const [showPasswordRequirements, setShowPasswordRequirements] = useState(false);
 
   // ============================================================
   // MODAL STATE
@@ -57,10 +72,15 @@ const Admin_AccountSettings = () => {
 
   // ============================================================
   // NOTIFICATION PREFERENCES STATE
+  //
+  // These persist server-side via /staff/me/notifications. The state
+  // mirrors what the server has, and every toggle PUTs the full set.
   // ============================================================
   const [notifyCert, setNotifyCert] = useState(true);
   const [notifyReg, setNotifyReg] = useState(true);
   const [notifyWeekly, setNotifyWeekly] = useState(false);
+  const [prefsLoading, setPrefsLoading] = useState(true);
+  const [prefsSaving, setPrefsSaving] = useState(false);
 
   // ============================================================
   // TWO-FACTOR AUTHENTICATION STATE
@@ -73,6 +93,14 @@ const Admin_AccountSettings = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeNav, setActiveNav] = useState('settings');
   const [showScrollButton, setShowScrollButton] = useState(false);
+
+  // ============================================================
+  // DERIVED — has the admin met every new-password requirement?
+  // ============================================================
+  const allPasswordRequirementsMet = useMemo(
+    () => PASSWORD_REQUIREMENTS.every(r => r.test(newPassword)),
+    [newPassword]
+  );
 
   // ============================================================
   // UTILITY FUNCTIONS
@@ -112,10 +140,9 @@ const Admin_AccountSettings = () => {
   useEffect(() => {
     scrollToTop();
   }, []);
+
   // ============================================================
   // FETCH MY PROFILE ON MOUNT
-  // Tolerant of both { success, data } and { ... } response shapes,
-  // retries once on failure, and surfaces the real error message.
   // ============================================================
   useEffect(() => {
     let cancelled = false;
@@ -128,9 +155,6 @@ const Admin_AccountSettings = () => {
         const res = await api.get('/staff/me');
         if (cancelled) return;
 
-        // Support both response shapes:
-        //   A) { success: true, data: { name, surname, ... } }
-        //   B) { name, surname, ... }            (unwrapped)
         const payload = res.data?.data ?? res.data ?? null;
         const isOk = res.data?.success !== false && !!payload;
 
@@ -160,7 +184,6 @@ const Admin_AccountSettings = () => {
       } catch (err) {
         if (cancelled) return;
 
-        // Retry once — StrictMode / network hiccups sometimes kill the first attempt
         if (attempt === 1) {
           setTimeout(() => fetchProfile(2), 300);
           return;
@@ -179,6 +202,40 @@ const Admin_AccountSettings = () => {
     };
 
     fetchProfile();
+
+    return () => { cancelled = true; };
+  }, []);
+
+  // ============================================================
+  // FETCH NOTIFICATION PREFERENCES ON MOUNT
+  // ============================================================
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchPrefs = async () => {
+      try {
+        setPrefsLoading(true);
+        const res = await api.get('/staff/me/notifications');
+        if (cancelled) return;
+
+        const payload = res.data?.data ?? null;
+        const isOk = res.data?.success !== false && !!payload;
+
+        if (isOk) {
+          setNotifyCert(payload.notifyOnCertificate ?? true);
+          setNotifyReg(payload.notifyOnRegistration ?? true);
+          setNotifyWeekly(payload.notifyWeekly ?? false);
+        }
+      } catch (err) {
+        // Silent — if this fails, toggles fall back to defaults and
+        // the next toggle attempt will surface the error.
+        console.error('Fetch notification prefs error:', err);
+      } finally {
+        if (!cancelled) setPrefsLoading(false);
+      }
+    };
+
+    fetchPrefs();
 
     return () => { cancelled = true; };
   }, []);
@@ -308,6 +365,7 @@ const Admin_AccountSettings = () => {
         setNewPassword('');
         setConfirmPassword('');
         setPasswordErrors({});
+        setShowPasswordRequirements(false);
       } else {
         handlePasswordErrors(res.data);
       }
@@ -330,13 +388,31 @@ const Admin_AccountSettings = () => {
     if (Object.keys(fieldErrors).length > 0) {
       setPasswordErrors(fieldErrors);
       setPasswordServerError('');
-      const first = Object.values(fieldErrors)[0];
-      showToast(first);
+
+      if (fieldErrors.currentPassword) {
+        showToast(fieldErrors.currentPassword);
+      } else {
+        const first = Object.values(fieldErrors)[0];
+        showToast(first);
+      }
     } else {
-      setPasswordServerError(data.message || 'Failed to update password');
-      showToast(data.message || 'Failed to update password');
+      const message = data.message || 'Failed to update password';
+      setPasswordServerError(message);
+      showToast(message);
     }
   };
+
+  // ============================================================
+  // LIVE NEW-PASSWORD REQUIREMENTS PANEL
+  // ============================================================
+  useEffect(() => {
+    const hasContent = newPassword.length > 0;
+    if (!hasContent) {
+      setShowPasswordRequirements(false);
+      return;
+    }
+    setShowPasswordRequirements(!allPasswordRequirementsMet);
+  }, [newPassword, allPasswordRequirementsMet]);
 
   // ============================================================
   // BACKUP HANDLERS
@@ -395,34 +471,93 @@ const Admin_AccountSettings = () => {
     );
   };
 
+  // ============================================================
+  // NOTIFICATION TOGGLE HANDLERS
+  //
+  // Each toggle flips one pref, then PUTs the full set to the server.
+  // Optimistic update — rolls back on failure.
+  // ============================================================
+  const saveNotificationPrefs = async (next) => {
+    const previous = {
+      notifyCert,
+      notifyReg,
+      notifyWeekly,
+    };
+
+    // Optimistic flip
+    setNotifyCert(next.notifyCert);
+    setNotifyReg(next.notifyReg);
+    setNotifyWeekly(next.notifyWeekly);
+    setPrefsSaving(true);
+
+    try {
+      const res = await api.put('/staff/me/notifications', {
+        notifyOnCertificate: next.notifyCert,
+        notifyOnRegistration: next.notifyReg,
+        notifyWeekly: next.notifyWeekly,
+      });
+
+      if (res.data?.success === false) {
+        throw new Error(res.data?.message || 'Failed to save preference');
+      }
+    } catch (err) {
+      console.error('Save notification prefs error:', err);
+      // Roll back
+      setNotifyCert(previous.notifyCert);
+      setNotifyReg(previous.notifyReg);
+      setNotifyWeekly(previous.notifyWeekly);
+      showToast('Failed to save preference. Please try again.');
+    } finally {
+      setPrefsSaving(false);
+    }
+  };
+
   const toggleNotifyCert = () => {
+    if (prefsLoading || prefsSaving) return;
+
     const newState = !notifyCert;
-    setNotifyCert(newState);
     showToast(
       newState
         ? 'Email notifications for certificate issuance have been enabled.'
         : 'Email notifications for certificate issuance have been turned off.'
     );
+    saveNotificationPrefs({
+      notifyCert: newState,
+      notifyReg,
+      notifyWeekly,
+    });
   };
 
   const toggleNotifyReg = () => {
+    if (prefsLoading || prefsSaving) return;
+
     const newState = !notifyReg;
-    setNotifyReg(newState);
     showToast(
       newState
         ? 'Notifications for new learner registrations have been enabled.'
         : 'Notifications for new learner registrations have been turned off.'
     );
+    saveNotificationPrefs({
+      notifyCert,
+      notifyReg: newState,
+      notifyWeekly,
+    });
   };
 
   const toggleNotifyWeekly = () => {
+    if (prefsLoading || prefsSaving) return;
+
     const newState = !notifyWeekly;
-    setNotifyWeekly(newState);
     showToast(
       newState
         ? 'Weekly summary report notifications have been enabled.'
         : 'Weekly summary report notifications have been turned off.'
     );
+    saveNotificationPrefs({
+      notifyCert,
+      notifyReg,
+      notifyWeekly: newState,
+    });
   };
 
   // ============================================================
@@ -549,6 +684,23 @@ const Admin_AccountSettings = () => {
                   {passwordErrors.newPassword && (
                     <span className="error-text">{passwordErrors.newPassword}</span>
                   )}
+
+                  {/* Live requirements checklist */}
+                  {showPasswordRequirements && newPassword && !allPasswordRequirementsMet && (
+                    <div className="password-requirements">
+                      <p className="requirements-title">Password must contain:</p>
+                      <ul className="requirements-list">
+                        {PASSWORD_REQUIREMENTS.map(req => {
+                          const met = req.test(newPassword);
+                          return (
+                            <li key={req.id} className={met ? 'met' : 'unmet'}>
+                              {met ? '●' : '○'} {req.label}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  )}
                 </div>
                 <div className="security-item half">
                   <label>Confirm New Password</label>
@@ -638,7 +790,7 @@ const Admin_AccountSettings = () => {
                 >
                   <option value="7 days">7 days</option>
                   <option value="30 days">30 days</option>
-                  <option value="3 months">3 months</option>
+                  <option value="90 days">3 months</option>
                 </select>
               </div>
             </div>
@@ -681,7 +833,11 @@ const Admin_AccountSettings = () => {
             <div className="notification-item">
               <div className="notification-header">
                 <span className="notification-title">Email me when a certificate is issued</span>
-                <div className="toggle-switch small" onClick={toggleNotifyCert}>
+                <div
+                  className={`toggle-switch small ${prefsLoading || prefsSaving ? 'toggle-disabled' : ''}`}
+                  onClick={toggleNotifyCert}
+                  style={prefsLoading || prefsSaving ? { opacity: 0.6, cursor: 'not-allowed' } : undefined}
+                >
                   <div className={`toggle-track ${notifyCert ? 'active' : ''}`}>
                     <div className={`toggle-thumb ${notifyCert ? 'active' : ''}`}></div>
                   </div>
@@ -693,7 +849,11 @@ const Admin_AccountSettings = () => {
             <div className="notification-item">
               <div className="notification-header">
                 <span className="notification-title">Notify on new learner registration</span>
-                <div className="toggle-switch small" onClick={toggleNotifyReg}>
+                <div
+                  className={`toggle-switch small ${prefsLoading || prefsSaving ? 'toggle-disabled' : ''}`}
+                  onClick={toggleNotifyReg}
+                  style={prefsLoading || prefsSaving ? { opacity: 0.6, cursor: 'not-allowed' } : undefined}
+                >
                   <div className={`toggle-track ${notifyReg ? 'active' : ''}`}>
                     <div className={`toggle-thumb ${notifyReg ? 'active' : ''}`}></div>
                   </div>
@@ -705,7 +865,11 @@ const Admin_AccountSettings = () => {
             <div className="notification-item">
               <div className="notification-header">
                 <span className="notification-title">Weekly summary report</span>
-                <div className="toggle-switch small" onClick={toggleNotifyWeekly}>
+                <div
+                  className={`toggle-switch small ${prefsLoading || prefsSaving ? 'toggle-disabled' : ''}`}
+                  onClick={toggleNotifyWeekly}
+                  style={prefsLoading || prefsSaving ? { opacity: 0.6, cursor: 'not-allowed' } : undefined}
+                >
                   <div className={`toggle-track ${notifyWeekly ? 'active' : ''}`}>
                     <div className={`toggle-thumb ${notifyWeekly ? 'active' : ''}`}></div>
                   </div>

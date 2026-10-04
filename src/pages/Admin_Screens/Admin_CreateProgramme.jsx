@@ -4,15 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import Admin_Sidebar from '../../components/Admin/Admin_Sidebar';
 import Admin_Header from '../../components/Admin/Admin_Header';
 import '../../styles/Admin/Admin_CreateProgramme.css';
-
-// ---------------------------------------------------------------------------
-// API base URL
-// Falls back to http://localhost:5000 when VITE_API_BASE_URL isn't set,
-// so nothing needs to be added to your .env.
-// ---------------------------------------------------------------------------
-const API_BASE =
-    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
-    'http://localhost:5000';
+import { API_BASE } from '../../config/api';
 
 const Admin_CreateProgramme = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -23,7 +15,7 @@ const Admin_CreateProgramme = () => {
         programmeName: '',
         description: '',
         duration: '',
-        startDate: '',      // stored as ISO: "YYYY-MM-DD"
+        startDate: '',
         status: 'Draft'
     });
     const [showDraftConfirmation, setShowDraftConfirmation] = useState(false);
@@ -65,7 +57,6 @@ const Admin_CreateProgramme = () => {
         setShowCalendar(!showCalendar);
     };
 
-    // Returns true if the given date is strictly before today (date-only)
     const isPastDate = (date) => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -74,11 +65,8 @@ const Admin_CreateProgramme = () => {
         return compare < today;
     };
 
-    // -------------------------------------------------------------------------
-    // Date selection: keep the pretty label for the UI, store ISO for backend
-    // -------------------------------------------------------------------------
     const handleDateSelect = (date, disabled) => {
-        if (disabled) return; // safety guard
+        if (disabled) return;
 
         const parsed = new Date(date);
         if (isNaN(parsed.getTime())) return;
@@ -88,10 +76,10 @@ const Admin_CreateProgramme = () => {
         const dd = String(parsed.getDate()).padStart(2, '0');
         const isoDate = `${yyyy}-${mm}-${dd}`;
 
-        setSelectedDate(date);                 // "Sep 18, 2026" for display
+        setSelectedDate(date);
         setProgrammeData(prev => ({
             ...prev,
-            startDate: isoDate                 // "2026-09-18" for the API
+            startDate: isoDate
         }));
         setShowCalendar(false);
     };
@@ -104,12 +92,10 @@ const Admin_CreateProgramme = () => {
         const firstDay = new Date(year, month, 1).getDay();
 
         const days = [];
-        // Empty days for start of month
         for (let i = 0; i < firstDay; i++) {
             days.push(null);
         }
 
-        // Actual days
         for (let i = 1; i <= daysInMonth; i++) {
             const date = new Date(year, month, i);
             const dateString = date.toLocaleDateString('en-US', {
@@ -131,9 +117,6 @@ const Admin_CreateProgramme = () => {
         navigate('/admin/programmes');
     };
 
-    // -------------------------------------------------------------------------
-    // Save as Draft -> POST /api/programmes with status 'Draft'
-    // -------------------------------------------------------------------------
     const handleSaveDraft = () => {
         setShowDraftConfirmation(true);
     };
@@ -155,7 +138,7 @@ const Admin_CreateProgramme = () => {
                     programmeName: programmeData.programmeName.trim(),
                     description: programmeData.description || '',
                     duration: programmeData.duration || '',
-                    startDate: null,          // Drafts have no start date
+                    startDate: null,
                     status: 'Draft'
                 })
             });
@@ -184,10 +167,6 @@ const Admin_CreateProgramme = () => {
         setShowDraftConfirmation(false);
     };
 
-    // -------------------------------------------------------------------------
-    // Publish -> POST /api/programmes with status 'Publish'
-    // Controller decides Active vs Upcoming from the date.
-    // -------------------------------------------------------------------------
     const handlePublishProgramme = () => {
         if (!programmeData.programmeName.trim()) {
             alert('Programme name is required.');
@@ -212,8 +191,8 @@ const Admin_CreateProgramme = () => {
                     programmeName: programmeData.programmeName.trim(),
                     description: programmeData.description || '',
                     duration: programmeData.duration || '',
-                    startDate: programmeData.startDate,   // already ISO
-                    status: 'Publish'                     // signals the publish branch
+                    startDate: programmeData.startDate,
+                    status: 'Publish'
                 })
             });
 
@@ -223,7 +202,6 @@ const Admin_CreateProgramme = () => {
                 throw new Error(data.message || 'Failed to publish programme.');
             }
 
-            // Show the toast briefly, then navigate back to the list
             setShowPublishMessage(true);
             setTimeout(() => {
                 setShowPublishMessage(false);
@@ -289,7 +267,6 @@ const Admin_CreateProgramme = () => {
 
                     <div className="admin-programme-form-container">
                         <div className="admin-form-main">
-                            {/* Programme Name */}
                             <div className="admin-form-group">
                                 <label className="admin-form-label">PROGRAMME NAME</label>
                                 <input
@@ -310,7 +287,6 @@ const Admin_CreateProgramme = () => {
                                 </datalist>
                             </div>
 
-                            {/* Description */}
                             <div className="admin-form-group">
                                 <label className="admin-form-label">DESCRIPTION</label>
                                 <textarea
@@ -322,7 +298,6 @@ const Admin_CreateProgramme = () => {
                                 />
                             </div>
 
-                            {/* Duration */}
                             <div className="admin-form-group">
                                 <label className="admin-form-label">DURATION</label>
                                 <div className="admin-duration-container">
@@ -345,7 +320,6 @@ const Admin_CreateProgramme = () => {
                                 </div>
                             </div>
 
-                            {/* Start Date */}
                             <div className="admin-form-group">
                                 <label className="admin-form-label">START DATE</label>
                                 <div className="admin-date-picker-container">

@@ -36,13 +36,9 @@ const activeCenterIcon = L.divIcon({
 
 // ============================================
 // Fetch real road route from OSRM
-//
-// Public OSRM demo only serves the "driving" profile.
-// We take the driving road geometry and compute both
-// walking and driving times ourselves.
 // ============================================
-const WALKING_SPEED_KMH = 5;   // average pedestrian pace
-const DRIVING_SPEED_KMH = 60;  // average urban driving speed
+const WALKING_SPEED_KMH = 5;
+const DRIVING_SPEED_KMH = 60;
 
 const fetchRoute = async (from, to) => {
   const url =
@@ -75,9 +71,6 @@ const fetchRoute = async (from, to) => {
 
 // ============================================
 // Format minutes into a readable string.
-//   45    → "45 min"
-//   75    → "1 h 15 min"
-//   291   → "4 h 51 min"
 // ============================================
 const formatDuration = (minutes) => {
   if (!minutes || minutes < 1) return '< 1 min';
@@ -265,7 +258,6 @@ const MapController = ({ target, userLocation, focusUser, onRouteInfo }) => {
           map.fitBounds(line.getBounds(), { padding: [80, 80], maxZoom: 15 });
         }
 
-        // ⬇️ Forward BOTH walking and driving times to the UI
         onRouteInfo({
           distanceKm: route.distanceKm,
           walkingMin: route.walkingMin,
@@ -325,6 +317,10 @@ const LocateCenter = () => {
 
   const [programmeContext, setProgrammeContext] = useState(null);
 
+  // Set of programme IDs the learner has already submitted interest for.
+  // Used to lock the button across every other centre.
+  const [submittedProgrammeIds, setSubmittedProgrammeIds] = useState(new Set());
+
   // -------------------------------------------------------------------------
   // Read programme context on mount
   // -------------------------------------------------------------------------
@@ -358,16 +354,18 @@ const LocateCenter = () => {
     }
   }, [location.state]);
 
-  // -------------------------------------------------------------------------
-  // Load centres + my centre interests
-  // -------------------------------------------------------------------------
+  
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        const res = await api.get('/learner/digital-centers');
+        const centresUrl = programmeContext?.programmeId
+          ? `/programmes/${programmeContext.programmeId}/centres`
+          : '/learner/digital-centers';
+
+        const res = await api.get(centresUrl);
         if (res.data.success) setCenters(res.data.data || []);
         else setError(res.data.message || 'Failed to load centres');
 
@@ -377,6 +375,19 @@ const LocateCenter = () => {
             setInterestedCenters(mine.data.data.map((i) => i.digital_center_id));
           }
         } catch (_) { /* silent */ }
+
+        // Load every programme the learner has already submitted interest for.
+        // Used to lock the button for that programme across all centres.
+        try {
+          const interestsRes = await api.get('/learner/interests');
+          if (interestsRes.data.success && Array.isArray(interestsRes.data.data)) {
+            const ids = interestsRes.data.data
+              .filter((row) => row.status && row.status !== 'Not Interested')
+              .map((row) => row.Programme_id ?? row.programme_id)
+              .filter((id) => id != null);
+            setSubmittedProgrammeIds(new Set(ids));
+          }
+        } catch (_) { /* silent */ }
       } catch (err) {
         setError('Failed to load digital centres. Please try again.');
       } finally {
@@ -384,7 +395,7 @@ const LocateCenter = () => {
       }
     };
     loadData();
-  }, []);
+  }, [programmeContext?.programmeId]);
 
   const findNearest = async () => {
     setSearching(true);
@@ -424,9 +435,12 @@ const LocateCenter = () => {
         setStatusMsg('Showing centres near your live location.');
       }
 
-      const res = await api.get('/learner/digital-centers/nearest', {
-        params: { latitude, longitude },
-      });
+      const params = { latitude, longitude };
+      if (programmeContext?.programmeId) {
+        params.programme_id = programmeContext.programmeId;
+      }
+
+      const res = await api.get('/learner/digital-centers/nearest', { params });
 
       if (res.data.success) {
         const list = res.data.data || [];
@@ -457,31 +471,48 @@ const LocateCenter = () => {
     findNearest();
   };
 
+ 
   const handleInterest = async (centerId, e) => {
     if (e) e.stopPropagation();
-    const already = interestedCenters.includes(centerId);
+
+    const pid = programmeContext?.programmeId;
+    const programmeTitle = programmeContext?.programmeTitle || 'this programme';
+
+    
+    if (pid != null && submittedProgrammeIds.has(pid)) {
+      alert(
+        `You've already submitted your interest for ${programmeTitle}. ` +
+        `Please wait for a centre to contact you.`
+      );
+      return;
+    }
 
     try {
-      if (already) {
-        await api.delete('/learner/digital-centers/interest', {
-          data: { centerId },
-        });
-        setInterestedCenters(interestedCenters.filter((id) => id !== centerId));
-        return;
-      }
-
       const payload = { centerId };
-      if (programmeContext?.programmeId) {
-        payload.programmeId = programmeContext.programmeId;
+      if (pid != null) payload.programmeId = pid;
+
+      const res = await api.post('/learner/digital-centers/interest', payload);
+
+    
+      setInterestedCenters((prev) => [...prev, centerId]);
+      if (pid != null) {
+        setSubmittedProgrammeIds((prev) => {
+          const next = new Set(prev);
+          next.add(pid);
+          return next;
+        });
       }
 
-      await api.post('/learner/digital-centers/interest', payload);
-      setInterestedCenters([...interestedCenters, centerId]);
-
-      if (programmeContext?.programmeId) {
+      
+      if (pid != null) {
         sessionStorage.removeItem('pendingProgrammeInterest');
-        setProgrammeContext(null);
       }
+
+      
+      const successMsg =
+        res?.data?.message ||
+        `Your interest in ${programmeTitle} has been submitted successfully. A centre will contact you soon.`;
+      alert(successMsg);
     } catch (err) {
       alert(err.response?.data?.message || 'Could not update your interest.');
     }
@@ -618,6 +649,11 @@ const LocateCenter = () => {
             ) : (
               centers.map((center) => {
                 const isSelected = selectedCenter?.id === center.id;
+
+                const pid = programmeContext?.programmeId;
+                const alreadySubmittedForProgramme =
+                  pid != null && submittedProgrammeIds.has(pid);
+
                 return (
                   <div
                     key={center.id}
@@ -664,12 +700,17 @@ const LocateCenter = () => {
                     </div>
 
                     <button
-                      className={`btn-interest ${interestedCenters.includes(center.id) ? 'interested' : ''}`}
+                      className="btn-interest"
                       onClick={(e) => handleInterest(center.id, e)}
+                      disabled={alreadySubmittedForProgramme}
+                      style={{
+                        background: '#000',
+                        color: '#fff',
+                        opacity: alreadySubmittedForProgramme ? 0.45 : 1,
+                        cursor: alreadySubmittedForProgramme ? 'not-allowed' : 'pointer',
+                      }}
                     >
-                      {interestedCenters.includes(center.id)
-                        ? 'Interest Submitted'
-                        : 'Submit Interest'}
+                      Submit Interest
                     </button>
                   </div>
                 );
@@ -698,7 +739,6 @@ const LocateCenter = () => {
 
               {routeInfo && (
                 <div className="route-info-box">
-                  {/* Walking mode */}
                   <div className="route-info-mode">
                     <div className="route-info-icon">
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2">
@@ -716,7 +756,6 @@ const LocateCenter = () => {
                     </div>
                   </div>
 
-                  {/* Driving mode */}
                   <div className="route-info-mode">
                     <div className="route-info-icon">
                       <svg
@@ -740,7 +779,6 @@ const LocateCenter = () => {
                     </div>
                   </div>
 
-                  {/* Distance */}
                   <div className="route-info-distance-row">
                     {routeInfo.distanceKm.toFixed(1)} km
                   </div>

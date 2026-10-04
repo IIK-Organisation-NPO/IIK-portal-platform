@@ -42,7 +42,7 @@ const AdminBlogManagement = () => {
 
   const tabs = ['All', 'Blog Posts', 'News', 'Events', 'Drafts'];
 
-  // ── Fetch from API whenever tab/search changes ────────────
+  
   useEffect(() => {
     let cancelled = false;
     const timer = setTimeout(async () => {
@@ -71,7 +71,7 @@ const AdminBlogManagement = () => {
     setModal({ type: 'edit', postId: post.id });
   };
 
-  // ── PUT to API ────────────────────────────────────────────
+  
   const savePost = async (event) => {
     event.preventDefault();
     if (!formData.title.trim()) return;
@@ -91,7 +91,7 @@ const AdminBlogManagement = () => {
     }
   };
 
-  // ── DELETE to API ─────────────────────────────────────────
+  //  DELETE to API 
   const confirmDelete = async () => {
     try {
       await blogAPI.deletePost(modal.postId);

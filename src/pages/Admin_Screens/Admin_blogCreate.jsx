@@ -1,24 +1,13 @@
- //src/pages/Admin_Screens/Admin_BlogCreate.jsx
-// ============================================================
-// Admin_BlogCreate — Create New Post page
-// Handles Blog Posts, Events, Announcements and News.
-// Article Body uses a contentEditable rich-text editor.
-// Featured image is uploaded to the backend, and its URL is
-// embedded as an <img> inside the post's HTML body so it appears
-// on the public blog without adding any MySQL column.
-// ============================================================
-
+// src/pages/Admin_Screens/Admin_BlogCreate.jsx
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Admin_Header from '../../components/Admin/Admin_Header';
 import Admin_Sidebar from '../../components/Admin/Admin_Sidebar';
 import '../../styles/Admin/Admin_BlogCreate.css';
 import { blogAPI } from '../../services/api';
+import { API_BASE } from '../../config/api';
 
 const Admin_BlogCreate = () => {
-    // -----------------------------------------------------------
-    // 1. HOOKS & STATE
-    // -----------------------------------------------------------
     const navigate = useNavigate();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -27,7 +16,7 @@ const Admin_BlogCreate = () => {
     const [formData, setFormData] = useState({
         postType: 'Blog Post',
         officialTitle: '',
-        authorReference: 'Admin User',
+        authorReference: 'Admin',
         tags: '',
         articleBody: '',
         featuredImage: null,
@@ -37,28 +26,18 @@ const Admin_BlogCreate = () => {
 
     const [errors, setErrors] = useState({});
 
-    // Toast notification state (replaces alert)
-    const [toast, setToast] = useState(null); // { type: 'success' | 'error', text: string }
+    const [toast, setToast] = useState(null);
 
-    const adminName = 'Admin User';
+    const adminName = 'Admin';
 
-    // -----------------------------------------------------------
-    // 2. SIDEBAR / HEADER HELPERS
-    // -----------------------------------------------------------
     const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
     const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
-    // -----------------------------------------------------------
-    // TOAST HELPER — auto-hides after 3.5 seconds
-    // -----------------------------------------------------------
     const showToast = (type, text) => {
         setToast({ type, text });
         window.setTimeout(() => setToast(null), 3500);
     };
 
-    // -----------------------------------------------------------
-    // 3. GENERIC INPUT HANDLER
-    // -----------------------------------------------------------
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData((prev) => ({ ...prev, [name]: value }));
@@ -71,9 +50,6 @@ const Admin_BlogCreate = () => {
         });
     };
 
-    // -----------------------------------------------------------
-    // 4. RICH TEXT EDITOR HANDLERS
-    // -----------------------------------------------------------
     const handleEditorInput = () => {
         if (!editorRef.current) return;
         const html = editorRef.current.innerHTML;
@@ -101,9 +77,6 @@ const Admin_BlogCreate = () => {
         applyFormat('createLink', safeUrl);
     };
 
-    // -----------------------------------------------------------
-    // 5. FEATURED IMAGE UPLOAD
-    // -----------------------------------------------------------
     const handleFileUpload = (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -118,9 +91,6 @@ const Admin_BlogCreate = () => {
         });
     };
 
-    // -----------------------------------------------------------
-    // 6. VALIDATION
-    // -----------------------------------------------------------
     const isEvent = formData.postType === 'Event';
 
     const stripHtml = (html) => {
@@ -136,7 +106,6 @@ const Admin_BlogCreate = () => {
             nextErrors.officialTitle = 'Official Title is required.';
         }
 
-        // Featured image is required (both draft and publish)
         if (!formData.featuredImage) {
             nextErrors.featuredImage = 'Featured image is required.';
         }
@@ -157,24 +126,24 @@ const Admin_BlogCreate = () => {
         return nextErrors;
     };
 
-    // -----------------------------------------------------------
-    // 7. ACTION HANDLERS
-    // -----------------------------------------------------------
-
-    // Uploads the picked image and returns its public URL.
     const uploadFeaturedImage = async () => {
         if (!formData.featuredImage) return null;
         const res = await blogAPI.uploadImage(formData.featuredImage);
         return res.data?.url || null;
     };
 
-    // Builds the payload. The image URL is embedded at the TOP of
-    // the article body as an <img> tag, so it's stored inside the
-    // existing Content column — no schema change needed.
+    // ---- FIXED: don't prepend API_BASE to data URLs ----
     const buildPayload = (status, imageUrl) => {
         const safeAlt = (formData.officialTitle || 'Post image').replace(/"/g, '&quot;');
-        const imageTag = imageUrl
-            ? `<img src="http://localhost:5000${imageUrl}" alt="${safeAlt}" style="max-width:100%;height:auto;border-radius:8px;margin-bottom:16px;display:block;" />`
+
+        const src = !imageUrl
+            ? ''
+            : imageUrl.startsWith('data:')
+                ? imageUrl                        // data URLs are complete on their own
+                : `${API_BASE}${imageUrl}`;       // legacy /uploads paths need the host
+
+        const imageTag = src
+            ? `<img src="${src}" alt="${safeAlt}" style="max-width:100%;height:auto;border-radius:8px;margin-bottom:16px;display:block;" />`
             : '';
 
         return {
@@ -237,7 +206,7 @@ const Admin_BlogCreate = () => {
         setFormData({
             postType: 'Blog Post',
             officialTitle: '',
-            authorReference: 'Admin User',
+            authorReference: 'Admin',
             tags: '',
             articleBody: '',
             featuredImage: null,
@@ -261,9 +230,6 @@ const Admin_BlogCreate = () => {
 
     const postTypeOptions = ['Blog Post', 'Event', 'Announcement', 'News'];
 
-    // -----------------------------------------------------------
-    // 8. RENDER
-    // -----------------------------------------------------------
     return (
         <div className="admin-blogcreate-layout">
             <Admin_Header
@@ -273,7 +239,6 @@ const Admin_BlogCreate = () => {
                 notificationCount={3}
             />
 
-            {/* In-page toast (replaces alert) */}
             {toast && (
                 <div
                     className={`blogcreate-toast blogcreate-toast--${toast.type}`}
@@ -301,9 +266,7 @@ const Admin_BlogCreate = () => {
                     </div>
 
                     <div className="blogcreate-grid">
-                        {/* LEFT COLUMN */}
                         <div className="blogcreate-left">
-                            {/* Post Type */}
                             <div className="form-group">
                                 <label>Post Type</label>
                                 <div className="select-wrapper">
@@ -320,7 +283,6 @@ const Admin_BlogCreate = () => {
                                 </div>
                             </div>
 
-                            {/* Official Title */}
                             <div className="form-group">
                                 <label>Official Title</label>
                                 <input
@@ -336,7 +298,6 @@ const Admin_BlogCreate = () => {
                                 )}
                             </div>
 
-                            {/* Author + Tags */}
                             <div className="form-row">
                                 <div className="form-group half">
                                     <label>Author Reference</label>
@@ -361,7 +322,6 @@ const Admin_BlogCreate = () => {
                                 </div>
                             </div>
 
-                            {/* RICH TEXT EDITOR */}
                             <div className="form-group">
                                 <label>Article Body / Event Description</label>
 
@@ -456,9 +416,7 @@ const Admin_BlogCreate = () => {
                             </div>
                         </div>
 
-                        {/* RIGHT COLUMN */}
                         <div className="blogcreate-right">
-                            {/* Featured Image — required */}
                             <div className="blogcreate-card">
                                 <h3 className="card-title">Featured Display Image</h3>
                                 <div className={`upload-area ${errors.featuredImage ? 'upload-area--error' : ''}`}>
@@ -501,7 +459,6 @@ const Admin_BlogCreate = () => {
                                 )}
                             </div>
 
-                            {/* EVENT LOGISTICS — conditional */}
                             {isEvent && (
                                 <div className="blogcreate-card event-card">
                                     <h3 className="card-title">
@@ -544,7 +501,6 @@ const Admin_BlogCreate = () => {
                         </div>
                     </div>
 
-                    {/* Bottom action bar */}
                     <div className="blogcreate-actions">
                         <button
                             className="btn-back"

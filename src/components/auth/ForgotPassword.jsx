@@ -5,6 +5,7 @@ import { FaEnvelope, FaArrowLeft, FaLock, FaSpinner, FaExclamationCircle } from 
 import Footer from '../common/Footer';
 import '../../styles/components/forgotpassword.css';
 import logo from '../../assets/images/small Mki.png';
+import { API } from '../../config/api';
 
 const ForgotPassword = () => {
   const navigate = useNavigate();
@@ -14,27 +15,25 @@ const ForgotPassword = () => {
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!email.trim()) {
       setError('Email address is required');
       return;
     }
-    
+
     if (!/\S+@\S+\.\S+/.test(email)) {
       setError('Please enter a valid email address');
       return;
     }
-    
+
     setError('');
     setMessage('');
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${API_URL}/api/auth/forgot-password`, {
+      const response = await fetch(API.auth.forgotPassword, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -47,13 +46,13 @@ const ForgotPassword = () => {
       if (response.ok && data.success) {
         setSuccess(true);
         setMessage('OTP sent to your email! Please check your inbox.');
-        
+
         setTimeout(() => {
-          navigate('/verify-otp', { 
-            state: { 
+          navigate('/verify-otp', {
+            state: {
               email: email.trim().toLowerCase(),
               from: 'forgot-password'
-            } 
+            }
           });
         }, 2000);
       } else {
@@ -80,7 +79,7 @@ const ForgotPassword = () => {
 
       <div className="forgot-password-container">
         <div className="forgot-password-card">
-          
+
           <div className="icon-container">
             <div className="lock-icon-wrapper">
               <FaLock size={40} color="#000000" />
@@ -92,13 +91,12 @@ const ForgotPassword = () => {
             No worries. Enter your email address and we'll send you an OTP to reset your password.
           </p>
 
-          {/* Success Message - No icon */}
           {success && (
-            <div className="success-message" style={{ 
-              background: '#d4edda', 
-              color: '#155724', 
-              padding: '12px 16px', 
-              borderRadius: '8px', 
+            <div className="success-message" style={{
+              background: '#d4edda',
+              color: '#155724',
+              padding: '12px 16px',
+              borderRadius: '8px',
               marginBottom: '15px',
               border: '1px solid #c3e6cb'
             }}>
@@ -106,7 +104,6 @@ const ForgotPassword = () => {
             </div>
           )}
 
-          {/* Error Message */}
           {error && (
             <div className="error-message" style={{
               display: 'flex',
@@ -146,9 +143,9 @@ const ForgotPassword = () => {
               {error && <span className="error-text">{error}</span>}
             </div>
 
-            <button 
-              type="submit" 
-              className="btn-primary" 
+            <button
+              type="submit"
+              className="btn-primary"
               disabled={isLoading || success}
             >
               {isLoading ? (

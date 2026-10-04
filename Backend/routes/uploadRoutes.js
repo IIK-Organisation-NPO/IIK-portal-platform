@@ -2,24 +2,10 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
 const router = express.Router();
 
-// Ensure the folder exists on startup
-const uploadDir = path.join(__dirname, '..', 'uploads', 'blog');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-// Store with a unique filename
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, uploadDir),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    const name = `post-${Date.now()}-${Math.round(Math.random() * 1e6)}${ext}`;
-    cb(null, name);
-  },
-});
+// Keep the uploaded file in memory — nothing is written to disk
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage,
@@ -31,14 +17,26 @@ const upload = multer({
 });
 
 // POST /api/upload/blog  — field name: "image"
+// Returns the image as a base64 data URL — the frontend embeds it inline.
 router.post('/blog', upload.single('image'), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ success: false, message: 'No file uploaded' });
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No file uploaded' });
+    }
+
+    const base64 = req.file.buffer.toString('base64');
+    const url = `data:${req.file.mimetype};base64,${base64}`;
+
+    res.status(201).json({
+      success: true,
+      url,
+      mime: req.file.mimetype,
+      size: req.file.size,
+    });
+  } catch (err) {
+    console.error('Blog image upload error:', err);
+    res.status(500).json({ success: false, message: err.message });
   }
-
-  const url = `/uploads/blog/${req.file.filename}`;
-
-  res.status(201).json({ success: true, url });
 });
 
 module.exports = router;

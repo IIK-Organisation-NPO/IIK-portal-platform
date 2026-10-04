@@ -5,18 +5,8 @@ import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import Admin_Sidebar from '../../components/Admin/Admin_Sidebar';
 import Admin_Header from '../../components/Admin/Admin_Header';
 import '../../styles/Admin/admin_StaffManagement.css';
+import { API, authHeaders } from '../../config/api';
 
-// ---------------------------------------------------------------------------
-// API base URL
-// ---------------------------------------------------------------------------
-const API_BASE =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
-  import.meta.env?.VITE_API_URL ||
-  'http://localhost:5000';
-
-// ---------------------------------------------------------------------------
-// Password requirements (drives the live checklist panel)
-// ---------------------------------------------------------------------------
 const PASSWORD_REQUIREMENTS = [
   { id: 'length',    label: 'At least 8 characters',                    test: (p) => p.length >= 8 },
   { id: 'lowercase', label: 'At least one lowercase letter',            test: (p) => /[a-z]/.test(p) },
@@ -25,9 +15,6 @@ const PASSWORD_REQUIREMENTS = [
   { id: 'special',   label: 'At least one special character (@$!%*?&)', test: (p) => /[@$!%*?&]/.test(p) }
 ];
 
-// ---------------------------------------------------------------------------
-// Validation helpers
-// ---------------------------------------------------------------------------
 const validateName = (value, label = 'Name') => {
   const v = (value || '').trim();
   if (!v) return `${label} is required`;
@@ -82,9 +69,6 @@ const limitPhoneInput = (raw) => {
   return cleaned.slice(0, 10);
 };
 
-// ---------------------------------------------------------------------------
-// Table row helpers
-// ---------------------------------------------------------------------------
 const roleLabelFromId = (roleId) => {
   switch (String(roleId)) {
     case '1': return 'Administrator';
@@ -116,21 +100,19 @@ const normalizeStaff = (row = {}) => {
 const AdminStaffManagement = () => {
   const navigate = useNavigate();
 
-  // --- UI State ---
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // --- Form State ---
   const [formData, setFormData] = useState({
     name: '',
     surname: '',
     email: '',
     phone_number: '',
     role_id: '',
+    centre: '',
     password: '',
     confirmPassword: ''
   });
 
-  // --- Field errors / touched / submission state ---
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [serverError, setServerError] = useState('');
@@ -141,16 +123,16 @@ const AdminStaffManagement = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const serverErrorTimerRef = useRef(null);
 
-  // --- Table Data State (loaded from DB) ---
   const [staffMembers, setStaffMembers] = useState([]);
   const [staffLoading, setStaffLoading] = useState(true);
   const [staffLoadError, setStaffLoadError] = useState('');
 
-  // --- Roles State (from the role table, filtered to 1 & 3) ---
   const [roles, setRoles] = useState([]);
   const [rolesLoading, setRolesLoading] = useState(true);
 
-  // --- Modal State ---
+  const [centres, setCentres] = useState([]);
+  const [centresLoading, setCentresLoading] = useState(true);
+
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
   const [showActionModal, setShowActionModal] = useState(false);
@@ -158,18 +140,42 @@ const AdminStaffManagement = () => {
   const [selectedStaff, setSelectedStaff] = useState(null);
   const [editStatus, setEditStatus] = useState('');
 
-  // --- Derived: password requirements met? ---
+  const currentUserId = useMemo(() => {
+    try {
+      const u = JSON.parse(localStorage.getItem('user') || '{}');
+      return u.userId ?? u.User_id ?? u.id ?? u.adminId ?? u.Admin_ID ?? null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const isSelf = (staff) =>
+    currentUserId != null &&
+    staff != null &&
+    String(staff.id) === String(currentUserId);
+
+  const isSuperAdminRole = useMemo(() => {
+    if (!formData.role_id) return false;
+    if (String(formData.role_id) === '3') return true;
+    const found = roles.find(r => String(r.role_id) === String(formData.role_id));
+    if (!found) return false;
+    const label = String(found.role_type || '').toLowerCase();
+    return label.includes('super');
+  }, [formData.role_id, roles]);
+
   const allPasswordRequirementsMet = useMemo(
     () => PASSWORD_REQUIREMENTS.every(r => r.test(formData.password)),
     [formData.password]
   );
 
-  // --- Fetch staff from the backend ---
   const fetchStaff = async () => {
     setStaffLoading(true);
     setStaffLoadError('');
     try {
-      const res = await fetch(`${API_BASE}/api/staff`);
+      const res = await fetch(API.staff.list, {
+        headers: authHeaders(),
+        credentials: 'include',
+      });
       const data = await res.json();
 
       if (!res.ok || !data.success) {
@@ -185,11 +191,13 @@ const AdminStaffManagement = () => {
     }
   };
 
-  // --- Fetch assignable roles (role_id 1 and 3) ---
   const fetchRoles = async () => {
     setRolesLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/staff/roles`);
+      const res = await fetch(API.staff.roles, {
+        headers: authHeaders(),
+        credentials: 'include',
+      });
       const data = await res.json();
 
       if (data.success && Array.isArray(data.data)) {
@@ -211,13 +219,35 @@ const AdminStaffManagement = () => {
     }
   };
 
+  const fetchCentres = async () => {
+    setCentresLoading(true);
+    try {
+      const res = await fetch(API.learner.digitalCenters, {
+        headers: authHeaders(),
+        credentials: 'include',
+      });
+      const data = await res.json();
+
+      if (data.success && Array.isArray(data.data)) {
+        setCentres(data.data);
+      } else {
+        setCentres([]);
+      }
+    } catch (err) {
+      console.error('Fetch centres error:', err);
+      setCentres([]);
+    } finally {
+      setCentresLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchStaff();
     fetchRoles();
+    fetchCentres();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // --- Handlers ---
   const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
@@ -228,6 +258,9 @@ const AdminStaffManagement = () => {
       case 'email':           return validateEmail(value);
       case 'phone_number':    return validatePhone(value);
       case 'role_id':         return value ? '' : 'Please select a role';
+      case 'centre':
+        if (isSuperAdminRole) return '';
+        return value ? '' : 'Please select a centre for this Administrator';
       case 'password':        return validatePassword(value);
       case 'confirmPassword':
         if (!value) return 'Please confirm the password';
@@ -240,6 +273,25 @@ const AdminStaffManagement = () => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     const finalValue = name === 'phone_number' ? limitPhoneInput(value) : value;
+
+    if (name === 'role_id') {
+      const roleIsSuper =
+        String(finalValue) === '3' ||
+        (() => {
+          const found = roles.find(r => String(r.role_id) === String(finalValue));
+          return found ? String(found.role_type || '').toLowerCase().includes('super') : false;
+        })();
+
+      setFormData(prev => ({
+        ...prev,
+        role_id: finalValue,
+        centre: roleIsSuper ? '' : prev.centre,
+      }));
+
+      setErrors(prev => ({ ...prev, centre: '' }));
+
+      return;
+    }
 
     setFormData(prev => ({ ...prev, [name]: finalValue }));
 
@@ -271,15 +323,25 @@ const AdminStaffManagement = () => {
       const err = validateField(f, formData[f]);
       if (err) newErrors[f] = err;
     });
+
+    if (!isSuperAdminRole && !formData.centre) {
+      newErrors.centre = 'Please select a centre for this Administrator.';
+    }
+
     setErrors(newErrors);
     setTouched({
-      name: true, surname: true, email: true, phone_number: true,
-      role_id: true, password: true, confirmPassword: true
+      name: true,
+      surname: true,
+      email: true,
+      phone_number: true,
+      role_id: true,
+      centre: true,
+      password: true,
+      confirmPassword: true,
     });
     return Object.keys(newErrors).length === 0;
   };
 
-  // --- Register (POST /api/staff) ---
   const handleRegisterStaff = async (e) => {
     e.preventDefault();
     setServerError('');
@@ -289,15 +351,22 @@ const AdminStaffManagement = () => {
 
     setSubmitting(true);
     try {
-      const res = await fetch(`${API_BASE}/api/staff`, {
+      const centreForPayload =
+        isSuperAdminRole || !formData.centre
+          ? null
+          : parseInt(formData.centre, 10);
+
+      const res = await fetch(API.staff.list, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        credentials: 'include',
         body: JSON.stringify({
           name: formData.name.trim(),
           surname: formData.surname.trim(),
           email: formData.email.trim().toLowerCase(),
           phone_number: formData.phone_number.trim() || null,
           role_id: parseInt(formData.role_id, 10),
+          centre: centreForPayload,
           password: formData.password,
           confirmPassword: formData.confirmPassword
         })
@@ -317,17 +386,14 @@ const AdminStaffManagement = () => {
           setServerError(data.message || 'Failed to register staff member.');
         }
 
-        if (serverErrorTimerRef.current) {
-          clearTimeout(serverErrorTimerRef.current);
-        }
-        serverErrorTimerRef.current = setTimeout(() => {
-          setServerError('');
-        }, 5000);
-
+        if (serverErrorTimerRef.current) clearTimeout(serverErrorTimerRef.current);
+        serverErrorTimerRef.current = setTimeout(() => setServerError(''), 5000);
         return;
       }
 
       const created = data.data;
+      const nowIso = new Date().toISOString();
+
       setStaffMembers(prev => [
         normalizeStaff({
           Admin_ID: created.id,
@@ -335,7 +401,11 @@ const AdminStaffManagement = () => {
           Surname: created.surname,
           Email_address: created.email,
           Phone_number: created.phone_number,
-          role_ID: created.role_id
+          role_ID: created.role_id,
+          role_type:
+            roles.find(r => String(r.role_id) === String(created.role_id))?.role_type,
+          Is_active: 1,
+          created_at: created.created_at || nowIso,
         }),
         ...prev
       ]);
@@ -345,7 +415,7 @@ const AdminStaffManagement = () => {
 
       setFormData({
         name: '', surname: '', email: '', phone_number: '',
-        role_id: '', password: '', confirmPassword: ''
+        role_id: '', centre: '', password: '', confirmPassword: ''
       });
       setErrors({});
       setTouched({});
@@ -359,7 +429,6 @@ const AdminStaffManagement = () => {
     }
   };
 
-  // --- Action modal (hub) ---
   const handleOpenActionModal = (staff) => {
     setSelectedStaff(staff);
     setShowActionModal(true);
@@ -379,25 +448,28 @@ const AdminStaffManagement = () => {
 
   const handleSelectDeactivate = () => {
     if (!selectedStaff) return;
+    if (isSelf(selectedStaff)) return;
     setShowActionModal(false);
     setShowDeactivateModal(true);
   };
 
   const handleSelectDelete = () => {
     if (!selectedStaff) return;
+    if (isSelf(selectedStaff)) return;
     setShowActionModal(false);
     setShowDeleteModal(true);
   };
 
-  // --- Edit modal (direct entry point kept too) ---
-  const handleEditClick = (staff) => {
-    setSelectedStaff(staff);
-    setEditStatus(staff.status);
-    setShowEditModal(true);
-  };
-
   const handleSaveEdit = async () => {
     if (!selectedStaff) return;
+
+    if (isSelf(selectedStaff) && editStatus === 'Inactive') {
+      setServerError('You cannot deactivate your own account.');
+      setTimeout(() => setServerError(''), 5000);
+      setShowEditModal(false);
+      setSelectedStaff(null);
+      return;
+    }
 
     const newStatus = editStatus;
     const previous = staffMembers;
@@ -408,9 +480,10 @@ const AdminStaffManagement = () => {
     setShowEditModal(false);
 
     try {
-      const res = await fetch(`${API_BASE}/api/staff/${selectedStaff.id}/status`, {
+      const res = await fetch(API.staff.status(selectedStaff.id), {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        credentials: 'include',
         body: JSON.stringify({ is_active: newStatus === 'Active' })
       });
 
@@ -431,15 +504,15 @@ const AdminStaffManagement = () => {
     }
   };
 
-  // --- Deactivate modal ---
-  const handleDeactivateClick = (staff) => {
-    setSelectedStaff(staff);
-    setShowDeactivateModal(true);
-  };
-
   const handleConfirmDeactivate = async () => {
     if (!selectedStaff) return;
-
+    if (isSelf(selectedStaff)) {
+      setShowDeactivateModal(false);
+      setServerError('You cannot deactivate your own account.');
+      setTimeout(() => setServerError(''), 5000);
+      setSelectedStaff(null);
+      return;
+    }
     const previous = staffMembers;
 
     setStaffMembers(prev =>
@@ -448,9 +521,10 @@ const AdminStaffManagement = () => {
     setShowDeactivateModal(false);
 
     try {
-      const res = await fetch(`${API_BASE}/api/staff/${selectedStaff.id}/status`, {
+      const res = await fetch(API.staff.status(selectedStaff.id), {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        credentials: 'include',
         body: JSON.stringify({ is_active: false })
       });
 
@@ -471,19 +545,25 @@ const AdminStaffManagement = () => {
     }
   };
 
-  // --- Delete modal ---
   const handleConfirmDelete = async () => {
     if (!selectedStaff) return;
-
+    if (isSelf(selectedStaff)) {
+      setShowDeleteModal(false);
+      setServerError('You cannot delete your own account.');
+      setTimeout(() => setServerError(''), 5000);
+      setSelectedStaff(null);
+      return;
+    }
     const previous = staffMembers;
 
-    // Optimistic remove
     setStaffMembers(prev => prev.filter(s => s.id !== selectedStaff.id));
     setShowDeleteModal(false);
 
     try {
-      const res = await fetch(`${API_BASE}/api/staff/${selectedStaff.id}`, {
-        method: 'DELETE'
+      const res = await fetch(API.staff.remove(selectedStaff.id), {
+        method: 'DELETE',
+        headers: authHeaders(),
+        credentials: 'include'
       });
 
       const data = await res.json();
@@ -524,13 +604,11 @@ const AdminStaffManagement = () => {
         />
 
         <main className="admin-content">
-          {/* Page Header */}
           <div className="page-header">
             <h1>Staff Management</h1>
             <p>Register administrative staff, delegate functional access roles, and audit operational activity.</p>
           </div>
 
-          {/* ACL banner */}
           <div className="acl-banner">
             <svg className="acl-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
@@ -539,7 +617,6 @@ const AdminStaffManagement = () => {
             <p><strong>Access Control Level (ACL):</strong> Creating staff accounts issues temporary access codes. New staff must authenticate within 24 hours of invitation.</p>
           </div>
 
-          {/* Success / server error banners */}
           {successMessage && (
             <div className="success-toast" style={{
               position: 'fixed', top: '80px', right: '20px',
@@ -559,7 +636,6 @@ const AdminStaffManagement = () => {
             }}>{serverError}</div>
           )}
 
-          {/* Register New Staff Member */}
           <div className="card form-card">
             <h2>Register New Staff Member</h2>
             <form onSubmit={handleRegisterStaff} className="register-form" noValidate>
@@ -647,6 +723,36 @@ const AdminStaffManagement = () => {
                     ))}
                   </select>
                   {showError('role_id') && <span className="field-error">{errors.role_id}</span>}
+                </div>
+
+                <div className="form-group">
+                  <label>ASSIGN CENTRE</label>
+                  <select
+                    name="centre"
+                    value={formData.centre}
+                    onChange={handleInputChange}
+                    onBlur={handleBlur}
+                    className={showError('centre') ? 'error' : ''}
+                    disabled={submitting || centresLoading || isSuperAdminRole}
+                    title={isSuperAdminRole ? 'Super Admins are not bound to a centre.' : undefined}
+                  >
+                    <option value="">
+                      {isSuperAdminRole
+                        ? 'Not applicable for Super Admin'
+                        : (centresLoading ? 'Loading centres...' : 'Select Centre...')}
+                    </option>
+                    {!isSuperAdminRole && centres.map((c) => (
+                      <option
+                        key={c.id ?? c.digital_center_id}
+                        value={c.id ?? c.digital_center_id}
+                      >
+                        {c.name ?? c.center_name}
+                      </option>
+                    ))}
+                  </select>
+                  {showError('centre') && (
+                    <span className="field-error">{errors.centre}</span>
+                  )}
                 </div>
 
                 <div className="form-group">
@@ -738,7 +844,6 @@ const AdminStaffManagement = () => {
             </form>
           </div>
 
-          {/* Current Staff Members Table */}
           <div className="card table-card">
             <h2>Current Staff Members</h2>
             <table className="data-table">
@@ -777,7 +882,24 @@ const AdminStaffManagement = () => {
                 ) : (
                   staffMembers.map((staff) => (
                     <tr key={staff.id}>
-                      <td className="staff-name-cell"><strong>{staff.name}</strong></td>
+                      <td className="staff-name-cell">
+                        <strong>{staff.name}</strong>
+                        {isSelf(staff) && (
+                          <span
+                            style={{
+                              marginLeft: 8,
+                              fontSize: 11,
+                              padding: '2px 8px',
+                              borderRadius: 999,
+                              background: '#e0e7ff',
+                              color: '#3730a3',
+                              fontWeight: 600,
+                            }}
+                          >
+                            You
+                          </span>
+                        )}
+                      </td>
                       <td className="staff-role-cell">
                         <span>{staff.role}</span>
                         <small>{staff.email}</small>
@@ -806,9 +928,6 @@ const AdminStaffManagement = () => {
             </table>
           </div>
 
-          {/* --- MODALS --- */}
-
-          {/* Action Selection Modal */}
           {showActionModal && (
             <div className="modal-overlay">
               <div className="modal action-modal" role="dialog" aria-modal="true" aria-labelledby="action-modal-title">
@@ -817,7 +936,19 @@ const AdminStaffManagement = () => {
                   <p className="action-modal-subtitle">
                     Choose what you would like to do with <strong>{selectedStaff?.name}</strong>.
                   </p>
-
+                  {isSelf(selectedStaff) && (
+                    <p style={{
+                      margin: '8px 0 12px',
+                      fontSize: 13,
+                      color: '#92400e',
+                      background: '#fef3c7',
+                      border: '1px solid #fcd34d',
+                      borderRadius: 8,
+                      padding: '8px 12px',
+                    }}>
+                      This is your own account. You can't deactivate or delete it.
+                    </p>
+                  )}
                   <div className="action-modal-buttons">
                     <button className="action-modal-btn btn-edit" onClick={handleSelectEdit}>
                       Edit
@@ -825,11 +956,19 @@ const AdminStaffManagement = () => {
                     <button
                       className="action-modal-btn btn-archive"
                       onClick={handleSelectDeactivate}
-                      disabled={selectedStaff?.status === 'Inactive'}
+                      disabled={
+                        selectedStaff?.status === 'Inactive' || isSelf(selectedStaff)
+                      }
+                      title={isSelf(selectedStaff) ? 'You cannot deactivate your own account.' : undefined}
                     >
                       Deactivate
                     </button>
-                    <button className="action-modal-btn btn-delete" onClick={handleSelectDelete}>
+                    <button
+                      className="action-modal-btn btn-delete"
+                      onClick={handleSelectDelete}
+                      disabled={isSelf(selectedStaff)}
+                      title={isSelf(selectedStaff) ? 'You cannot delete your own account.' : undefined}
+                    >
                       Delete
                     </button>
                   </div>
@@ -841,7 +980,6 @@ const AdminStaffManagement = () => {
             </div>
           )}
 
-          {/* Edit Status Modal */}
           {showEditModal && (
             <div className="modal-overlay">
               <div className="modal" role="dialog" aria-modal="true">
@@ -852,7 +990,9 @@ const AdminStaffManagement = () => {
                     <label>Status</label>
                     <select value={editStatus} onChange={(e) => setEditStatus(e.target.value)}>
                       <option value="Active">Active</option>
-                      <option value="Inactive">Inactive</option>
+                      <option value="Inactive" disabled={isSelf(selectedStaff)}>
+                        Inactive{isSelf(selectedStaff) ? ' (not allowed for your own account)' : ''}
+                      </option>
                     </select>
                   </div>
                 </div>
@@ -864,7 +1004,6 @@ const AdminStaffManagement = () => {
             </div>
           )}
 
-          {/* Deactivate Confirmation Modal */}
           {showDeactivateModal && (
             <div className="modal-overlay">
               <div className="modal" role="dialog" aria-modal="true" aria-labelledby="deactivate-modal-title">
@@ -881,7 +1020,6 @@ const AdminStaffManagement = () => {
             </div>
           )}
 
-          {/* Delete Confirmation Modal */}
           {showDeleteModal && (
             <div className="modal-overlay">
               <div className="modal" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
