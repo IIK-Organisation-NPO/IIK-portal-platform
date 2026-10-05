@@ -15,6 +15,7 @@ const blogRoutes = require('./routes/BlogRoutes');
 const navigationRoutes = require('./routes/navigationRoutes');
 const { startWeeklySummaryJob } = require('./weeklySummary/weeklySummary');
 const app = express();
+app.set('trust proxy', 1);
 
 // ===== ALLOWED ORIGINS (from .env) =====
 const allowedOrigins = (process.env.ALLOWED_ORIGINS ||
