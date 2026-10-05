@@ -5,6 +5,7 @@ const uploadRoutes = require('./routes/uploadRoutes');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const session = require('express-session');
+const MySQLStore = require('express-mysql-session')(session);
 const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const learnerRoutes = require('./routes/learnerRoutes');
@@ -14,8 +15,7 @@ const staffRoutes = require('./routes/staffRoutes');
 const blogRoutes = require('./routes/BlogRoutes');
 const navigationRoutes = require('./routes/navigationRoutes');
 const { startWeeklySummaryJob } = require('./weeklySummary/weeklySummary');
-const session = require('express-session');
-const MySQLStore = require('express-mysql-session')(session);
+
 const app = express();
 app.set('trust proxy', 1);
 
@@ -26,6 +26,7 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS ||
     .map((s) => s.trim())
     .filter(Boolean);
 
+// ===== MYSQL SESSION STORE INITIALIZATION =====
 const sessionStore = new MySQLStore({}, pool);
 
 // ===== SESSION CONFIGURATION =====
@@ -89,9 +90,17 @@ app.use((req, res, next) => {
 // ===== RATE LIMITING =====
 const rateLimit = require('express-rate-limit');
 
+// Helper function to extract IP without port for Azure proxy compatibility
+const getClientIp = (req) => {
+    const ip = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+    return ip.split(':')[0].trim();
+};
+
 const globalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 100000,
+    keyGenerator: getClientIp,
+    validate: { xForwardedForHeader: false },
     message: {
         success: false,
         error: 'Too many requests from this IP, please try again later.'
@@ -103,6 +112,8 @@ const globalLimiter = rateLimit({
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 10000,
+    keyGenerator: getClientIp,
+    validate: { xForwardedForHeader: false },
     message: {
         success: false,
         error: 'Too many authentication attempts, please try again later.'
