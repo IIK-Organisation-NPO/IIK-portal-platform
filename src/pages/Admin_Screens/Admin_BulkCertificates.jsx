@@ -11,13 +11,13 @@ const Admin_BulkUpload = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [selectedProgramme, setSelectedProgramme] = useState('');
     const [selectedStatus, setSelectedStatus] = useState('Completed');
-    const [selectedDateRange, setSelectedDateRange] = useState('Last 30 Days');
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [successMessage, setSuccessMessage] = useState('');
     const [adminName, setAdminName] = useState('Admin');
     const [submitting, setSubmitting] = useState(false);
+    const [issueDate, setIssueDate] = useState('');
 
     // Data from database
     const [programmes, setProgrammes] = useState([]);
@@ -31,15 +31,9 @@ const Admin_BulkUpload = () => {
 
     // Status options
     const statusOptions = ['All', 'Completed', 'In Progress', 'Withdrawn'];
-    const dateRanges = ['Last 7 Days', 'Last 30 Days', 'Last 90 Days', 'Last 6 Months', 'Last Year'];
 
-    const toggleMobileMenu = () => {
-        setIsMobileMenuOpen(!isMobileMenuOpen);
-    };
-
-    const closeMobileMenu = () => {
-        setIsMobileMenuOpen(false);
-    };
+    const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
+    const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
     // ============================================
     // PLURALIZATION HELPER
@@ -147,33 +141,51 @@ const Admin_BulkUpload = () => {
     };
 
     // ============================================
-    // HANDLE FILE SELECT
+    // HANDLE FILE SELECT — only one template PDF allowed
     // ============================================
     const handleFileSelect = (e) => {
         const files = Array.from(e.target.files);
-        if (files.length > 50) {
-            setError('Maximum 50 files allowed');
+
+        if (files.length === 0) return;
+
+        if (files.length > 1) {
+            setError('Only one template PDF can be selected. Please pick a single file.');
             setTimeout(() => setError(null), 5000);
+            e.target.value = '';
+            setSelectedFiles([]);
             return;
         }
 
-        const invalidFiles = files.filter(file => file.type !== 'application/pdf');
-        if (invalidFiles.length > 0) {
+        const file = files[0];
+
+        if (file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name)) {
             setError('Only PDF files are allowed');
             setTimeout(() => setError(null), 5000);
+            e.target.value = '';
+            setSelectedFiles([]);
             return;
         }
 
-        const oversizedFiles = files.filter(file => file.size > 10 * 1024 * 1024);
-        if (oversizedFiles.length > 0) {
-            setError('Each file must be less than 10MB');
+        if (file.size > 10 * 1024 * 1024) {
+            setError('File must be less than 10MB');
             setTimeout(() => setError(null), 5000);
+            e.target.value = '';
+            setSelectedFiles([]);
             return;
         }
 
-        setSelectedFiles(files);
-        setSuccessMessage(`${files.length} file(s) selected successfully`);
-        setTimeout(() => setSuccessMessage(''), 5000);
+        setSelectedFiles([file]);
+        setSuccessMessage(`Template "${file.name}" selected successfully`);
+        setTimeout(() => setSuccessMessage(''), 4000);
+    };
+
+    // ============================================
+    // REMOVE SELECTED TEMPLATE
+    // ============================================
+    const handleRemoveTemplate = () => {
+        setSelectedFiles([]);
+        const fileInput = document.getElementById('bulkFileInput');
+        if (fileInput) fileInput.value = '';
     };
 
     // ============================================
@@ -257,11 +269,25 @@ const Admin_BulkUpload = () => {
     // ============================================
     const handleOpenIssueConfirm = () => {
         const selected = filteredLearners.filter(l => l.selected);
+
         if (selected.length === 0) {
             setError('No learners selected');
             setTimeout(() => setError(null), 5000);
             return;
         }
+
+        if (selectedFiles.length === 0) {
+            setError('Please upload a certificate template PDF first.');
+            setTimeout(() => setError(null), 5000);
+            return;
+        }
+
+        if (!issueDate) {
+            setError('Please select an issue date before issuing certificates.');
+            setTimeout(() => setError(null), 5000);
+            return;
+        }
+
         setShowIssueConfirmModal(true);
     };
 
@@ -273,7 +299,7 @@ const Admin_BulkUpload = () => {
     };
 
     // ============================================
-    // CONFIRM ISSUE - performs the actual API call
+    // CONFIRM ISSUE — send template + certificates as multipart
     // ============================================
     const confirmIssue = async () => {
         setShowIssueConfirmModal(false);
@@ -286,20 +312,34 @@ const Admin_BulkUpload = () => {
             return;
         }
 
+        if (selectedFiles.length === 0) {
+            setError('Please upload a certificate template PDF first.');
+            setTimeout(() => setError(null), 5000);
+            return;
+        }
+
+        if (!issueDate) {
+            setError('Please select an issue date before issuing certificates.');
+            setTimeout(() => setError(null), 5000);
+            return;
+        }
+
         try {
             setSubmitting(true);
 
             const certificatesToIssue = selectedLearners.map(learner => ({
                 user_id: learner.id,
                 programme_id: learner.Programme_id || selectedProgramme,
-                issue_date: learner.Completion_date || new Date().toISOString().split('T')[0],
+                issue_date: issueDate,
                 expiry_date: null
             }));
 
-            console.log('Sending bulk certificates:', certificatesToIssue);
+            const formData = new FormData();
+            formData.append('template', selectedFiles[0]);
+            formData.append('certificates', JSON.stringify(certificatesToIssue));
 
-            const response = await api.post('/admin/bulk-certificates/issue', {
-                certificates: certificatesToIssue
+            const response = await api.post('/admin/bulk-certificates/issue', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
             });
 
             if (response.data.success) {
@@ -313,6 +353,8 @@ const Admin_BulkUpload = () => {
                 setTimeout(() => setSuccessMessage(''), 5000);
 
                 setSelectedFiles([]);
+                const fileInput = document.getElementById('bulkFileInput');
+                if (fileInput) fileInput.value = '';
                 handleDeselectAll();
                 await fetchEligibleLearners();
             } else {
@@ -440,7 +482,7 @@ const Admin_BulkUpload = () => {
 
                     {/* Page Header */}
                     <div className="bulkupload-page-header">
-                        <h1>Bulk Certificate Issuance – By Course</h1>
+                        <h1>Bulk Certificate Issuance — By Course</h1>
                         <p>Select a programme and configure status filters to identify eligible learners. Match, preview, and dispatch standard credentials in mass.</p>
                     </div>
 
@@ -448,7 +490,7 @@ const Admin_BulkUpload = () => {
                     <div className="filter-section">
                         <div className="filter-row">
                             <div className="filter-group">
-                                <label>Course / Programme</label>
+                                <label>COURSE / PROGRAMME</label>
                                 <select
                                     value={selectedProgramme}
                                     onChange={(e) => setSelectedProgramme(e.target.value)}
@@ -463,25 +505,13 @@ const Admin_BulkUpload = () => {
                             </div>
 
                             <div className="filter-group">
-                                <label>Completion Status</label>
+                                <label>COMPLETION STATUS</label>
                                 <select
                                     value={selectedStatus}
                                     onChange={(e) => setSelectedStatus(e.target.value)}
                                 >
                                     {statusOptions.map((status) => (
                                         <option key={status} value={status}>{status}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div className="filter-group">
-                                <label>Date Range</label>
-                                <select
-                                    value={selectedDateRange}
-                                    onChange={(e) => setSelectedDateRange(e.target.value)}
-                                >
-                                    {dateRanges.map((range) => (
-                                        <option key={range} value={range}>{range}</option>
                                     ))}
                                 </select>
                             </div>
@@ -497,40 +527,73 @@ const Admin_BulkUpload = () => {
                         </div>
                     </div>
 
-                    {/* Bulk Upload Section */}
+                    {/* Bulk Upload Section — one template only */}
                     <div className="bulk-upload-section">
-                        <h3>Bulk Upload Certificate PDFs</h3>
-                        <p>Upload certificate PDF files. Max 50 files, 10MB each.</p>
+                        <h3>Certificate Template</h3>
+                        <p>Upload one blank certificate template PDF. Each selected learner's name, ID, and programme will be overlaid onto this template.</p>
 
                         <div
                             className="bulk-file-upload-area"
                             onClick={() => document.getElementById('bulkFileInput').click()}
                         >
-                            <i className="fas fa-cloud-upload-alt"></i>
-                            <p>Upload certificate PDF files</p>
-                            <span className="upload-hint">Max 50 files, 10MB each.</span>
-                            <button className="btn-select-files">
-                                <i className="fas fa-file-pdf"></i> Select PDF Files
+                            <i className="far fa-file-alt upload-doc-icon"></i>
+                            <p>Upload one certificate template PDF</p>
+                            <span className="upload-hint">One file only, max 10MB.</span>
+                            <button className="btn-select-files" type="button">
+                                <i className="fas fa-file-pdf"></i> Select Template PDF
                             </button>
                             <input
                                 type="file"
                                 id="bulkFileInput"
                                 accept=".pdf"
-                                multiple
                                 onChange={handleFileSelect}
                                 style={{ display: 'none' }}
                             />
                         </div>
 
                         {selectedFiles.length > 0 && (
-                            <div className="selected-files-info">
+                            <div className="selected-files-info" style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '10px'
+                            }}>
                                 <i className="fas fa-check-circle"></i>
-                                <span>{selectedFiles.length} file(s) selected</span>
+                                <span>Template selected: <strong>{selectedFiles[0].name}</strong></span>
+                                <button
+                                    type="button"
+                                    onClick={handleRemoveTemplate}
+                                    style={{
+                                        background: 'transparent',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        color: '#dc3545',
+                                        fontWeight: 500,
+                                        marginLeft: 'auto'
+                                    }}
+                                >
+                                    Remove
+                                </button>
                             </div>
                         )}
 
-                        <div className="supported-formats">
-                            Supported formats: Standard PDF/A versions
+                        {/* Bottom row: Supported formats + Issue date */}
+                        <div className="bulk-upload-footer">
+                            <div className="supported-formats">
+                                Supported formats: Standard PDF/A versions
+                            </div>
+                            <div className="issue-date-wrapper">
+                                <input
+                                    type="date"
+                                    id="issueDate"
+                                    min={new Date().toISOString().split('T')[0]}
+                                    value={issueDate}
+                                    onChange={(e) => setIssueDate(e.target.value)}
+                                    className={`issue-date-input ${issueDate ? 'has-value' : ''}`}
+                                />
+                                {!issueDate && (
+                                    <span className="issue-date-placeholder">Issue date</span>
+                                )}
+                            </div>
                         </div>
                     </div>
 
@@ -558,11 +621,8 @@ const Admin_BulkUpload = () => {
                                 >
                                     <i className="fas fa-check-double"></i> Select All Eligible
                                 </button>
-                                <button
-                                    className="btn-deselect-all"
-                                    onClick={handleDeselectAll}
-                                >
-                                    <i className="fas fa-times"></i> Deselect All
+                                <button className="btn-deselect-all" onClick={handleDeselectAll}>
+                                    Deselect All
                                 </button>
                             </div>
                         </div>
@@ -628,11 +688,8 @@ const Admin_BulkUpload = () => {
 
                     {/* Action Buttons */}
                     <div className="bulk-actions">
-                        <button
-                            className="btn-back"
-                            onClick={() => navigate('/admin-certificates')}
-                        >
-                            <i className="fas fa-arrow-left"></i> Back to Certificates
+                        <button className="btn-back" onClick={() => navigate('/admin-certificates')}>
+                            Back to Certificates
                         </button>
                         <div className="bulk-actions-right">
                             <button
@@ -663,7 +720,7 @@ const Admin_BulkUpload = () => {
                 </main>
             </div>
 
-            {/* ===== PREVIEW SELECTED MODAL ===== */}
+            {/* Preview Modal */}
             {showPreviewModal && (
                 <div className="modal-overlay" onClick={closePreview}>
                     <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -675,7 +732,7 @@ const Admin_BulkUpload = () => {
                                     <tr style={{ borderBottom: '1px solid #eaeaea' }}>
                                         <th style={{ textAlign: 'left', padding: '6px 8px' }}>Name</th>
                                         <th style={{ textAlign: 'left', padding: '6px 8px' }}>Email</th>
-                                        <th style={{ textAlign: 'left', padding: '6px 8px' }}>Certificate #</th>
+                                        <th style={{ textAlign: 'left', padding: '6px 8px' }}>Completion</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -683,7 +740,7 @@ const Admin_BulkUpload = () => {
                                         <tr key={learner.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
                                             <td style={{ padding: '6px 8px' }}>{learner.name}</td>
                                             <td style={{ padding: '6px 8px' }}>{learner.email}</td>
-                                            <td style={{ padding: '6px 8px' }}>{learner.certNumber}</td>
+                                            <td style={{ padding: '6px 8px' }}>{learner.formattedCompletionDate}</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -696,31 +753,33 @@ const Admin_BulkUpload = () => {
                 </div>
             )}
 
-            {/* ===== ISSUE CONFIRMATION MODAL ===== */}
+            {/* Issue Confirmation Modal */}
             {showIssueConfirmModal && (
                 <div className="modal-overlay" onClick={cancelIssue}>
-                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                    <div className="modal-content confirmation-modal" onClick={(e) => e.stopPropagation()}>
                         <h2>Confirm Bulk Issuance</h2>
-                        <p>You are about to issue certificates to <strong>{selectedCount}</strong> learner(s).</p>
+                        <p className="confirmation-question">
+                            You are about to issue certificates to <strong>{selectedCount}</strong> learner(s).
+                        </p>
                         <div className="modal-details" style={{ maxHeight: '200px', overflowY: 'auto' }}>
                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
                                 <thead>
                                     <tr style={{ borderBottom: '1px solid #eaeaea' }}>
                                         <th style={{ textAlign: 'left', padding: '6px 8px' }}>Name</th>
-                                        <th style={{ textAlign: 'left', padding: '6px 8px' }}>Certificate #</th>
+                                        <th style={{ textAlign: 'left', padding: '6px 8px' }}>Email</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {filteredLearners.filter(l => l.selected).map((learner) => (
                                         <tr key={learner.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
                                             <td style={{ padding: '6px 8px' }}>{learner.name}</td>
-                                            <td style={{ padding: '6px 8px' }}>{learner.certNumber}</td>
+                                            <td style={{ padding: '6px 8px' }}>{learner.email}</td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
                         </div>
-                        <p style={{ marginTop: '12px', color: '#555' }}>This action cannot be undone. Proceed?</p>
+                        <p style={{ marginTop: '12px' }}>This action cannot be undone. Proceed?</p>
                         <div className="modal-actions">
                             <button className="modal-btn cancel-btn" onClick={cancelIssue}>Cancel</button>
                             <button className="modal-btn confirm-btn" onClick={confirmIssue}>Yes, Issue Certificates</button>

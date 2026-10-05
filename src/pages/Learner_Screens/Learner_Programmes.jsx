@@ -1,14 +1,113 @@
-import React, { useState } from 'react';
+// src/pages/Learner_Screens/Learner_Programmes.jsx
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Learner_Header from '../../components/Learner/Learner_Header';
 import Learner_SideBar from '../../components/Learner/Learner_SideBar';
 import '../../styles/Learner/Learner_Programmes.css';
+import { API_BASE } from '../../config/api';
+
+const classifyStartDate = (rawDate) => {
+  if (!rawDate) return 'none';
+  const d = new Date(rawDate);
+  if (isNaN(d.getTime())) return 'none';
+  d.setHours(0, 0, 0, 0);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (d.getTime() === today.getTime()) return 'today';
+  return d < today ? 'past' : 'future';
+};
+
+const isProgrammeActionable = (programme) => {
+  if (programme.status === 'Active') return true;
+  if (programme.status === 'Archived') return true;
+  if (programme.status !== 'Upcoming') return false;
+  const kind = classifyStartDate(programme.startDateRaw);
+  return kind === 'today' || kind === 'past';
+};
+
+const normalizeProgramme = (p = {}) => {
+  const rawStatus = p.status ?? p.Programme_status ?? 'Draft';
+
+  const startDateRaw =
+    p.startDateRaw ??
+    p.startDate ??
+    p.Start_date ??
+    null;
+
+  let formattedStartDate = 'Not set';
+  if (startDateRaw) {
+    const d = new Date(startDateRaw);
+    if (!isNaN(d.getTime())) {
+      formattedStartDate = d.toLocaleDateString('en-US', {
+        month: 'short',
+        day: '2-digit',
+        year: 'numeric'
+      });
+    } else {
+      formattedStartDate = String(startDateRaw);
+    }
+  }
+
+  return {
+    id: p.id ?? p.Programme_id ?? Date.now(),
+    title: p.name ?? p.Programme_name ?? 'Untitled Programme',
+    description: p.description ?? p.Programme_description ?? '',
+    duration: p.duration ?? p.Duration ?? '',
+    category: p.category ?? p.Category ?? '',
+    status: rawStatus,
+    startDate: formattedStartDate,
+    startDateRaw
+  };
+};
 
 const ProgrammesPage = () => {
+  const navigate = useNavigate();
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
-  const [interestedProgrammes, setInterestedProgrammes] = useState([]);
   const [selectedProgramme, setSelectedProgramme] = useState(null);
+
+  const [programmes, setProgrammes] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+
+  const [nowTick, setNowTick] = useState(Date.now());
+
+  const fetchProgrammes = useCallback(async () => {
+    setIsLoading(true);
+    setLoadError('');
+    try {
+      const res = await fetch(`${API_BASE}/api/programmes`);
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Failed to load programmes.');
+      }
+
+      const visible = (data.programmes || [])
+        .map(normalizeProgramme)
+        .filter(p => p.status !== 'Draft');
+
+      setProgrammes(visible);
+    } catch (err) {
+      console.error('Fetch programmes error:', err);
+      setLoadError(err.message || 'Failed to load programmes.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchProgrammes();
+  }, [fetchProgrammes]);
+
+  useEffect(() => {
+    const id = setInterval(() => setNowTick(Date.now()), 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen((isOpen) => !isOpen);
@@ -18,93 +117,46 @@ const ProgrammesPage = () => {
     setIsMobileMenuOpen(false);
   };
 
-  const programmes = [
-    {
-      id: 1,
-      title: 'Digital Literacy Fundamentals',
-      description: 'Master essential computer skills, internet navigation, email management, online safety, and everyday digital tools.',
-      duration: '8 weeks',
-      category: 'Digital Literacy'
-    },
-    {
-      id: 2,
-      title: 'Microsoft 365 Essentials',
-      description: 'Learn Word, Excel, PowerPoint, Outlook, and Teams for confident and productive workplace collaboration.',
-      duration: '12 weeks',
-      category: 'Microsoft 365'
-    },
-    {
-      id: 3,
-      title: 'Digital Marketing Strategies',
-      description: 'Build practical skills in social media marketing, search engine optimization, content strategy, and campaign planning.',
-      duration: '10 weeks',
-      category: 'Digital Marketing'
-    },
-    {
-      id: 4,
-      title: 'Advanced Excel & Data Analysis',
-      description: 'Unlock complex formulas, pivot tables, data visualization tools, and reporting techniques for better business decisions.',
-      duration: '8 weeks',
-      category: 'Microsoft 365'
-    },
-    {
-      id: 5,
-      title: 'Social Media Management',
-      description: 'Build an engaging online presence, schedule post workflows, design visual content, and measure social media performance.',
-      duration: '6 weeks',
-      category: 'Digital Marketing'
-    },
-    {
-      id: 6,
-      title: 'Internet Safety & POPIA Compliance',
-      description: 'Understand POPI Act privacy regulations, corporate compliance frameworks, secure browsing, and responsible data handling.',
-      duration: '4 weeks',
-      category: 'Digital Literacy'
-    },
-    {
-      id: 7,
-      title: 'Cloud Computing Fundamentals',
-      description: 'Explore cloud services, deployment models, infrastructure concepts, and the fundamentals of modern cloud-based work.',
-      duration: '10 weeks',
-      category: 'Digital Literacy'
-    },
-    {
-      id: 8,
-      title: 'Cybersecurity Essentials',
-      description: 'Learn security best practices, threat detection, risk management, password protection, and safe digital habits.',
-      duration: '12 weeks',
-      category: 'Digital Literacy'
-    },
-    {
-      id: 9,
-      title: 'Data Science & Analytics',
-      description: 'Develop a foundation in data visualization, statistical analysis, data storytelling, and machine learning basics.',
-      duration: '14 weeks',
-      category: 'Digital Marketing'
-    }
-  ];
+  const handleInterest = (programme) => {
+    sessionStorage.setItem('pendingProgrammeInterest', JSON.stringify({
+      programmeId: programme.id,
+      programmeTitle: programme.title,
+      stagedAt: Date.now(),
+    }));
 
-  const categories = ['All', 'Digital Literacy', 'Microsoft 365', 'Digital Marketing'];
-
-  const handleInterest = (programmeId) => {
-    if (interestedProgrammes.includes(programmeId)) {
-      setInterestedProgrammes(interestedProgrammes.filter(id => id !== programmeId));
-    } else {
-      setInterestedProgrammes([...interestedProgrammes, programmeId]);
-    }
+    navigate('/locate-center', {
+      state: {
+        programmeId: programme.id,
+        programmeTitle: programme.title
+      }
+    });
   };
 
-  const filteredProgrammes = programmes.filter(programme => {
-    const matchesCategory = activeFilter === 'All' || programme.category === activeFilter;
-    const matchesSearch = programme.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         programme.description.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+  const categories = useMemo(() => {
+    const set = new Set(programmes.map(p => p.category).filter(Boolean));
+    return ['All', ...Array.from(set)];
+  }, [programmes]);
+
+  const filteredProgrammes = useMemo(() => {
+    const search = (searchTerm || '').trim().toLowerCase();
+
+    return programmes.filter(programme => {
+      const matchesCategory =
+        activeFilter === 'All' || programme.category === activeFilter;
+
+      const title = (programme.title || '').toLowerCase();
+      const description = (programme.description || '').toLowerCase();
+      const matchesSearch =
+        search === '' || title.includes(search) || description.includes(search);
+
+      return matchesCategory && matchesSearch;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [programmes, activeFilter, searchTerm, nowTick]);
 
   return (
     <div className="programmes-layout">
       <Learner_Header
-        userName="Sarah Khumalo"
         onMenuToggle={toggleMobileMenu}
         isMobileMenuOpen={isMobileMenuOpen}
       />
@@ -117,7 +169,6 @@ const ProgrammesPage = () => {
         />
 
         <main className="programmes-page">
-          {/* Header Section */}
           <section className="programmes-hero">
             <div className="hero-content">
               <h1>Our Programmes</h1>
@@ -127,7 +178,6 @@ const ProgrammesPage = () => {
             </div>
           </section>
 
-          {/* Filter and Search Section */}
           <section className="programmes-filter">
             <div className="filter-content">
               <div className="filter-left">
@@ -155,51 +205,75 @@ const ProgrammesPage = () => {
             </div>
           </section>
 
-          {/* Programmes Grid */}
           <section className="programmes-grid-section">
             <div className="grid-content">
-              <div className="programmes-grid">
-                {filteredProgrammes.length > 0 ? (
-                  filteredProgrammes.map((programme) => (
-                    <div key={programme.id} className="programme-card">
-                      <div className="programme-image-placeholder">
-                        <div className="placeholder-content">
-                          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.5">
-                            <rect x="3" y="3" width="18" height="18" rx="2" />
-                            <circle cx="8.5" cy="8.5" r="1.5" />
-                            <path d="M21 15L16 10L5 21" />
-                          </svg>
-                          <span>Course Image</span>
+              {isLoading ? (
+                <div className="no-results">
+                  <p>Loading programmes...</p>
+                </div>
+              ) : loadError ? (
+                <div className="no-results">
+                  <p>{loadError}</p>
+                  <button className="read-more-button" onClick={fetchProgrammes}>
+                    Retry
+                  </button>
+                </div>
+              ) : (
+                <div className="programmes-grid">
+                  {filteredProgrammes.length > 0 ? (
+                    filteredProgrammes.map((programme) => {
+                      const actionable = isProgrammeActionable(programme);
+
+                      return (
+                        <div key={programme.id} className="programme-card">
+                          <div className="programme-image-placeholder">
+                            <div className="placeholder-content">
+                              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.5">
+                                <rect x="3" y="3" width="18" height="18" rx="2" />
+                                <circle cx="8.5" cy="8.5" r="1.5" />
+                                <path d="M21 15L16 10L5 21" />
+                              </svg>
+                              <span>Course Image</span>
+                            </div>
+                          </div>
+                          <div className="programme-content">
+                            <h3>{programme.title}</h3>
+                            <p className="programme-description">{programme.description}</p>
+                            <button
+                              type="button"
+                              className="read-more-button"
+                              onClick={() => setSelectedProgramme(programme)}
+                            >
+                              Read more
+                            </button>
+                            <div className="programme-meta">
+                              <span className="duration">Duration: {programme.duration}</span>
+                            </div>
+                            <button
+                              className="btn-interest"
+                              onClick={() => actionable && handleInterest(programme)}
+                              disabled={!actionable}
+                              title={
+                                !actionable
+                                  ? `Available from ${programme.startDate}`
+                                  : undefined
+                              }
+                            >
+                              {!actionable
+                                ? `Available from ${programme.startDate}`
+                                : "I'm Interested"}
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                      <div className="programme-content">
-                        <h3>{programme.title}</h3>
-                        <p className="programme-description">{programme.description}</p>
-                        <button
-                          type="button"
-                          className="read-more-button"
-                          onClick={() => setSelectedProgramme(programme)}
-                        >
-                          Read more
-                        </button>
-                        <div className="programme-meta">
-                          <span className="duration">Duration: {programme.duration}</span>
-                        </div>
-                        <button
-                          className={`btn-interest ${interestedProgrammes.includes(programme.id) ? 'interested' : ''}`}
-                          onClick={() => handleInterest(programme.id)}
-                        >
-                          {interestedProgrammes.includes(programme.id) ? 'Interested ✓' : "I'm Interested"}
-                        </button>
-                      </div>
+                      );
+                    })
+                  ) : (
+                    <div className="no-results">
+                      <p>No programmes found matching your criteria.</p>
                     </div>
-                  ))
-                ) : (
-                  <div className="no-results">
-                    <p>No programmes found matching your criteria.</p>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
             </div>
           </section>
 

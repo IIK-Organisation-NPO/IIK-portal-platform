@@ -5,7 +5,7 @@ class OTP {
     static async create(userId, email, otpCode, expiresInMinutes = 10) {
         const expiresAt = new Date(Date.now() + expiresInMinutes * 60000);
 
-        // Delete any existing unused OTP for this user
+        
         await this.deleteByUserId(userId);
 
         const query = `
@@ -196,7 +196,7 @@ class OTP {
         };
     }
 
-    // ===== CLEANUP OLD OTPS (Run as a scheduled job) =====
+    
     static async cleanup() {
         const deleted = await this.deleteExpired();
         console.log(`🧹 Cleaned up ${deleted} expired OTPs`);

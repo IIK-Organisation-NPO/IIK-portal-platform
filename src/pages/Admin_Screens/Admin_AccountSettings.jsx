@@ -1,25 +1,47 @@
 // src/pages/Admin/Admin_AccountSettings.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import '../../styles/Admin/Admin_AccountSettings.css';
 import Admin_Sidebar from '../../components/Admin/Admin_Sidebar';
 import Admin_Header from '../../components/Admin/Admin_Header';
+import api from '../../services/api';
+
+// ---------------------------------------------------------------------------
+// Password requirements — mirror the staff registration rules
+// ---------------------------------------------------------------------------
+const PASSWORD_REQUIREMENTS = [
+  { id: 'length',    label: 'At least 8 characters',                    test: (p) => p.length >= 8 },
+  { id: 'lowercase', label: 'At least one lowercase letter',            test: (p) => /[a-z]/.test(p) },
+  { id: 'uppercase', label: 'At least one uppercase letter',            test: (p) => /[A-Z]/.test(p) },
+  { id: 'number',    label: 'At least one number',                      test: (p) => /\d/.test(p) },
+  { id: 'special',   label: 'At least one special character (@$!%*?&)', test: (p) => /[@$!%*?&]/.test(p) }
+];
 
 const Admin_AccountSettings = () => {
   // ============================================================
   // ACCOUNT PROFILE STATE
   // ============================================================
-  const [name, setName] = useState('Admin');
-  const [surname, setSurname] = useState('User');
-  const [email] = useState('admin@iik.co.za'); // Read-only
-  const [role] = useState('Administrator');    // Read-only
+  const [name, setName] = useState('');
+  const [surname, setSurname] = useState('');
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState('Administrator');
+  const [originalProfile, setOriginalProfile] = useState({ name: '', surname: '' });
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileError, setProfileError] = useState('');
 
   // ============================================================
   // PASSWORD STATE
   // ============================================================
-  const [currentPassword, setCurrentPassword] = useState('**********');
+  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordErrors, setPasswordErrors] = useState({});
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordServerError, setPasswordServerError] = useState('');
+
+  // Live requirements panel visibility — shows while typing the new password
+  // and hides once every requirement is met.
+  const [showPasswordRequirements, setShowPasswordRequirements] = useState(false);
 
   // ============================================================
   // MODAL STATE
@@ -30,13 +52,10 @@ const Admin_AccountSettings = () => {
   const [showRestoreModal, setShowRestoreModal] = useState(false);
 
   // ============================================================
-  // TOAST STATE (FIXED)
+  // TOAST STATE
   // ============================================================
-  // toastMessage  -> the text to display
-  // toastVisible  -> controls enter vs. exit animation class
   const [toastMessage, setToastMessage] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
-  // Store timer IDs so rapid clicks don't cut off the previous toast
   const toastTimerRef = useRef(null);
   const toastCleanupRef = useRef(null);
 
@@ -53,10 +72,15 @@ const Admin_AccountSettings = () => {
 
   // ============================================================
   // NOTIFICATION PREFERENCES STATE
+  //
+  // These persist server-side via /staff/me/notifications. The state
+  // mirrors what the server has, and every toggle PUTs the full set.
   // ============================================================
   const [notifyCert, setNotifyCert] = useState(true);
   const [notifyReg, setNotifyReg] = useState(true);
   const [notifyWeekly, setNotifyWeekly] = useState(false);
+  const [prefsLoading, setPrefsLoading] = useState(true);
+  const [prefsSaving, setPrefsSaving] = useState(false);
 
   // ============================================================
   // TWO-FACTOR AUTHENTICATION STATE
@@ -71,45 +95,35 @@ const Admin_AccountSettings = () => {
   const [showScrollButton, setShowScrollButton] = useState(false);
 
   // ============================================================
+  // DERIVED — has the admin met every new-password requirement?
+  // ============================================================
+  const allPasswordRequirementsMet = useMemo(
+    () => PASSWORD_REQUIREMENTS.every(r => r.test(newPassword)),
+    [newPassword]
+  );
+
+  // ============================================================
   // UTILITY FUNCTIONS
   // ============================================================
-
-  /** Scrolls window to top smoothly. */
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  /**
-   * Displays a toast popup that:
-   *   1. Fades + slides in from the top of the screen
-   *   2. Stays visible for 2.5 seconds
-   *   3. Fades + slides out gently
-   *
-   * FIX: Clears any previous timers so rapid clicks don't cut the
-   *      new toast short, and adds a two-phase show/hide so we can
-   *      animate the exit properly.
-   */
   const showToast = (message) => {
-    // Cancel any pending timers from a previous toast
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     if (toastCleanupRef.current) clearTimeout(toastCleanupRef.current);
 
-    // Phase 1: set the message and make it visible (triggers enter animation)
     setToastMessage(message);
     setToastVisible(true);
 
-    // Phase 2: after 2.5s, trigger exit animation
     toastTimerRef.current = setTimeout(() => {
       setToastVisible(false);
-
-      // Phase 3: after exit animation completes (400ms), remove the node
       toastCleanupRef.current = setTimeout(() => {
         setToastMessage('');
       }, 400);
     }, 2500);
   };
 
-  /** Clean up toast timers if the component unmounts mid-animation. */
   useEffect(() => {
     return () => {
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
@@ -117,47 +131,184 @@ const Admin_AccountSettings = () => {
     };
   }, []);
 
-  /** Show / hide the scroll-to-top button. */
   useEffect(() => {
     const handleScroll = () => setShowScrollButton(window.scrollY > 400);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  /** Scroll to top on mount. */
   useEffect(() => {
     scrollToTop();
+  }, []);
+
+  // ============================================================
+  // FETCH MY PROFILE ON MOUNT
+  // ============================================================
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchProfile = async (attempt = 1) => {
+      try {
+        setProfileLoading(true);
+        setProfileError('');
+
+        const res = await api.get('/staff/me');
+        if (cancelled) return;
+
+        const payload = res.data?.data ?? res.data ?? null;
+        const isOk = res.data?.success !== false && !!payload;
+
+        if (isOk && (payload.name || payload.Name)) {
+          const rawRole = payload.role_type || payload.role || '';
+          const roleId  = payload.role_id ?? payload.roleId ?? null;
+
+          let roleLabel = 'Administrator';
+          if (rawRole === 'Super Admin' || roleId === 3) roleLabel = 'Super Admin';
+          else if (rawRole === 'ADMIN' || roleId === 1) roleLabel = 'Administrator';
+          else if (rawRole) roleLabel = rawRole;
+
+          setName(payload.name || payload.Name || '');
+          setSurname(payload.surname || payload.Surname || '');
+          setEmail(payload.email || payload.Email_address || '');
+          setRole(roleLabel);
+
+          setOriginalProfile({
+            name: payload.name || payload.Name || '',
+            surname: payload.surname || payload.Surname || ''
+          });
+
+          setProfileError('');
+        } else {
+          setProfileError(res.data?.message || 'Failed to load profile');
+        }
+      } catch (err) {
+        if (cancelled) return;
+
+        if (attempt === 1) {
+          setTimeout(() => fetchProfile(2), 300);
+          return;
+        }
+
+        console.error('Fetch profile error:', err);
+        setProfileError(
+          err.response?.data?.message ||
+          err.response?.data?.error ||
+          err.message ||
+          'Failed to load profile'
+        );
+      } finally {
+        if (!cancelled) setProfileLoading(false);
+      }
+    };
+
+    fetchProfile();
+
+    return () => { cancelled = true; };
+  }, []);
+
+  // ============================================================
+  // FETCH NOTIFICATION PREFERENCES ON MOUNT
+  // ============================================================
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchPrefs = async () => {
+      try {
+        setPrefsLoading(true);
+        const res = await api.get('/staff/me/notifications');
+        if (cancelled) return;
+
+        const payload = res.data?.data ?? null;
+        const isOk = res.data?.success !== false && !!payload;
+
+        if (isOk) {
+          setNotifyCert(payload.notifyOnCertificate ?? true);
+          setNotifyReg(payload.notifyOnRegistration ?? true);
+          setNotifyWeekly(payload.notifyWeekly ?? false);
+        }
+      } catch (err) {
+        // Silent — if this fails, toggles fall back to defaults and
+        // the next toggle attempt will surface the error.
+        console.error('Fetch notification prefs error:', err);
+      } finally {
+        if (!cancelled) setPrefsLoading(false);
+      }
+    };
+
+    fetchPrefs();
+
+    return () => { cancelled = true; };
   }, []);
 
   // ============================================================
   // PROFILE HANDLERS
   // ============================================================
   const handleSaveProfile = () => {
-    if (name !== 'Admin' || surname !== 'User') {
-      setShowProfileModal(true);
-    } else {
+    setProfileError('');
+
+    if (name.trim() === originalProfile.name && surname.trim() === originalProfile.surname) {
       showToast('No changes to save.');
+      return;
     }
+
+    if (!name.trim() || !surname.trim()) {
+      setProfileError('Name and surname are required');
+      return;
+    }
+
+    setShowProfileModal(true);
   };
 
-  const confirmProfileSave = () => {
-    setShowProfileModal(false);
-    showToast('Profile updated successfully!');
+  const confirmProfileSave = async () => {
+    setProfileSaving(true);
+    setProfileError('');
+
+    try {
+      const res = await api.put('/staff/me', {
+        name: name.trim(),
+        surname: surname.trim()
+      });
+
+      if (res.data.success) {
+        const d = res.data.data || {};
+        setOriginalProfile({
+          name: d.name || name.trim(),
+          surname: d.surname || surname.trim()
+        });
+        setShowProfileModal(false);
+        showToast('Profile updated successfully!');
+      } else {
+        const messages = (res.data.errors || [])
+          .map(e => e.message)
+          .join('. ');
+        setProfileError(messages || res.data.message || 'Failed to update profile');
+        setShowProfileModal(false);
+      }
+    } catch (err) {
+      console.error('Save profile error:', err);
+      const messages = (err.response?.data?.errors || [])
+        .map(e => e.message)
+        .join('. ');
+      setProfileError(
+        messages ||
+        err.response?.data?.message ||
+        'Failed to update profile'
+      );
+      setShowProfileModal(false);
+    } finally {
+      setProfileSaving(false);
+    }
   };
 
   // ============================================================
   // PASSWORD HANDLERS
   // ============================================================
-
-  /**
-   * Validates password inputs against the same rules used on Signup:
-   *   - Not empty
-   *   - Min 8 characters
-   *   - At least 1 lowercase, 1 uppercase, 1 digit, 1 special char
-   *   - Confirm matches
-   */
   const validatePassword = () => {
     const errors = {};
+
+    if (!currentPassword) {
+      errors.currentPassword = 'Current password is required';
+    }
 
     if (!newPassword) {
       errors.newPassword = 'New password is required';
@@ -184,29 +335,84 @@ const Admin_AccountSettings = () => {
   };
 
   const handleUpdatePassword = () => {
-    // FIX: capture the returned errors directly (React state updates are async,
-    // so reading passwordErrors right after setPasswordErrors would be stale).
+    setPasswordServerError('');
     const errors = validatePassword();
 
     if (Object.keys(errors).length > 0) {
-      // Show the first error to the user via toast
       const firstError = Object.values(errors)[0];
       showToast(firstError);
       return;
     }
 
-    // All validations passed -> open confirmation modal
     setShowPasswordModal(true);
   };
 
-  const confirmPasswordUpdate = () => {
-    setShowPasswordModal(false);
-    showToast('Password updated successfully!');
-    setCurrentPassword(newPassword);
-    setNewPassword('');
-    setConfirmPassword('');
-    setPasswordErrors({});
+  const confirmPasswordUpdate = async () => {
+    setPasswordSaving(true);
+    setPasswordServerError('');
+
+    try {
+      const res = await api.put('/staff/me/password', {
+        currentPassword,
+        newPassword,
+        confirmPassword
+      });
+
+      if (res.data.success) {
+        setShowPasswordModal(false);
+        showToast('Password updated successfully!');
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+        setPasswordErrors({});
+        setShowPasswordRequirements(false);
+      } else {
+        handlePasswordErrors(res.data);
+      }
+    } catch (err) {
+      console.error('Change password error:', err);
+      handlePasswordErrors(err.response?.data || {});
+    } finally {
+      setPasswordSaving(false);
+    }
   };
+
+  const handlePasswordErrors = (data) => {
+    setShowPasswordModal(false);
+
+    const fieldErrors = {};
+    (data.errors || []).forEach(e => {
+      if (e.field) fieldErrors[e.field] = e.message;
+    });
+
+    if (Object.keys(fieldErrors).length > 0) {
+      setPasswordErrors(fieldErrors);
+      setPasswordServerError('');
+
+      if (fieldErrors.currentPassword) {
+        showToast(fieldErrors.currentPassword);
+      } else {
+        const first = Object.values(fieldErrors)[0];
+        showToast(first);
+      }
+    } else {
+      const message = data.message || 'Failed to update password';
+      setPasswordServerError(message);
+      showToast(message);
+    }
+  };
+
+  // ============================================================
+  // LIVE NEW-PASSWORD REQUIREMENTS PANEL
+  // ============================================================
+  useEffect(() => {
+    const hasContent = newPassword.length > 0;
+    if (!hasContent) {
+      setShowPasswordRequirements(false);
+      return;
+    }
+    setShowPasswordRequirements(!allPasswordRequirementsMet);
+  }, [newPassword, allPasswordRequirementsMet]);
 
   // ============================================================
   // BACKUP HANDLERS
@@ -243,7 +449,7 @@ const Admin_AccountSettings = () => {
   };
 
   // ============================================================
-  // TOGGLE HANDLERS  (each shows a clear enable/disable toast)
+  // TOGGLE HANDLERS
   // ============================================================
   const toggle2FA = () => {
     const newState = !is2FAEnabled;
@@ -265,34 +471,93 @@ const Admin_AccountSettings = () => {
     );
   };
 
+  // ============================================================
+  // NOTIFICATION TOGGLE HANDLERS
+  //
+  // Each toggle flips one pref, then PUTs the full set to the server.
+  // Optimistic update — rolls back on failure.
+  // ============================================================
+  const saveNotificationPrefs = async (next) => {
+    const previous = {
+      notifyCert,
+      notifyReg,
+      notifyWeekly,
+    };
+
+    // Optimistic flip
+    setNotifyCert(next.notifyCert);
+    setNotifyReg(next.notifyReg);
+    setNotifyWeekly(next.notifyWeekly);
+    setPrefsSaving(true);
+
+    try {
+      const res = await api.put('/staff/me/notifications', {
+        notifyOnCertificate: next.notifyCert,
+        notifyOnRegistration: next.notifyReg,
+        notifyWeekly: next.notifyWeekly,
+      });
+
+      if (res.data?.success === false) {
+        throw new Error(res.data?.message || 'Failed to save preference');
+      }
+    } catch (err) {
+      console.error('Save notification prefs error:', err);
+      // Roll back
+      setNotifyCert(previous.notifyCert);
+      setNotifyReg(previous.notifyReg);
+      setNotifyWeekly(previous.notifyWeekly);
+      showToast('Failed to save preference. Please try again.');
+    } finally {
+      setPrefsSaving(false);
+    }
+  };
+
   const toggleNotifyCert = () => {
+    if (prefsLoading || prefsSaving) return;
+
     const newState = !notifyCert;
-    setNotifyCert(newState);
     showToast(
       newState
         ? 'Email notifications for certificate issuance have been enabled.'
         : 'Email notifications for certificate issuance have been turned off.'
     );
+    saveNotificationPrefs({
+      notifyCert: newState,
+      notifyReg,
+      notifyWeekly,
+    });
   };
 
   const toggleNotifyReg = () => {
+    if (prefsLoading || prefsSaving) return;
+
     const newState = !notifyReg;
-    setNotifyReg(newState);
     showToast(
       newState
         ? 'Notifications for new learner registrations have been enabled.'
         : 'Notifications for new learner registrations have been turned off.'
     );
+    saveNotificationPrefs({
+      notifyCert,
+      notifyReg: newState,
+      notifyWeekly,
+    });
   };
 
   const toggleNotifyWeekly = () => {
+    if (prefsLoading || prefsSaving) return;
+
     const newState = !notifyWeekly;
-    setNotifyWeekly(newState);
     showToast(
       newState
         ? 'Weekly summary report notifications have been enabled.'
         : 'Weekly summary report notifications have been turned off.'
     );
+    saveNotificationPrefs({
+      notifyCert,
+      notifyReg,
+      notifyWeekly: newState,
+    });
   };
 
   // ============================================================
@@ -335,6 +600,8 @@ const Admin_AccountSettings = () => {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="editable-input"
+                  disabled={profileLoading || profileSaving}
+                  placeholder={profileLoading ? 'Loading...' : ''}
                 />
               </div>
               <div className="profile-item">
@@ -344,6 +611,8 @@ const Admin_AccountSettings = () => {
                   value={surname}
                   onChange={(e) => setSurname(e.target.value)}
                   className="editable-input"
+                  disabled={profileLoading || profileSaving}
+                  placeholder={profileLoading ? 'Loading...' : ''}
                 />
               </div>
               <div className="profile-item">
@@ -361,7 +630,16 @@ const Admin_AccountSettings = () => {
                 {role}
               </span>
             </div>
-            <button className="btn btn-save" onClick={handleSaveProfile}>Save Changes</button>
+            {profileError && (
+              <p className="error-text" style={{ marginTop: '10px' }}>{profileError}</p>
+            )}
+            <button
+              className="btn btn-save"
+              onClick={handleSaveProfile}
+              disabled={profileLoading || profileSaving}
+            >
+              {profileSaving ? 'Saving...' : 'Save Changes'}
+            </button>
           </div>
 
           {/* ==================== SECURITY SETTINGS ==================== */}
@@ -374,9 +652,19 @@ const Admin_AccountSettings = () => {
                 <input
                   type="password"
                   value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="editable-input"
+                  onChange={(e) => {
+                    setCurrentPassword(e.target.value);
+                    if (passwordErrors.currentPassword) {
+                      setPasswordErrors(prev => ({ ...prev, currentPassword: '' }));
+                    }
+                  }}
+                  className={`editable-input ${passwordErrors.currentPassword ? 'input-error' : ''}`}
+                  placeholder="Enter your current password"
+                  disabled={passwordSaving}
                 />
+                {passwordErrors.currentPassword && (
+                  <span className="error-text">{passwordErrors.currentPassword}</span>
+                )}
               </div>
               <div className="security-row">
                 <div className="security-item half">
@@ -391,9 +679,27 @@ const Admin_AccountSettings = () => {
                       }
                     }}
                     className={`editable-input ${passwordErrors.newPassword ? 'input-error' : ''}`}
+                    disabled={passwordSaving}
                   />
                   {passwordErrors.newPassword && (
                     <span className="error-text">{passwordErrors.newPassword}</span>
+                  )}
+
+                  {/* Live requirements checklist */}
+                  {showPasswordRequirements && newPassword && !allPasswordRequirementsMet && (
+                    <div className="password-requirements">
+                      <p className="requirements-title">Password must contain:</p>
+                      <ul className="requirements-list">
+                        {PASSWORD_REQUIREMENTS.map(req => {
+                          const met = req.test(newPassword);
+                          return (
+                            <li key={req.id} className={met ? 'met' : 'unmet'}>
+                              {met ? '●' : '○'} {req.label}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
                   )}
                 </div>
                 <div className="security-item half">
@@ -408,13 +714,23 @@ const Admin_AccountSettings = () => {
                       }
                     }}
                     className={`editable-input ${passwordErrors.confirmPassword ? 'input-error' : ''}`}
+                    disabled={passwordSaving}
                   />
                   {passwordErrors.confirmPassword && (
                     <span className="error-text">{passwordErrors.confirmPassword}</span>
                   )}
                 </div>
               </div>
-              <button className="btn btn-update" onClick={handleUpdatePassword}>Update Password</button>
+              {passwordServerError && (
+                <p className="error-text" style={{ marginBottom: '10px' }}>{passwordServerError}</p>
+              )}
+              <button
+                className="btn btn-update"
+                onClick={handleUpdatePassword}
+                disabled={passwordSaving}
+              >
+                {passwordSaving ? 'Updating...' : 'Update Password'}
+              </button>
             </div>
 
             <div className="two-factor-section">
@@ -474,7 +790,7 @@ const Admin_AccountSettings = () => {
                 >
                   <option value="7 days">7 days</option>
                   <option value="30 days">30 days</option>
-                  <option value="3 months">3 months</option>
+                  <option value="90 days">3 months</option>
                 </select>
               </div>
             </div>
@@ -517,7 +833,11 @@ const Admin_AccountSettings = () => {
             <div className="notification-item">
               <div className="notification-header">
                 <span className="notification-title">Email me when a certificate is issued</span>
-                <div className="toggle-switch small" onClick={toggleNotifyCert}>
+                <div
+                  className={`toggle-switch small ${prefsLoading || prefsSaving ? 'toggle-disabled' : ''}`}
+                  onClick={toggleNotifyCert}
+                  style={prefsLoading || prefsSaving ? { opacity: 0.6, cursor: 'not-allowed' } : undefined}
+                >
                   <div className={`toggle-track ${notifyCert ? 'active' : ''}`}>
                     <div className={`toggle-thumb ${notifyCert ? 'active' : ''}`}></div>
                   </div>
@@ -529,7 +849,11 @@ const Admin_AccountSettings = () => {
             <div className="notification-item">
               <div className="notification-header">
                 <span className="notification-title">Notify on new learner registration</span>
-                <div className="toggle-switch small" onClick={toggleNotifyReg}>
+                <div
+                  className={`toggle-switch small ${prefsLoading || prefsSaving ? 'toggle-disabled' : ''}`}
+                  onClick={toggleNotifyReg}
+                  style={prefsLoading || prefsSaving ? { opacity: 0.6, cursor: 'not-allowed' } : undefined}
+                >
                   <div className={`toggle-track ${notifyReg ? 'active' : ''}`}>
                     <div className={`toggle-thumb ${notifyReg ? 'active' : ''}`}></div>
                   </div>
@@ -541,7 +865,11 @@ const Admin_AccountSettings = () => {
             <div className="notification-item">
               <div className="notification-header">
                 <span className="notification-title">Weekly summary report</span>
-                <div className="toggle-switch small" onClick={toggleNotifyWeekly}>
+                <div
+                  className={`toggle-switch small ${prefsLoading || prefsSaving ? 'toggle-disabled' : ''}`}
+                  onClick={toggleNotifyWeekly}
+                  style={prefsLoading || prefsSaving ? { opacity: 0.6, cursor: 'not-allowed' } : undefined}
+                >
                   <div className={`toggle-track ${notifyWeekly ? 'active' : ''}`}>
                     <div className={`toggle-thumb ${notifyWeekly ? 'active' : ''}`}></div>
                   </div>
@@ -555,19 +883,31 @@ const Admin_AccountSettings = () => {
 
       {/* ==================== PROFILE MODAL ==================== */}
       {showProfileModal && (
-        <div className="logout-modal-overlay" onClick={() => setShowProfileModal(false)}>
-          <div className="logout-modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="logout-modal-overlay" onClick={() => !profileSaving && setShowProfileModal(false)}>
+          <div className="logout-modal-content confirmation-modal" onClick={(e) => e.stopPropagation()}>
             <div className="logout-modal-header">
               <h2>Confirm Changes</h2>
-              <button className="logout-modal-close" onClick={() => setShowProfileModal(false)}>×</button>
+              <button
+                className="logout-modal-close"
+                onClick={() => setShowProfileModal(false)}
+                disabled={profileSaving}
+              >×</button>
             </div>
             <div className="logout-modal-body">
-              <p>Are you sure you want to save changes to your profile?</p>
-              <p className="logout-modal-warning">Your name and surname will be updated across the system.</p>
+              <p className="confirmation-message confirmation-question">Are you sure you want to save changes to your profile?</p>
+              <p className="logout-modal-warning confirmation-message">Your name and surname will be updated across the system.</p>
             </div>
             <div className="logout-modal-actions">
-              <button className="logout-modal-btn cancel-btn" onClick={() => setShowProfileModal(false)}>No, Stay</button>
-              <button className="logout-modal-btn confirm-btn" onClick={confirmProfileSave}>Yes, Save</button>
+              <button
+                className="logout-modal-btn cancel-btn"
+                onClick={() => setShowProfileModal(false)}
+                disabled={profileSaving}
+              >No, Stay</button>
+              <button
+                className="logout-modal-btn confirm-btn"
+                onClick={confirmProfileSave}
+                disabled={profileSaving}
+              >{profileSaving ? 'Saving...' : 'Yes, Save'}</button>
             </div>
           </div>
         </div>
@@ -575,19 +915,31 @@ const Admin_AccountSettings = () => {
 
       {/* ==================== PASSWORD MODAL ==================== */}
       {showPasswordModal && (
-        <div className="logout-modal-overlay" onClick={() => setShowPasswordModal(false)}>
-          <div className="logout-modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="logout-modal-overlay" onClick={() => !passwordSaving && setShowPasswordModal(false)}>
+          <div className="logout-modal-content confirmation-modal" onClick={(e) => e.stopPropagation()}>
             <div className="logout-modal-header">
               <h2>Confirm Password Update</h2>
-              <button className="logout-modal-close" onClick={() => setShowPasswordModal(false)}>×</button>
+              <button
+                className="logout-modal-close"
+                onClick={() => setShowPasswordModal(false)}
+                disabled={passwordSaving}
+              >×</button>
             </div>
             <div className="logout-modal-body">
-              <p>Are you sure you want to modify this password?</p>
-              <p className="logout-modal-warning">Continuing will result in use of the new password.</p>
+              <p className="confirmation-message confirmation-question">Are you sure you want to modify this password?</p>
+              <p className="logout-modal-warning confirmation-message">Continuing will result in use of the new password.</p>
             </div>
             <div className="logout-modal-actions">
-              <button className="logout-modal-btn cancel-btn" onClick={() => setShowPasswordModal(false)}>No, Cancel</button>
-              <button className="logout-modal-btn confirm-btn" onClick={confirmPasswordUpdate}>Yes, Update</button>
+              <button
+                className="logout-modal-btn cancel-btn"
+                onClick={() => setShowPasswordModal(false)}
+                disabled={passwordSaving}
+              >No, Cancel</button>
+              <button
+                className="logout-modal-btn confirm-btn"
+                onClick={confirmPasswordUpdate}
+                disabled={passwordSaving}
+              >{passwordSaving ? 'Updating...' : 'Yes, Update'}</button>
             </div>
           </div>
         </div>
@@ -596,14 +948,14 @@ const Admin_AccountSettings = () => {
       {/* ==================== BACKUP MODAL ==================== */}
       {showBackupModal && (
         <div className="logout-modal-overlay" onClick={cancelBackup}>
-          <div className="logout-modal-content" onClick={(e) => e.stopPropagation()}>
+          <div className="logout-modal-content confirmation-modal" onClick={(e) => e.stopPropagation()}>
             <div className="logout-modal-header">
               <h2>Confirm Backup</h2>
               <button className="logout-modal-close" onClick={cancelBackup}>×</button>
             </div>
             <div className="logout-modal-body">
-              <p>Are you sure you want to backup?</p>
-              <p className="logout-modal-warning">This will create a new backup of your system data.</p>
+              <p className="confirmation-message confirmation-question">Are you sure you want to backup?</p>
+              <p className="logout-modal-warning confirmation-message">This will create a new backup of your system data.</p>
             </div>
             <div className="logout-modal-actions">
               <button className="logout-modal-btn cancel-btn" onClick={cancelBackup}>No, Cancel</button>
@@ -616,14 +968,14 @@ const Admin_AccountSettings = () => {
       {/* ==================== RESTORE MODAL ==================== */}
       {showRestoreModal && (
         <div className="logout-modal-overlay" onClick={cancelRestore}>
-          <div className="logout-modal-content" onClick={(e) => e.stopPropagation()}>
+          <div className="logout-modal-content confirmation-modal" onClick={(e) => e.stopPropagation()}>
             <div className="logout-modal-header">
               <h2>Confirm Restore</h2>
               <button className="logout-modal-close" onClick={cancelRestore}>×</button>
             </div>
             <div className="logout-modal-body">
-              <p>Are you sure you want to restore data from this date?</p>
-              <p className="logout-modal-warning">Restore point: {selectedRestorePoint}</p>
+              <p className="confirmation-message confirmation-question">Are you sure you want to restore data from this date?</p>
+              <p className="logout-modal-warning confirmation-message">Restore point: {selectedRestorePoint}</p>
             </div>
             <div className="logout-modal-actions">
               <button className="logout-modal-btn cancel-btn" onClick={cancelRestore}>No, Cancel</button>
@@ -634,7 +986,6 @@ const Admin_AccountSettings = () => {
       )}
 
       {/* ==================== TOAST POPUP ==================== */}
-      {/* The className toggles between enter/exit animations */}
       {toastMessage && (
         <div className={`toast-message ${toastVisible ? 'toast-enter' : 'toast-exit'}`}>
           {toastMessage}

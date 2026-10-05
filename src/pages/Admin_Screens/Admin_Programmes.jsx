@@ -1,9 +1,46 @@
 // src/pages/Admin_Screens/Admin_Programmes.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Admin_Sidebar from '../../components/Admin/Admin_Sidebar';
 import Admin_Header from '../../components/Admin/Admin_Header';
 import '../../styles/Admin/admin_Programmes.css';
+import { API, API_BASE, authHeaders } from '../../config/api';
+
+const normalizeProgramme = (p = {}) => {
+  const rawStatus = p.status ?? p.Programme_status ?? 'Draft';
+  const isArchived =
+    p.archived === true ||
+    p.Programme_status === 'Archived' ||
+    p.Archived === 1;
+
+  let formattedStartDate = 'Not set';
+  const rawDate = p.startDate ?? p.Start_date;
+  if (rawDate) {
+    const d = new Date(rawDate);
+    if (!isNaN(d.getTime())) {
+      formattedStartDate = d.toLocaleDateString('en-US', {
+        month: 'short',
+        day: '2-digit',
+        year: 'numeric'
+      });
+    } else {
+      formattedStartDate = String(rawDate);
+    }
+  }
+
+  return {
+    id: p.id ?? p.Programme_id ?? Date.now(),
+    name: p.name ?? p.Programme_name ?? 'Untitled Programme',
+    description: p.description ?? p.Programme_description ?? '',
+    duration: p.duration ?? p.Duration ?? '',
+    startDate: formattedStartDate,
+    rawStatus,
+    status: isArchived ? 'Archived' : rawStatus,
+    enrolled: Number(p.enrolled ?? p.Enrolled ?? 0),
+    category: p.category ?? p.Category ?? '',
+    archived: isArchived
+  };
+};
 
 const AdminProgrammes = () => {
   const navigate = useNavigate();
@@ -15,164 +52,330 @@ const AdminProgrammes = () => {
   const [statusFilter, setStatusFilter] = useState('Status');
   const [showArchived, setShowArchived] = useState(false);
   const [programmeToArchive, setProgrammeToArchive] = useState(null);
-  const [programmes, setProgrammes] = useState([
-    {
-      id: 1,
-      name: 'Digital Literacy',
-      enrolled: 52,
-      startDate: 'Jan 10, 2026',
-      status: 'Active',
-      category: 'Digital Skills',
-      archived: false
-    },
-    {
-      id: 2,
-      name: 'Microsoft 365',
-      enrolled: 38,
-      startDate: 'Feb 01, 2026',
-      status: 'Active',
-      category: 'Productivity',
-      archived: false
-    },
-    {
-      id: 3,
-      name: 'Digital Marketing',
-      enrolled: 45,
-      startDate: 'Mar 05, 2026',
-      status: 'Active',
-      category: 'Marketing',
-      archived: false
-    },
-    {
-      id: 4,
-      name: 'Business Communication',
-      enrolled: 0,
-      startDate: 'Jan 20, 2026',
-      status: 'Upcoming',
-      category: 'Business',
-      archived: false
-    },
-    {
-      id: 5,
-      name: 'Project Management Basics',
-      enrolled: 0,
-      startDate: 'May 01, 2026',
-      status: 'Draft',
-      category: 'Management',
-      archived: false
-    }
-  ]);
+  const [programmes, setProgrammes] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [editingProgramme, setEditingProgramme] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [programmeToDelete, setProgrammeToDelete] = useState(null);
+  const [editName, setEditName] = useState('');
   const [editStatus, setEditStatus] = useState('');
+  const [editError, setEditError] = useState('');
+
+  const [totalEnrolments, setTotalEnrolments] = useState(0);
+
+  const fetchProgrammes = useCallback(async () => {
+    setIsLoading(true);
+    setLoadError('');
+    try {
+      const res = await fetch(`${API_BASE}/api/programmes`, {
+        headers: authHeaders(),
+        credentials: 'include',
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Failed to load programmes.');
+      }
+
+      setProgrammes((data.programmes || []).map(normalizeProgramme));
+    } catch (err) {
+      console.error('Fetch programmes error:', err);
+      setLoadError(err.message || 'Failed to load programmes.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const fetchCentreStatuses = useCallback(async () => {
+    const currentUser = (() => {
+      try {
+        return JSON.parse(localStorage.getItem('user') || '{}');
+      } catch {
+        return {};
+      }
+    })();
+
+    const isSuperAdmin = currentUser.roleId === 3;
+    const myCentreId = currentUser.centreId ?? null;
+
+    if (isSuperAdmin || !myCentreId) return;
+
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/centres/${myCentreId}/programmes`,
+        {
+          headers: authHeaders(),
+          credentials: 'include',
+        }
+      );
+      const data = await res.json();
+
+      if (data.success && Array.isArray(data.data)) {
+        const map = {};
+        data.data.forEach((row) => {
+          map[row.id] = row.centreStatus || 'Active';
+        });
+
+        setProgrammes((prev) =>
+          prev.map((p) => {
+            if (!map[p.id]) return p;
+
+            const pairArchived = map[p.id] === 'Archived';
+            return {
+              ...p,
+              archived: pairArchived,
+              status: pairArchived ? 'Archived' : (p.rawStatus || p.status),
+            };
+          })
+        );
+      }
+    } catch (err) {
+      console.error('Fetch centre statuses error:', err);
+    }
+  }, []);
+
+  const fetchStats = useCallback(async () => {
+    try {
+      const res = await fetch(API.admin.stats, {
+        headers: authHeaders(),
+        credentials: 'include',
+      });
+      const data = await res.json();
+
+      if (data.success && data.data) {
+        setTotalEnrolments(Number(data.data.totalEnrollments) || 0);
+      }
+    } catch (err) {
+      console.error('Fetch stats error:', err);
+    }
+  }, []);
 
   useEffect(() => {
-    const newProgramme = location.state?.programme;
-    if (!newProgramme) return;
+    (async () => {
+      await fetchProgrammes();
+      await fetchCentreStatuses();
+    })();
+    fetchStats();
+  }, [fetchProgrammes, fetchStats, fetchCentreStatuses]);
 
-    setProgrammes(currentProgrammes => (
-      currentProgrammes.some(programme => programme.id === newProgramme.id)
-        ? currentProgrammes
-        : [...currentProgrammes, newProgramme]
-    ));
+  useEffect(() => {
+    const incoming = location.state?.programme;
+    if (!incoming) return;
+
+    const normalized = normalizeProgramme(incoming);
+    setProgrammes(current =>
+      current.some(p => p.id === normalized.id)
+        ? current
+        : [normalized, ...current]
+    );
     navigate('/admin/programmes', { replace: true, state: {} });
   }, [location.state?.programme, navigate]);
 
-  // Toggle mobile menu
-  const toggleMobileMenu = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen);
-  };
+  const toggleMobileMenu = () => setIsMobileMenuOpen(v => !v);
+  const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
-  const closeMobileMenu = () => {
-    setIsMobileMenuOpen(false);
-  };
-
-  // Handle scroll to top
   const scrollToTop = () => {
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Show/hide scroll button based on scroll position
   useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > 400) {
-        setShowScrollButton(true);
-      } else {
-        setShowScrollButton(false);
-      }
-    };
-
+    const handleScroll = () => setShowScrollButton(window.scrollY > 400);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Get unique categories for filter
-  const categories = ['Category', 'All', ...new Set(programmes.map(p => p.category))];
+  const categories = useMemo(
+    () => [
+      'Category',
+      'All',
+      ...new Set(programmes.map(p => p.category).filter(Boolean))
+    ],
+    [programmes]
+  );
+
   const statuses = ['Status', 'All', 'Active', 'Upcoming', 'Draft', 'Archived'];
 
-  // Filter programmes
-  const filteredProgrammes = programmes.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === 'Category' || categoryFilter === 'All' || p.category === categoryFilter;
-    const matchesStatus = statusFilter === 'Status' || statusFilter === 'All'
-      || (statusFilter === 'Archived' ? p.archived : p.status === statusFilter);
-    return matchesSearch && matchesCategory && matchesStatus;
-  });
+  const filteredProgrammes = useMemo(() => {
+    const search = (searchTerm || '').trim().toLowerCase();
 
-  // Separate archived and active programmes
+    return programmes.filter(p => {
+      const name = (p.name || '').toLowerCase();
+      const description = (p.description || '').toLowerCase();
+      const matchesSearch =
+        search === '' || name.includes(search) || description.includes(search);
+
+      const matchesCategory =
+        categoryFilter === 'Category' ||
+        categoryFilter === 'All' ||
+        p.category === categoryFilter;
+
+      const matchesStatus =
+        statusFilter === 'Status' ||
+        statusFilter === 'All' ||
+        (statusFilter === 'Archived' ? p.archived : p.status === statusFilter);
+
+      return matchesSearch && matchesCategory && matchesStatus;
+    });
+  }, [programmes, searchTerm, categoryFilter, statusFilter]);
+
   const activeProgrammes = filteredProgrammes.filter(p => !p.archived);
   const archivedProgrammes = filteredProgrammes.filter(p => p.archived);
+  const displayedProgrammes = showArchived
+    ? [...activeProgrammes, ...archivedProgrammes]
+    : activeProgrammes;
 
-  // Get displayed programmes
-  const displayedProgrammes = showArchived ? [...activeProgrammes, ...archivedProgrammes] : activeProgrammes;
-
-  // Stats
   const totalProgrammes = programmes.length;
-  const activeProgrammesCount = programmes.filter(p => p.status === 'Active' && !p.archived).length;
-  const totalEnrolments = programmes.reduce((sum, p) => sum + p.enrolled, 0);
+  const activeProgrammesCount = programmes.filter(
+    p => p.status === 'Active' && !p.archived
+  ).length;
 
-  // Handle archive
-  const handleArchive = (id) => {
-    setProgrammes(programmes.map(p => 
-      p.id === id ? { ...p, archived: !p.archived } : p
-    ));
+  const handleArchive = async (id) => {
+    const target = programmes.find(p => p.id === id);
+    if (!target) return;
+
+    const currentUser = (() => {
+      try {
+        return JSON.parse(localStorage.getItem('user') || '{}');
+      } catch {
+        return {};
+      }
+    })();
+
+    const isSuperAdmin = currentUser.roleId === 3;
+    const hasCentre = !!currentUser.centreId;
+    const useCentreScope = !isSuperAdmin && hasCentre;
+
+    const previous = programmes;
     setProgrammeToArchive(null);
+
+    try {
+      let res;
+
+      if (useCentreScope) {
+        const newStatus = target.archived ? 'Active' : 'Archived';
+
+        res = await fetch(
+          `${API_BASE}/api/programmes/${id}/my-centre/status`,
+          {
+            method: 'PUT',
+            headers: authHeaders({ 'Content-Type': 'application/json' }),
+            credentials: 'include',
+            body: JSON.stringify({ status: newStatus }),
+          }
+        );
+      } else {
+        const endpoint = target.archived
+          ? `${API_BASE}/api/programmes/${id}/unarchive`
+          : `${API_BASE}/api/programmes/${id}/archive`;
+
+        res = await fetch(endpoint, {
+          method: 'PATCH',
+          headers: authHeaders(),
+          credentials: 'include',
+        });
+      }
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Failed to update programme.');
+      }
+
+      await fetchProgrammes();
+      await fetchCentreStatuses();
+    } catch (err) {
+      console.error('Archive/unarchive error:', err);
+      setProgrammes(previous);
+      setLoadError(err.message || 'Failed to update programme.');
+    }
   };
 
-  // Handle edit
   const handleEdit = (programme) => {
     setEditingProgramme(programme);
+    setEditName(programme.name);
     setEditStatus(programme.status);
+    setEditError('');
     setShowEditModal(true);
   };
 
-  // Handle save edit
-  const handleSaveEdit = () => {
-    setProgrammes(programmes.map(p => 
-      p.id === editingProgramme.id
-        ? { ...p, status: editStatus, enrolled: ['Draft', 'Upcoming'].includes(editStatus) ? 0 : p.enrolled }
-        : p
-    ));
-    setShowEditModal(false);
-    setEditingProgramme(null);
+  const handleSaveEdit = async () => {
+    if (!editingProgramme) return;
+
+    const trimmedName = editName.trim() || editingProgramme.name;
+
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/programmes/${editingProgramme.id}`,
+        {
+          method: 'PUT',
+          headers: authHeaders({ 'Content-Type': 'application/json' }),
+          credentials: 'include',
+          body: JSON.stringify({
+            programmeName: trimmedName,
+            status: editStatus
+          })
+        }
+      );
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        setEditError(data.message || 'Failed to save changes.');
+        return;
+      }
+
+      setProgrammes(prev =>
+        prev.map(p =>
+          p.id === editingProgramme.id ? normalizeProgramme(data.programme) : p
+        )
+      );
+      setEditError('');
+      setShowEditModal(false);
+      setEditingProgramme(null);
+    } catch (err) {
+      console.error('Save edit error:', err);
+      setEditError(err.message || 'Failed to save changes.');
+    }
   };
 
-  // Handle create programme
+  const handleDeleteProgramme = async () => {
+    if (!programmeToDelete) return;
+    const id = programmeToDelete.id;
+
+    const previous = programmes;
+    setProgrammes(prev => prev.filter(p => p.id !== id));
+    setProgrammeToDelete(null);
+
+    try {
+      const res = await fetch(`${API_BASE}/api/programmes/${id}`, {
+        method: 'DELETE',
+        headers: authHeaders(),
+        credentials: 'include',
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Failed to delete programme.');
+      }
+    } catch (err) {
+      console.error('Delete error:', err);
+      setProgrammes(previous);
+      setLoadError(err.message || 'Failed to delete programme.');
+    }
+  };
+
   const handleCreateProgramme = () => {
     navigate('/admin/create-programme');
   };
 
-  // Handle export data
   const handleExportData = () => {
     const exportData = filteredProgrammes.map(p => ({
       'Programme Name': p.name,
-      'Enrolled': p.enrolled,
+      Enrolled: p.enrolled,
       'Start Date': p.startDate,
-      'Status': p.archived ? 'Archived' : p.status,
-      'Category': p.category
+      Status: p.archived ? 'Archived' : p.status,
+      Category: p.category
     }));
 
     if (exportData.length === 0) return;
@@ -195,21 +398,18 @@ const AdminProgrammes = () => {
 
   return (
     <div className="app-container">
-      {/* Header */}
-      <Admin_Header 
+      <Admin_Header
         onMenuToggle={toggleMobileMenu}
         isMobileMenuOpen={isMobileMenuOpen}
       />
 
       <div className="main-layout">
-        {/* Sidebar */}
-        <Admin_Sidebar 
+        <Admin_Sidebar
           active="programmes"
           isMobileOpen={isMobileMenuOpen}
           onClose={closeMobileMenu}
         />
 
-        {/* Main Content */}
         <main className="admin-content">
           <div className="page-header">
             <div className="page-header-row">
@@ -221,7 +421,6 @@ const AdminProgrammes = () => {
             <p>Create, manage, and monitor training programmes and enrolment pipelines.</p>
           </div>
 
-          {/* Stats Cards */}
           <div className="stats-grid">
             <div className="stat-card">
               <span className="stat-label">Total Programmes</span>
@@ -237,7 +436,6 @@ const AdminProgrammes = () => {
             </div>
           </div>
 
-          {/* Controls Bar */}
           <div className="controls-bar">
             <div className="controls-left">
               <button className="btn-secondary" onClick={handleExportData}>
@@ -271,7 +469,7 @@ const AdminProgrammes = () => {
                 ))}
               </select>
               {archivedProgrammes.length > 0 && (
-                <button 
+                <button
                   className="btn-archived"
                   onClick={() => setShowArchived(!showArchived)}
                 >
@@ -281,7 +479,6 @@ const AdminProgrammes = () => {
             </div>
           </div>
 
-          {/* Programmes Table */}
           <div className="card table-card">
             <table className="data-table">
               <thead>
@@ -294,33 +491,52 @@ const AdminProgrammes = () => {
                 </tr>
               </thead>
               <tbody>
-                {displayedProgrammes.length > 0 ? (
+                {isLoading ? (
+                  <tr>
+                    <td colSpan="5" className="no-results">Loading programmes...</td>
+                  </tr>
+                ) : loadError ? (
+                  <tr>
+                    <td colSpan="5" className="no-results">
+                      {loadError}{' '}
+                      <button className="btn-secondary" onClick={fetchProgrammes}>
+                        Retry
+                      </button>
+                    </td>
+                  </tr>
+                ) : displayedProgrammes.length > 0 ? (
                   displayedProgrammes.map((programme) => (
                     <tr key={programme.id} className={programme.archived ? 'archived-row' : ''}>
                       <td>{programme.name}</td>
                       <td>{programme.enrolled} learners</td>
                       <td>{programme.startDate}</td>
                       <td>
-                        <span className={`status-badge status-${programme.status.toLowerCase()}`}>
+                        <span className={`status-badge status-${(programme.status || 'draft').toLowerCase()}`}>
                           {programme.status}
                         </span>
                       </td>
                       <td>
                         <div className="action-buttons">
-                          <button 
-                            className="btn-edit" 
+                          <button
+                            className="btn-edit"
                             onClick={() => handleEdit(programme)}
                             disabled={programme.archived}
                           >
                             Edit
                           </button>
-                          <button 
+                          <button
                             className={`btn-archive ${programme.archived ? 'btn-unarchive' : ''}`}
                             onClick={() => programme.archived
                               ? handleArchive(programme.id)
                               : setProgrammeToArchive(programme)}
                           >
                             {programme.archived ? 'Unarchive' : 'Archive'}
+                          </button>
+                          <button
+                            className="btn-delete"
+                            onClick={() => setProgrammeToDelete(programme)}
+                          >
+                            Delete
                           </button>
                         </div>
                       </td>
@@ -335,27 +551,52 @@ const AdminProgrammes = () => {
             </table>
           </div>
 
-          {/* Edit Modal */}
           {showEditModal && (
             <div className="modal-overlay">
               <div className="modal">
-                <h2>Edit Programme Status</h2>
+                <h2>Edit Programme</h2>
                 <div className="modal-content">
-                  <p><strong>Programme:</strong> {editingProgramme?.name}</p>
+                  <div className="form-group">
+                    <label>Programme Name</label>
+                    <input
+                      type="text"
+                      value={editName}
+                      onChange={(e) => {
+                        setEditName(e.target.value);
+                        if (editError) setEditError('');
+                      }}
+                    />
+                  </div>
                   <div className="form-group">
                     <label>Status</label>
-                    <select 
-                      value={editStatus} 
-                      onChange={(e) => setEditStatus(e.target.value)}
+                    <select
+                      value={editStatus}
+                      onChange={(e) => {
+                        setEditStatus(e.target.value);
+                        if (editError) setEditError('');
+                      }}
                     >
                       <option value="Active">Active</option>
                       <option value="Upcoming">Upcoming</option>
                       <option value="Draft">Draft</option>
                     </select>
                   </div>
+
+                  {editError && (
+                    <p className="modal-error" role="alert">
+                      {editError}
+                    </p>
+                  )}
                 </div>
                 <div className="modal-actions">
-                  <button className="btn-secondary" onClick={() => setShowEditModal(false)}>
+                  <button
+                    className="btn-secondary"
+                    onClick={() => {
+                      setShowEditModal(false);
+                      setEditingProgramme(null);
+                      setEditError('');
+                    }}
+                  >
                     Cancel
                   </button>
                   <button className="btn-primary" onClick={handleSaveEdit}>
@@ -366,18 +607,39 @@ const AdminProgrammes = () => {
             </div>
           )}
 
-          {programmeToArchive && (
+          {programmeToDelete && (
             <div className="modal-overlay">
-              <div className="modal" role="dialog" aria-modal="true" aria-labelledby="archive-modal-title">
-                <h2 id="archive-modal-title">Archive Programme?</h2>
+              <div className="modal archive-confirmation-modal" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
+                <h2 id="delete-modal-title">Delete Programme?</h2>
                 <div className="modal-content">
-                  <p>Are you sure you want to archive <strong>{programmeToArchive.name}</strong>?</p>
+                  <p className="archive-confirmation-question">Are you sure you want to delete <strong>{programmeToDelete.name}</strong>?</p>
+                  <p className="archive-modal-warning delete-modal-warning">This action cannot be reversed.</p>
                 </div>
                 <div className="modal-actions">
-                  <button className="btn-secondary" onClick={() => setProgrammeToArchive(null)}>
+                  <button className="archive-modal-cancel" onClick={() => setProgrammeToDelete(null)}>
                     Cancel
                   </button>
-                  <button className="btn-archive" onClick={() => handleArchive(programmeToArchive.id)}>
+                  <button className="delete-modal-confirm" onClick={handleDeleteProgramme}>
+                    Delete Programme
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {programmeToArchive && (
+            <div className="modal-overlay">
+              <div className="modal archive-confirmation-modal" role="dialog" aria-modal="true" aria-labelledby="archive-modal-title">
+                <h2 id="archive-modal-title">Archive Programme?</h2>
+                <div className="modal-content">
+                  <p className="archive-confirmation-question">Are you sure you want to archive <strong>{programmeToArchive.name}</strong>?</p>
+                  <p className="archive-modal-warning">This action will move the programme to the archived list.</p>
+                </div>
+                <div className="modal-actions">
+                  <button className="archive-modal-cancel" onClick={() => setProgrammeToArchive(null)}>
+                    Cancel
+                  </button>
+                  <button className="archive-modal-confirm" onClick={() => handleArchive(programmeToArchive.id)}>
                     Archive Programme
                   </button>
                 </div>
@@ -385,18 +647,15 @@ const AdminProgrammes = () => {
             </div>
           )}
 
-          {/* POPIA Notice */}
           <div className="popia-notice">
             <p><strong>POPIA Compliance Notice:</strong> Under South African Protection of Personal Information Act rules, this database is restricted to authorized credentials management. Deactivation obscures public-facing records immediately.</p>
           </div>
-
         </main>
       </div>
 
-      {/* Scroll to Top Button */}
       {showScrollButton && (
-        <button 
-          className="scroll-to-top-btn" 
+        <button
+          className="scroll-to-top-btn"
           onClick={scrollToTop}
           aria-label="Scroll to top"
         >

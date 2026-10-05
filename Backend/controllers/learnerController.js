@@ -1,6 +1,7 @@
 // backend/controllers/learnerController.js
 const { pool } = require('../config/database');
 const bcrypt = require('bcrypt');
+const { getPrefs, setPrefs } = require('../utils/notificationPrefs');
 
 // ============================================
 //  VALIDATE AND CLEAN PHONE NUMBER
@@ -31,7 +32,7 @@ const validateAndCleanPhone = (phone) => {
         return { valid: true, message: 'Valid phone number', cleaned: '0' + digitsOnly };
     }
 
-    // Check 27 format (without +)
+    
     if (cleaned.startsWith('27')) {
         let afterCode = cleaned.substring(2);
         if (afterCode.startsWith('0')) {
@@ -50,7 +51,7 @@ const validateAndCleanPhone = (phone) => {
         return { valid: true, message: 'Valid phone number', cleaned: '0' + digitsOnly };
     }
 
-    // Check local format (starting with 0)
+    
     if (cleaned.startsWith('0')) {
         let digitsOnly = cleaned.replace(/\D/g, '');
         if (digitsOnly.length !== 10) {
@@ -76,7 +77,7 @@ const validateAndCleanPhone = (phone) => {
 };
 
 // ============================================
-//  GET LEARNER PROFILE (FIXED - Counts Enrolled too)
+//  GET LEARNER PROFILE
 // ============================================
 exports.getLearnerProfile = async (req, res) => {
     try {
@@ -92,20 +93,21 @@ exports.getLearnerProfile = async (req, res) => {
         const userId = req.user.userId;
         console.log('🔍 Fetching profile for userId:', userId);
         
-        let addressColumn = '';
+        
+        let addressSelect = "'' as address";
+        let hasAddressColumn = false;
         try {
             const [columns] = await pool.query(
-                "SHOW COLUMNS FROM user LIKE 'address'"
+                "SHOW COLUMNS FROM user LIKE 'Physical_address'"
             );
             if (columns.length > 0) {
-                addressColumn = 'u.address';
+                hasAddressColumn = true;
+                addressSelect = 'u.Physical_address as address';
             } else {
-                addressColumn = "'' as address";
-                console.log('⚠️ address column not found, using empty string');
+                console.log('Physical_address column not found, using empty string');
             }
         } catch (err) {
-            console.log('⚠️ Could not check address column:', err.message);
-            addressColumn = "'' as address";
+            console.log(' Could not check Physical_address column:', err.message);
         }
         
         const [users] = await pool.query(
@@ -121,7 +123,7 @@ exports.getLearnerProfile = async (req, res) => {
                 u.email_verify,
                 u.register_at,
                 r.role_type,
-                ${addressColumn}
+                ${addressSelect}
              FROM user u
              LEFT JOIN gender g ON u.gender_id = g.gender_id
              LEFT JOIN role r ON u.role_id = r.role_id
@@ -140,6 +142,7 @@ exports.getLearnerProfile = async (req, res) => {
         
         const user = users[0];
         
+        
         let completed = [];
         let totalCompleted = 0;
         try {
@@ -157,10 +160,10 @@ exports.getLearnerProfile = async (req, res) => {
             completed = completedResult;
             totalCompleted = completedResult.length;
         } catch (err) {
-            console.log('⚠️ Completed programmes query failed:', err.message);
+            console.log(' Completed programmes query failed:', err.message);
         }
         
-        //  Get current enrollment - Count BOTH 'In Progress' AND 'Enrolled'
+      
         let enrolled = [];
         let totalEnrolled = 0;
         try {
@@ -182,6 +185,32 @@ exports.getLearnerProfile = async (req, res) => {
             console.log(' Enrollments query failed:', err.message);
         }
         
+        
+        let enrolledProgrammes = [];
+        try {
+            const [enrolledListResult] = await pool.query(
+                `SELECT
+                    li.programme_id,
+                    li.digital_center_id,
+                    li.status,
+                    li.enrolled_date,
+                    p.Programme_name        AS programme_name,
+                    p.Programme_description AS programme_description,
+                    p.Duration              AS duration
+                 FROM learner_interests li
+                 LEFT JOIN programmes p ON p.Programme_id = li.programme_id
+                 WHERE li.user_id = ?
+                   AND li.status = 'Enrolled'
+                 ORDER BY li.enrolled_date DESC`,
+                [userId]
+            );
+            enrolledProgrammes = enrolledListResult;
+            totalEnrolled = enrolledProgrammes.length;
+        } catch (err) {
+            console.log(' Enrolled programmes list query failed:', err.message);
+        }
+        
+        
         let certificatesCount = 0;
         try {
             const [certResult] = await pool.query(
@@ -192,6 +221,7 @@ exports.getLearnerProfile = async (req, res) => {
         } catch (err) {
             console.log(' Certificates query failed:', err.message);
         }
+        
         
         let interestsCount = 0;
         try {
@@ -204,6 +234,8 @@ exports.getLearnerProfile = async (req, res) => {
             console.log(' Interests count query failed:', err.message);
         }
         
+        const rawAddress = user.address || '';
+
         res.status(200).json({
             status: 'success',
             data: {
@@ -215,7 +247,9 @@ exports.getLearnerProfile = async (req, res) => {
                 phone: user.phone_number || 'Not provided',
                 phone_number: user.phone_number || 'Not provided',
                 idNumber: user.id_number || 'Not provided',
-                address: user.address || 'Not provided',
+                address: rawAddress || 'Not provided',
+                physicalAddress: rawAddress || null,
+                Physical_address: rawAddress || null,
                 gender: user.gender_description || 'Not provided',
                 isVerified: user.email_verify || false,
                 registeredAt: user.register_at,
@@ -224,6 +258,17 @@ exports.getLearnerProfile = async (req, res) => {
                     name: p.programme_name,
                     completionDate: p.completion_date,
                     certificateStatus: p.certificate_status || 'Issued'
+                })),
+                
+                enrolledProgrammes: enrolledProgrammes.map(p => ({
+                    id: p.programme_id,
+                    programmeId: p.programme_id,
+                    name: p.programme_name || 'Untitled Programme',
+                    description: p.programme_description || '',
+                    duration: p.duration || '',
+                    centreId: p.digital_center_id,
+                    status: p.status,
+                    enrolledDate: p.enrolled_date
                 })),
                 totalCompleted: totalCompleted,
                 totalEnrolled: totalEnrolled,
@@ -243,19 +288,22 @@ exports.getLearnerProfile = async (req, res) => {
 };
 
 // ============================================
-//  UPDATE LEARNER PROFILE (WITH PHONE VALIDATION)
+//  UPDATE LEARNER PROFILE 
 // ============================================
 exports.updateLearnerProfile = async (req, res) => {
     try {
         const userId = req.user.userId;
-        const { phone, name, surname, address } = req.body;
         
+        const { phone, name, surname, physicalAddress, address: legacyAddress } = req.body;
+
+        const address = physicalAddress !== undefined ? physicalAddress : legacyAddress;
+
         console.log(` Updating profile for user ${userId}`);
-        console.log(' Update data:', { phone, name, surname, address });
-        
+        console.log(' Update data:', { phone, name, surname, physicalAddress: address });
+
         let validatedPhone = null;
         const errors = {};
-        
+
         if (phone !== undefined && phone !== null) {
             const phoneValidation = validateAndCleanPhone(phone);
             if (!phoneValidation.valid) {
@@ -268,20 +316,46 @@ exports.updateLearnerProfile = async (req, res) => {
             }
             validatedPhone = phoneValidation.cleaned;
         }
+
+        
+        if (address !== undefined && address !== null && address !== '') {
+            if (typeof address !== 'string') {
+                return res.status(400).json({
+                    status: 'error',
+                    message: 'Address must be text',
+                    errors: { physicalAddress: 'Address must be text' }
+                });
+            }
+            if (address.trim().length < 5) {
+                return res.status(400).json({
+                    status: 'error',
+                    message: 'Address must be at least 5 characters',
+                    errors: { physicalAddress: 'Address must be at least 5 characters' }
+                });
+            }
+            if (address.trim().length > 255) {
+                return res.status(400).json({
+                    status: 'error',
+                    message: 'Address cannot exceed 255 characters',
+                    errors: { physicalAddress: 'Address cannot exceed 255 characters' }
+                });
+            }
+        }
+
         
         let hasAddressColumn = false;
         try {
             const [columns] = await pool.query(
-                "SHOW COLUMNS FROM user LIKE 'address'"
+                "SHOW COLUMNS FROM user LIKE 'Physical_address'"
             );
             hasAddressColumn = columns.length > 0;
         } catch (err) {
-            console.log(' Could not check address column:', err.message);
+            console.log(' Could not check Physical_address column:', err.message);
         }
-        
+
         const updates = [];
         const values = [];
-        
+
         if (validatedPhone !== null) {
             updates.push('phone_number = ?');
             values.push(validatedPhone);
@@ -294,25 +368,25 @@ exports.updateLearnerProfile = async (req, res) => {
             updates.push('surname = ?');
             values.push(surname);
         }
-        if (address !== undefined && address !== null && hasAddressColumn) {
-            updates.push('address = ?');
-            values.push(address);
+        if (address !== undefined && hasAddressColumn) {
+            updates.push('Physical_address = ?');
+            
+            values.push(address === '' ? null : address);
         }
-        
+
         if (updates.length === 0) {
             return res.status(400).json({
                 status: 'error',
                 message: 'No fields to update'
             });
         }
-        
+
         values.push(userId);
-        
+
         await pool.query(
             `UPDATE user SET ${updates.join(', ')} WHERE User_id = ?`,
             values
         );
-        
         const [users] = await pool.query(
             `SELECT 
                 u.User_id,
@@ -325,13 +399,15 @@ exports.updateLearnerProfile = async (req, res) => {
                 g.gender_description,
                 u.email_verify,
                 u.register_at,
-                ${hasAddressColumn ? 'u.address' : "'' as address"}
+                ${hasAddressColumn ? 'u.Physical_address as address' : "'' as address"}
              FROM user u
              LEFT JOIN gender g ON u.gender_id = g.gender_id
              WHERE u.User_id = ?`,
             [userId]
         );
-        
+
+        const rawAddress = users[0].address || '';
+
         res.status(200).json({
             status: 'success',
             message: 'Profile updated successfully',
@@ -344,13 +420,14 @@ exports.updateLearnerProfile = async (req, res) => {
                 phone: users[0].phone_number || 'Not provided',
                 phone_number: users[0].phone_number || 'Not provided',
                 idNumber: users[0].id_number || 'Not provided',
-                address: users[0].address || 'Not provided',
+                address: rawAddress || 'Not provided',
+                physicalAddress: rawAddress || null,
+                Physical_address: rawAddress || null,
                 gender: users[0].gender_description,
                 isVerified: users[0].email_verify,
                 registeredAt: users[0].register_at
             }
         });
-        
     } catch (error) {
         console.error(' Update profile error:', error);
         res.status(500).json({
@@ -424,7 +501,7 @@ exports.changePassword = async (req, res) => {
 };
 
 // ============================================
-//  GET LEARNER STATS (FIXED - Counts Enrolled too)
+//  GET LEARNER STATS
 // ============================================
 exports.getLearnerStats = async (req, res) => {
     try {
@@ -495,26 +572,55 @@ exports.getLearnerStats = async (req, res) => {
 };
 
 // ============================================
-//  GET ALL PROGRAMMES
+//  GET ALL PROGRAMMES 
 // ============================================
 exports.getProgrammes = async (req, res) => {
     try {
         const [programmes] = await pool.query(
-            `SELECT 
+            `SELECT
                 Programme_id,
                 Programme_name,
-                Programme_description
-             FROM Programmes
+                Programme_description,
+                Duration,
+                Start_date,
+                Programme_status
+             FROM programmes
+             WHERE Programme_status IN ('Active', 'Upcoming', 'Archived')
              ORDER BY Programme_name`
         );
 
-        res.status(200).json({
-            success: true,
-            data: programmes
+        const normalized = programmes.map((row) => {
+            let formattedStartDate = 'Not set';
+            if (row.Start_date) {
+                const d = new Date(row.Start_date);
+                if (!isNaN(d.getTime())) {
+                    formattedStartDate = d.toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: '2-digit',
+                        year: 'numeric'
+                    });
+                }
+            }
+
+            return {
+                Programme_id: row.Programme_id,
+                Programme_name: row.Programme_name,
+                Programme_description: row.Programme_description,
+                Duration: row.Duration || '',
+                Start_date: row.Start_date,
+                Programme_status: row.Programme_status,
+                startDateRaw: row.Start_date || null,
+                startDate: formattedStartDate,
+                status: row.Programme_status
+            };
         });
 
+        res.status(200).json({
+            success: true,
+            data: normalized
+        });
     } catch (error) {
-        console.error(' Error fetching programmes:', error);
+        console.error('Error fetching programmes:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch programmes'
@@ -666,7 +772,7 @@ exports.getLearnerInterests = async (req, res) => {
 };
 
 // ============================================
-// UPDATE INTEREST STATUS (For Admin use)
+// UPDATE INTEREST STATUS 
 // ============================================
 exports.updateInterestStatus = async (req, res) => {
     try {
@@ -772,7 +878,7 @@ exports.getCompletedProgrammes = async (req, res) => {
 };
 
 // ============================================
-// GET CURRENT ENROLLMENTS (In Progress + Enrolled)
+// GET CURRENT ENROLLMENTS 
 // ============================================
 exports.getCurrentEnrollments = async (req, res) => {
     try {
@@ -854,9 +960,9 @@ exports.getCertificateById = async (req, res) => {
         });
     }
 };
+
 // ============================================
-// GET MY CERTIFICATES (for the logged-in learner)
-// Returns one row per issued certificate.
+// GET MY CERTIFICATES 
 // ============================================
 exports.getMyCertificates = async (req, res) => {
     try {
@@ -882,17 +988,31 @@ exports.getMyCertificates = async (req, res) => {
             [userId]
         );
 
-        const data = rows.map((row) => ({
-            id: row.id,
-            certificateId: row.certificate_id,
-            programme: row.programme || 'Unknown Programme',
-            status: 'Issued',
-            dateIssued: row.date_issued,
-            expireDate: row.expire_date,
-            certificateNumber: `CERT-${row.certificate_id}`,
-            learnerName: `${row.learner_name || ''} ${row.learner_surname || ''}`.trim(),
-            learnerIdNumber: row.learner_id_number || 'N/A'
-        }));
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const data = rows.map((row) => {
+            let status = 'Pending';
+            if (row.date_issued) {
+                const issued = new Date(row.date_issued);
+                if (!isNaN(issued.getTime())) {
+                    issued.setHours(0, 0, 0, 0);
+                    status = issued <= today ? 'Issued' : 'Pending';
+                }
+            }
+
+            return {
+                id: row.id,
+                certificateId: row.certificate_id,
+                programme: row.programme || 'Unknown Programme',
+                status,
+                dateIssued: row.date_issued,
+                expireDate: row.expire_date,
+                certificateNumber: `CERT-${row.certificate_id}`,
+                learnerName: `${row.learner_name || ''} ${row.learner_surname || ''}`.trim(),
+                learnerIdNumber: row.learner_id_number || 'N/A'
+            };
+        });
 
         res.status(200).json({
             success: true,
@@ -909,8 +1029,7 @@ exports.getMyCertificates = async (req, res) => {
 };
 
 // ============================================
-// GET / DOWNLOAD CERTIFICATE PDF (learner-owned only)
-// Streams the generated PDF for the given certificate ID.
+// DOWNLOAD CERTIFICATE PDF — streams from DB blob
 // ============================================
 exports.downloadMyCertificate = async (req, res) => {
     try {
@@ -923,13 +1042,13 @@ exports.downloadMyCertificate = async (req, res) => {
             `SELECT 
                 c.Certificate_id,
                 c.Date_issued,
+                c.file_data,
                 u.name        AS learner_name,
                 u.surname     AS learner_surname,
-                u.id_number   AS learner_id_number,
                 p.Programme_name
-             FROM Certificate c
+             FROM certificate c
              LEFT JOIN user u       ON c.User_id = u.User_id
-             LEFT JOIN Programmes p ON c.Programme_id = p.Programme_id
+             LEFT JOIN programmes p ON c.Programme_id = p.Programme_id
              WHERE c.Certificate_id = ? AND c.User_id = ?`,
             [certificateId, userId]
         );
@@ -942,35 +1061,108 @@ exports.downloadMyCertificate = async (req, res) => {
         }
 
         const cert = rows[0];
+
+        if (!cert.file_data) {
+            return res.status(404).json({
+                success: false,
+                message: 'Certificate file is not available in the database'
+            });
+        }
+
         const learnerName = `${cert.learner_name || ''} ${cert.learner_surname || ''}`.trim() || 'Learner';
+        const fileName = `Certificate_${learnerName.replace(/\s+/g, '_')}_${cert.Certificate_id}.pdf`;
 
-        const CertificateService = require('../services/certificateService');
-
-        const pdfBytes = await CertificateService.generateCertificate({
-            learnerName,
-            idNumber: cert.learner_id_number || 'N/A',
-            completionDate: cert.Date_issued || new Date(),
-            programmeName: cert.Programme_name || 'Programme',
-            certificateNumber: `CERT-${cert.Certificate_id}`
-        });
-
-        const fileName = `Certificate_${learnerName.replace(/\s/g, '_')}.pdf`;
+        const buffer = Buffer.isBuffer(cert.file_data)
+            ? cert.file_data
+            : Buffer.from(cert.file_data);
 
         res.writeHead(200, {
             'Content-Type': 'application/pdf',
-            'Content-Disposition': `attachment; filename="${fileName}"`,
-            'Content-Length': pdfBytes.length,
+            'Content-Disposition': `inline; filename="${fileName}"`,
+            'Content-Length': buffer.length,
             'Cache-Control': 'no-cache, no-store, must-revalidate',
             'Pragma': 'no-cache',
             'Expires': '0'
         });
-        res.end(pdfBytes);
+
+        res.end(buffer);
 
     } catch (error) {
         console.error('Error downloading learner certificate:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to download certificate: ' + error.message
+        });
+    }
+};
+// ============================================
+//  GET MY NOTIFICATION PREFERENCES
+// ============================================
+exports.getMyNotificationPrefs = async (req, res) => {
+    try {
+        const userId = req.user?.userId;
+        if (!userId) {
+            return res.status(401).json({
+                status: 'error',
+                message: 'User not authenticated'
+            });
+        }
+
+        const prefs = getPrefs(userId);
+
+        return res.status(200).json({
+            status: 'success',
+            data: prefs
+        });
+    } catch (error) {
+        console.error('Get notification prefs error:', error);
+        return res.status(500).json({
+            status: 'error',
+            message: 'Failed to load preferences: ' + error.message
+        });
+    }
+};
+
+// ============================================
+//  UPDATE MY NOTIFICATION PREFERENCES
+// ============================================
+exports.updateMyNotificationPrefs = async (req, res) => {
+    try {
+        const userId = req.user?.userId;
+        if (!userId) {
+            return res.status(401).json({
+                status: 'error',
+                message: 'User not authenticated'
+            });
+        }
+
+        const { certificateIssued, newProgramme } = req.body;
+
+        if (typeof certificateIssued !== 'boolean' || typeof newProgramme !== 'boolean') {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Both certificateIssued and newProgramme must be booleans.'
+            });
+        }
+
+        const ok = setPrefs(userId, { certificateIssued, newProgramme });
+        if (!ok) {
+            return res.status(500).json({
+                status: 'error',
+                message: 'Failed to save preferences.'
+            });
+        }
+
+        return res.status(200).json({
+            status: 'success',
+            message: 'Preferences saved successfully',
+            data: getPrefs(userId)
+        });
+    } catch (error) {
+        console.error('Update notification prefs error:', error);
+        return res.status(500).json({
+            status: 'error',
+            message: 'Failed to save preferences: ' + error.message
         });
     }
 };

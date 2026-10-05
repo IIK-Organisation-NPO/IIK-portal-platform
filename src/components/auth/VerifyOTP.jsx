@@ -5,17 +5,16 @@ import { FaArrowLeft, FaSpinner, FaExclamationCircle, FaClock } from 'react-icon
 import Footer from '../common/Footer';
 import '../../styles/components/forgotpassword.css';
 import logo from '../../assets/images/small Mki.png';
+import { API } from '../../config/api';
 
 const VerifyOTP = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  
   const email = location.state?.email || '';
   const fullName = location.state?.fullName || '';
   const isGoogleUser = location.state?.isGoogleUser || false;
   const purpose = location.state?.purpose || 'password_reset';
   const userId = location.state?.userId || '';
-  
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -28,6 +27,19 @@ const VerifyOTP = () => {
   const inputRefs = useRef([]);
 
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+  useEffect(() => {
+    if (!email) {
+      if (purpose === 'signup') {
+        navigate('/signup');
+      } else {
+        navigate('/forgot-password');
+      }
+    }
+    if (inputRefs.current[0]) {
+      inputRefs.current[0].focus();
+    }
+  }, [email, navigate, purpose]);
 
   useEffect(() => {
     if (!email) {
@@ -61,7 +73,6 @@ const VerifyOTP = () => {
     setOtp(newOtp);
     setError('');
     setSuccess(false);
-    
     if (value && index < 5) {
       inputRefs.current[index + 1].focus();
     }
@@ -93,7 +104,6 @@ const VerifyOTP = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const otpCode = otp.join('');
-    
     if (otpCode.length !== 6) {
       setError('Please enter the complete 6-digit code');
       return;
@@ -106,19 +116,18 @@ const VerifyOTP = () => {
     try {
       let endpoint = '';
       let body = {};
-      
       if (purpose === 'signup') {
         setError('Signup verification uses email link, not OTP. Please check your email.');
         setIsLoading(false);
         return;
       } else {
-        endpoint = `${API_URL}/api/auth/verify-password-reset-otp`;
+        endpoint = API.auth.verifyResetOtp;
         body = { email, otpCode };
       }
 
-      console.log(`📤 Verifying OTP for purpose: ${purpose}`);
-      console.log(`📤 Endpoint: ${endpoint}`);
-      console.log(`📤 Body:`, body);
+      console.log(`Verifying OTP for purpose: ${purpose}`);
+      console.log(`Endpoint: ${endpoint}`);
+      console.log(`Body:`, body);
 
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -134,14 +143,14 @@ const VerifyOTP = () => {
         setSuccess(true);
         setMessage('OTP verified successfully!');
         setIsLoading(false);
-        
+
         setTimeout(() => {
-          navigate('/reset-password', { 
-            state: { 
+          navigate('/reset-password', {
+            state: {
               resetToken: data.data?.resetToken,
               email: email,
               userId: data.data?.userId
-            } 
+            }
           });
         }, 2000);
       } else {
@@ -170,15 +179,15 @@ const VerifyOTP = () => {
 
     try {
       let endpoint = '';
-      
+
       if (purpose === 'signup') {
-        endpoint = `${API_URL}/api/auth/resend-verification`;
+        endpoint = API.auth.resendOtp;
       } else {
-        endpoint = `${API_URL}/api/auth/resend-password-reset-otp`;
+        endpoint = API.auth.resendResetOtp;
       }
 
-      console.log(`📤 Resending for purpose: ${purpose}`);
-      console.log(`📤 Endpoint: ${endpoint}`);
+      console.log(`Resending for purpose: ${purpose}`);
+      console.log(`Endpoint: ${endpoint}`);
 
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -277,13 +286,12 @@ const VerifyOTP = () => {
             {isSignup ? 'Verification link sent to' : 'Code sent to'} <strong>{email}</strong>
           </div>
 
-          {/* Success Message - No icon */}
           {success && (
-            <div className="success-message" style={{ 
-              background: '#d4edda', 
-              color: '#155724', 
-              padding: '12px 16px', 
-              borderRadius: '8px', 
+            <div className="success-message" style={{
+              background: '#d4edda',
+              color: '#155724',
+              padding: '12px 16px',
+              borderRadius: '8px',
               marginBottom: '15px',
               border: '1px solid #c3e6cb'
             }}>
@@ -291,7 +299,6 @@ const VerifyOTP = () => {
             </div>
           )}
 
-          {/* Error Message */}
           {error && !success && (
             <div className="server-error">
               <FaExclamationCircle />
@@ -299,13 +306,12 @@ const VerifyOTP = () => {
             </div>
           )}
 
-          {/* Info Message - No icon */}
           {message && !success && !error && (
-            <div className="info-message" style={{ 
-              background: '#e3f2fd', 
-              color: '#0d47a1', 
-              padding: '12px 16px', 
-              borderRadius: '8px', 
+            <div className="info-message" style={{
+              background: '#e3f2fd',
+              color: '#0d47a1',
+              padding: '12px 16px',
+              borderRadius: '8px',
               marginBottom: '15px',
               border: '1px solid #90caf9'
             }}>
@@ -385,9 +391,9 @@ const VerifyOTP = () => {
                     <FaClock className="timer-icon" />
                     Didn't receive the code?{' '}
                     {canResend ? (
-                      <button 
+                      <button
                         type="button"
-                        onClick={handleResend} 
+                        onClick={handleResend}
                         className="resend-btn"
                         disabled={resendLoading}
                       >
@@ -400,9 +406,9 @@ const VerifyOTP = () => {
                     )}
                   </div>
 
-                  <button 
-                    type="submit" 
-                    className="btn-primary" 
+                  <button
+                    type="submit"
+                    className="btn-primary"
                     disabled={isLoading || otp.join('').length !== 6 || resendLoading}
                   >
                     {isLoading ? (
@@ -419,9 +425,9 @@ const VerifyOTP = () => {
 
               {isSignup && (
                 <div style={{ textAlign: 'center', marginTop: '15px' }}>
-                  <button 
+                  <button
                     type="button"
-                    onClick={handleResend} 
+                    onClick={handleResend}
                     className="resend-btn"
                     disabled={resendLoading || !canResend}
                     style={{

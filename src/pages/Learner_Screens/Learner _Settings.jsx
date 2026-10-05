@@ -1,27 +1,23 @@
-import React, { useState } from 'react';
+// src/pages/Learner_Screens/Learner _Settings.jsx
+import { useEffect, useRef, useState } from 'react';
 import Learner_Header from '../../components/Learner/Learner_Header';
 import Learner_SideBar from '../../components/Learner/Learner_SideBar';
 import '../../styles/Learner/Learner_Settings.css';
+import { API } from '../../config/api';
 
 const SettingsPage = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    name: 'Sarah',
-    surname: 'Khumalo',
-    email: 'sarah.khumalo@example.com',
-    phone: '+27 82 123 4567'
-  });
-
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
-  });
-
   const [notifications, setNotifications] = useState({
     certificateIssued: true,
-    newProgramme: true
+    newProgramme: true,
   });
+  const [prefsLoading, setPrefsLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastVisible, setToastVisible] = useState(false);
+  const toastTimerRef = useRef(null);
+  const toastCleanupRef = useRef(null);
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen((isOpen) => !isOpen);
@@ -31,39 +27,120 @@ const SettingsPage = () => {
     setIsMobileMenuOpen(false);
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+  const getAuthHeaders = (extra = {}) => {
+    const token = localStorage.getItem('token');
+    return {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...extra,
+    };
   };
 
-  const handlePasswordChange = (e) => {
-    const { name, value } = e.target;
-    setPasswordData((prev) => ({ ...prev, [name]: value }));
+  const showToast = (message) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    if (toastCleanupRef.current) clearTimeout(toastCleanupRef.current);
+
+    setToastMessage(message);
+    setToastVisible(true);
+
+    toastTimerRef.current = setTimeout(() => {
+      setToastVisible(false);
+      toastCleanupRef.current = setTimeout(() => {
+        setToastMessage('');
+      }, 400);
+    }, 2500);
   };
 
-  const handleNotificationToggle = (key) => {
-    setNotifications((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
+  
+  useEffect(() => {
+    let cancelled = false;
 
-  const handleSaveChanges = (e) => {
-    e.preventDefault();
-    alert('Profile changes saved!');
-  };
+    const load = async () => {
+      try {
+        setPrefsLoading(true);
+        const res = await fetch(API.learner.notifications, {
+          headers: getAuthHeaders(),
+          credentials: 'include',
+        });
+        const data = await res.json();
+        if (cancelled) return;
 
-  const handleUpdatePassword = (e) => {
-    e.preventDefault();
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      alert('New passwords do not match!');
-      return;
+        const payload = data?.data ?? null;
+        const isOk = data?.success === true || data?.status === 'success';
+
+        if (res.ok && isOk && payload) {
+          setNotifications({
+            certificateIssued: payload.certificateIssued ?? true,
+            newProgramme: payload.newProgramme ?? true,
+          });
+        }
+      } catch (err) {
+        console.error('Load notification prefs error:', err);
+      } finally {
+        if (!cancelled) setPrefsLoading(false);
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  
+  const handleNotificationToggle = async (key) => {
+    if (saving || prefsLoading) return;
+
+    const next = { ...notifications, [key]: !notifications[key] };
+    const previous = notifications;
+
+    setNotifications(next);
+    setSaving(true);
+
+    const message =
+      key === 'certificateIssued'
+        ? `Email notifications for certificate issuance have been ${
+            next.certificateIssued ? 'enabled.' : 'turned off.'
+          }`
+        : `Notifications for new programme availability have been ${
+            next.newProgramme ? 'enabled.' : 'turned off.'
+          }`;
+    showToast(message);
+
+    try {
+      const res = await fetch(API.learner.notifications, {
+        method: 'PUT',
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+        credentials: 'include',
+        body: JSON.stringify(next),
+      });
+
+      const data = await res.json();
+      const isOk = data?.success === true || data?.status === 'success';
+
+      if (!res.ok || !isOk) {
+        setNotifications(previous);
+        showToast(data?.message || 'Failed to save preference.');
+      }
+    } catch (err) {
+      console.error('Save notification prefs error:', err);
+      setNotifications(previous);
+      showToast('Failed to save preference.');
+    } finally {
+      setSaving(false);
     }
-    alert('Password updated successfully!');
-    setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
   };
+
+  useEffect(
+    () => () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      if (toastCleanupRef.current) clearTimeout(toastCleanupRef.current);
+    },
+    []
+  );
 
   return (
-    <div className="settings-layout">
+    <div className="learner-certificates-layout">
       <Learner_Header
-        userName="Sarah Khumalo"
         onMenuToggle={toggleMobileMenu}
         isMobileMenuOpen={isMobileMenuOpen}
       />
@@ -76,132 +153,16 @@ const SettingsPage = () => {
         />
 
         <main className="settings-page">
-          {/* Header Section */}
           <section className="settings-hero">
             <div className="hero-content">
               <h1>Settings</h1>
               <p className="hero-subtitle">
-                Manage your account profile, security, and notification preferences.
+                Manage your notification preferences.
               </p>
             </div>
           </section>
 
           <div className="settings-content">
-            {/* Account Profile */}
-            <div className="settings-card">
-              <div className="card-header">
-                <h2>Account Profile</h2>
-                <p className="card-subtitle">
-                  Update your personal details and contact information.
-                </p>
-              </div>
-              <form className="profile-form" onSubmit={handleSaveChanges}>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label htmlFor="name">Name</label>
-                    <input
-                      type="text"
-                      id="name"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="surname">Surname</label>
-                    <input
-                      type="text"
-                      id="surname"
-                      name="surname"
-                      value={formData.surname}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="email">Email Address</label>
-                  <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="phone">Phone Number</label>
-                  <input
-                    type="tel"
-                    id="phone"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                  />
-                </div>
-
-                <div className="form-footer">
-                  <span className="last-updated">Last updated September 8</span>
-                  <button type="submit" className="btn-primary">
-                    Save Changes
-                  </button>
-                </div>
-              </form>
-            </div>
-
-            {/* Security Settings */}
-            <div className="settings-card">
-              <div className="card-header">
-                <h2>Security Settings</h2>
-              </div>
-              <form className="security-form" onSubmit={handleUpdatePassword}>
-                <div className="form-group">
-                  <label htmlFor="currentPassword">Current Password</label>
-                  <input
-                    type="password"
-                    id="currentPassword"
-                    name="currentPassword"
-                    value={passwordData.currentPassword}
-                    onChange={handlePasswordChange}
-                    placeholder="••••••••••"
-                  />
-                </div>
-
-                <div className="form-row">
-                  <div className="form-group">
-                    <label htmlFor="newPassword">New Password</label>
-                    <input
-                      type="password"
-                      id="newPassword"
-                      name="newPassword"
-                      value={passwordData.newPassword}
-                      onChange={handlePasswordChange}
-                      placeholder="••••••••••"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="confirmPassword">Confirm New Password</label>
-                    <input
-                      type="password"
-                      id="confirmPassword"
-                      name="confirmPassword"
-                      value={passwordData.confirmPassword}
-                      onChange={handlePasswordChange}
-                      placeholder="••••••••••"
-                    />
-                  </div>
-                </div>
-
-                <div className="form-footer">
-                  <button type="submit" className="btn-primary">
-                    Update Password
-                  </button>
-                </div>
-              </form>
-            </div>
-
-            {/* Notification Preferences */}
             <div className="settings-card">
               <div className="card-header">
                 <h2>Notification Preferences</h2>
@@ -210,13 +171,19 @@ const SettingsPage = () => {
                 <div className="notification-item">
                   <div className="notification-text">
                     <h3>Email me when a certificate is issued</h3>
-                    <p>Receive an email copy every time you complete a course and a certificate is issued.</p>
+                    <p>
+                      Receive an email copy every time you complete a course and
+                      a certificate is issued.
+                    </p>
                   </div>
                   <label className="toggle-switch">
                     <input
                       type="checkbox"
                       checked={notifications.certificateIssued}
-                      onChange={() => handleNotificationToggle('certificateIssued')}
+                      onChange={() =>
+                        handleNotificationToggle('certificateIssued')
+                      }
+                      disabled={prefsLoading || saving}
                     />
                     <span className="toggle-slider"></span>
                   </label>
@@ -225,13 +192,17 @@ const SettingsPage = () => {
                 <div className="notification-item">
                   <div className="notification-text">
                     <h3>Notify me of new programme availability</h3>
-                    <p>Get notified when new programmes are published and available for enrollment.</p>
+                    <p>
+                      Get notified when new programmes are published and
+                      available for enrollment.
+                    </p>
                   </div>
                   <label className="toggle-switch">
                     <input
                       type="checkbox"
                       checked={notifications.newProgramme}
                       onChange={() => handleNotificationToggle('newProgramme')}
+                      disabled={prefsLoading || saving}
                     />
                     <span className="toggle-slider"></span>
                   </label>
@@ -239,13 +210,26 @@ const SettingsPage = () => {
               </div>
             </div>
 
-            {/* POPIA Notice */}
             <div className="popia-notice">
-              <strong>POPIA Notice:</strong> All personal information shown on this profile is processed in compliance with the South African Protection of Personal Information Act (POPIA). Your ID and contact details are fully encrypted and only used for verified academic credential issuance.
+              <strong>POPIA Notice:</strong> All personal information shown on
+              this profile is processed in compliance with the South African
+              Protection of Personal Information Act (POPIA). Your ID and
+              contact details are fully encrypted and only used for verified
+              academic credential issuance.
             </div>
           </div>
         </main>
       </div>
+
+      {toastMessage && (
+        <div
+          className={`toast-message ${
+            toastVisible ? 'toast-enter' : 'toast-exit'
+          }`}
+        >
+          {toastMessage}
+        </div>
+      )}
     </div>
   );
 };

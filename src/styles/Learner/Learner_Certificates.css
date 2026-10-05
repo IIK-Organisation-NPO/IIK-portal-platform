@@ -115,12 +115,23 @@
     flex-direction: column;
 }
 
+/* ---------------------------------------------------------------------------
+   Certificate preview — acts like a fixed image thumbnail.
+
+   The container has a fixed height and clips anything that overflows.
+   The PDF embed inside is rendered larger than the container so the
+   browser shows the top portion of page 1, then the overflow is hidden.
+--------------------------------------------------------------------------- */
 .cert-preview {
-    height: 150px;
+    position: relative;
+    width: 100%;
+    height: 150px;            /* match the previous placeholder height */
+    overflow: hidden;
     background: #eef0f2;
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
 }
 
 .cert-preview span {
@@ -137,6 +148,18 @@
 
 .cert-preview.unavailable span {
     color: #c7cbd1;
+}
+
+/* The PDF embed — scaled larger than the container so the browser
+   renders a real slice of the page, then clipped by the parent.
+   pointer-events: none makes it inert (no scroll, no zoom, no click). */
+.cert-preview-embed {
+    width: 150%;
+    height: 150%;
+    border: 0;
+    display: block;
+    pointer-events: none;
+    flex-shrink: 0;
 }
 
 .cert-card-body {

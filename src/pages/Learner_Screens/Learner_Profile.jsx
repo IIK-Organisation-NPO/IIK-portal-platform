@@ -7,60 +7,43 @@ import api from '../../services/api';
 
 // ============================================
 // PHONE INPUT LIMITER
-// - Allows exactly 10 digits (e.g. 0821234567)
-// - Or +27 followed by exactly 9 digits (e.g. +27821234567)
-// - Or 27 followed by exactly 9 digits (e.g. 27821234567)
-// - Blocks typing past the limit
-// - Allows the user to type "+" at the start
 // ============================================
 const limitPhoneInput = (raw) => {
     if (raw == null) return '';
 
-    // Allow only digits and "+"
     let cleaned = String(raw).replace(/[^\d+]/g, '');
 
-    // Only one "+" allowed, and only at position 0
     if (cleaned.indexOf('+') > 0) {
-        // Remove every "+" that isn't the first character
         cleaned = cleaned[0] + cleaned.slice(1).replace(/\+/g, '');
     }
 
-    // If it starts with +27, cap total length at 12 characters (+27 + 9 digits)
     if (cleaned.startsWith('+27')) {
         return cleaned.slice(0, 12);
     }
 
-    // If it starts with + but not +27 yet, allow it to grow up to 12 chars
-    // (the user may still be typing "+2" before they reach "+27")
     if (cleaned.startsWith('+')) {
         return cleaned.slice(0, 12);
     }
 
-    // If it starts with "27", cap at 11 digits (27 + 9)
     if (cleaned.startsWith('27')) {
         return cleaned.slice(0, 11);
     }
 
-    // Otherwise cap at 10 digits
     return cleaned.slice(0, 10);
 };
 
-// Final validation on submit
 const isValidSAPhone = (phone) => {
     if (!phone) return false;
     const cleaned = phone.replace(/[\s\-()]/g, '');
 
-    // +27 followed by exactly 9 digits
     if (cleaned.startsWith('+27')) {
         return /^\+27\d{9}$/.test(cleaned);
     }
 
-    // 27 followed by exactly 9 digits
     if (cleaned.startsWith('27')) {
         return /^27\d{9}$/.test(cleaned);
     }
 
-    // Local: exactly 10 digits starting with 0
     if (cleaned.startsWith('0')) {
         return /^0\d{9}$/.test(cleaned);
     }
@@ -93,7 +76,7 @@ const Learner_Profile = () => {
     currentlyEnrolled: ''
   });
 
-  //  Validation functions (same as signup)
+  //  Validation functions 
   const validateName = (name) => {
     if (!name.trim()) {
       return { valid: false, message: 'Name is required' };
@@ -129,10 +112,8 @@ const Learner_Profile = () => {
   const validatePhone = (phone) => {
     if (!phone) return { valid: false, message: 'Phone number is required' };
 
-    // Strip spaces / dashes / brackets just in case
     const cleaned = phone.replace(/[\s\-()]/g, '');
 
-    // +27 format
     if (cleaned.startsWith('+27')) {
       const afterCode = cleaned.substring(3);
       if (afterCode.startsWith('0')) {
@@ -145,7 +126,6 @@ const Learner_Profile = () => {
       return { valid: true, message: 'Valid phone number' };
     }
 
-    // 27 format (without +)
     if (cleaned.startsWith('27')) {
       const afterCode = cleaned.substring(2);
       if (afterCode.startsWith('0')) {
@@ -158,7 +138,6 @@ const Learner_Profile = () => {
       return { valid: true, message: 'Valid phone number' };
     }
 
-    // Local format (starting with 0)
     if (cleaned.startsWith('0')) {
       const digitsOnly = cleaned.replace(/\D/g, '');
       if (digitsOnly.length !== 10) {
@@ -167,7 +146,6 @@ const Learner_Profile = () => {
       return { valid: true, message: 'Valid phone number' };
     }
 
-    // Any other leading "+" that isn't +27
     if (cleaned.startsWith('+')) {
       return { valid: false, message: 'Please enter a valid South African phone number (e.g., 0821234567 or +27821234567)' };
     }
@@ -216,16 +194,24 @@ const Learner_Profile = () => {
       if (response.data.status === 'success') {
         const data = response.data.data;
 
+        const rawAddress =
+          data.physicalAddress ??
+          data.Physical_address ??
+          data.address ??
+          '';
+
         setLearnerData({
-          userName: data.fullName || data.name + ' ' + data.surname,
+          userName: data.fullName || `${data.name || ''} ${data.surname || ''}`.trim(),
           userEmail: data.email || '',
-          memberSince: data.registeredAt ? new Date(data.registeredAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }) : 'January 2025',
+          memberSince: data.registeredAt
+            ? new Date(data.registeredAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
+            : 'January 2025',
           personalInfo: {
             firstName: data.name || '',
             lastName: data.surname || '',
-            idNumber: data.idNumber || 'Not provided',
+            idNumber: data.idNumber || data.id_number || 'Not provided',
             phone: data.phone || data.phone_number || '',
-            address: data.address || 'Not provided'
+            address: rawAddress || 'Not provided' // <-- CHANGED
           },
           completedProgrammes: data.completedProgrammes || [],
           currentlyEnrolled: data.currentEnrollment || 'None'
@@ -256,17 +242,17 @@ const Learner_Profile = () => {
         return false;
       }
 
-      // Map frontend field names to backend field names
+     
+      
       const fieldMap = {
         firstName: 'name',
         lastName: 'surname',
-        phone: 'phone',
-        address: 'address'
+        phone: 'phone_number',
+        address: 'physicalAddress'
       };
 
       const backendField = fieldMap[field] || field;
 
-      // Build update object
       const updateData = {};
 
       if (field === 'firstName') {
@@ -276,9 +262,9 @@ const Learner_Profile = () => {
         updateData.name = learnerData.personalInfo.firstName;
         updateData.surname = value;
       } else if (field === 'phone') {
-        updateData.phone = value;
+        updateData.phone_number = value;
       } else if (field === 'address') {
-        updateData.address = value;
+        updateData.physicalAddress = value; 
       }
 
       const response = await api.put('/learner/profile', updateData);
@@ -316,7 +302,8 @@ const Learner_Profile = () => {
   const handleEditClick = (field, value) => {
     setFieldErrors({});
     setEditingField(field);
-    setEditValue(value);
+   
+    setEditValue(value === 'Not provided' ? '' : value);
   };
 
   const handleEditSave = async () => {
@@ -379,7 +366,7 @@ const Learner_Profile = () => {
         setLearnerData({
           ...learnerData,
           personalInfo: {
-            ...learnerData.personalInfo,
+          ...learnerData.personalInfo,
             [editingField]: oldValue
           }
         });
@@ -400,36 +387,29 @@ const Learner_Profile = () => {
     const limited = limitPhoneInput(e.target.value);
     setEditValue(limited);
 
-    // Clear error while typing
     if (fieldErrors.phone) {
       setFieldErrors({});
     }
   };
 
   const handlePhoneKeyDown = (e) => {
-    // Allow control / navigation keys
     const allowedKeys = [
       'Backspace', 'Delete', 'ArrowLeft', 'ArrowRight',
       'Tab', 'Home', 'End', 'Enter', 'Escape'
     ];
     if (allowedKeys.includes(e.key)) return;
-
-    // Allow Ctrl/Cmd combos (copy, paste, select all, etc.)
     if (e.ctrlKey || e.metaKey) return;
 
-    // Allow digits and "+"
     if (!/^[\d+]$/.test(e.key)) {
       e.preventDefault();
       return;
     }
 
-    // Block a second "+" if one already exists
     if (e.key === '+' && editValue.includes('+')) {
       e.preventDefault();
       return;
     }
 
-    // Block "+" unless it's at the start
     if (e.key === '+' && editValue.length > 0) {
       e.preventDefault();
       return;
@@ -443,12 +423,13 @@ const Learner_Profile = () => {
     fetchLearnerProfile();
   }, []);
 
-  // Render editable field
+  
   const renderEditableField = (label, field, value) => {
     const isEditing = editingField === field;
-    const fieldError = fieldErrors[field] || fieldErrors[field === 'firstName' ? 'name' : field === 'lastName' ? 'surname' : field];
+    const fieldError =
+      fieldErrors[field] ||
+      fieldErrors[field === 'firstName' ? 'name' : field === 'lastName' ? 'surname' : field];
 
-    // Don't allow editing of ID Number
     if (field === 'idNumber') {
       return (
         <div className="info-item">
@@ -477,7 +458,7 @@ const Learner_Profile = () => {
                   maxLength={12}
                   className={`edit-input ${fieldError ? 'error' : ''}`}
                   autoFocus
-                  placeholder="0821234567 or +27821234567"
+                 placeholder=""
                   inputMode="tel"
                 />
               ) : (
@@ -486,7 +467,10 @@ const Learner_Profile = () => {
                   value={editValue}
                   onChange={(e) => {
                     setEditValue(e.target.value);
-                    if (fieldErrors[field] || fieldErrors[field === 'firstName' ? 'name' : field === 'lastName' ? 'surname' : field]) {
+                    if (
+                      fieldErrors[field] ||
+                      fieldErrors[field === 'firstName' ? 'name' : field === 'lastName' ? 'surname' : field]
+                    ) {
                       setFieldErrors({});
                     }
                   }}
@@ -522,7 +506,7 @@ const Learner_Profile = () => {
     );
   };
 
-  // Loading state
+  
   if (loading) {
     return (
       <div className="profile-layout">
@@ -547,7 +531,7 @@ const Learner_Profile = () => {
     );
   }
 
-  // Error state
+  
   if (error && !learnerData.userEmail) {
     return (
       <div className="profile-layout">
@@ -720,21 +704,12 @@ const Learner_Profile = () => {
         </main>
       </div>
 
-      {/* Animation styles */}
       <style>{`
         @keyframes slideIn {
-          from {
-            transform: translateX(100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
+          from { transform: translateX(100%); opacity: 0; }
+          to   { transform: translateX(0);    opacity: 1; }
         }
-        .edit-input.error {
-          border-color: #dc3545 !important;
-        }
+        .edit-input.error { border-color: #dc3545 !important; }
         .field-error {
           color: #dc3545;
           font-size: 12px;
@@ -759,9 +734,7 @@ const Learner_Profile = () => {
           outline: none;
           border-color: #1a237e;
         }
-        .edit-mode .field-error {
-          width: 100%;
-        }
+        .edit-mode .field-error { width: 100%; }
       `}</style>
     </div>
   );

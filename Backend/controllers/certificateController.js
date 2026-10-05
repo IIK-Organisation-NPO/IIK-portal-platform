@@ -6,11 +6,11 @@ const path = require('path');
 
 class CertificateController {
     // ============================================
-    // ✅ GET ALL CERTIFICATES
+    // GET ALL CERTIFICATES
     // ============================================
     static async getCertificates(req, res) {
         try {
-            console.log('📜 Fetching certificates...');
+            console.log('Fetching certificates...');
 
             const [rows] = await pool.execute(
                 `SELECT 
@@ -27,7 +27,7 @@ class CertificateController {
                 ORDER BY c.Certificate_id DESC`
             );
 
-            //  Format dates manually in JavaScript
+            // Format dates as YYYY-MM-DD
             const formattedRows = rows.map(row => {
                 let formattedDateIssued = null;
                 if (row.Date_issued) {
@@ -66,7 +66,7 @@ class CertificateController {
                 };
             });
 
-            console.log(` Found ${formattedRows.length} certificates`);
+            console.log(`Found ${formattedRows.length} certificates`);
 
             res.status(200).json({
                 success: true,
@@ -74,7 +74,7 @@ class CertificateController {
             });
 
         } catch (error) {
-            console.error(' Error fetching certificates:', error);
+            console.error('Error fetching certificates:', error);
             res.status(500).json({
                 success: false,
                 message: 'Failed to fetch certificates'
@@ -83,56 +83,46 @@ class CertificateController {
     }
 
     // ============================================
-    // ✅ VIEW CERTIFICATE - Displays in Browser (NEW)
+    // VIEW CERTIFICATE
     // ============================================
     static async viewCertificate(req, res) {
         try {
             const { id } = req.params;
 
-            console.log('👁️ Viewing certificate ID:', id);
+            console.log('Viewing certificate ID:', id);
 
-            const [certificate] = await pool.execute(
-                `SELECT 
-                    c.Certificate_id,
-                    c.Date_issued,
-                    u.name as learner_name,
-                    u.surname as learner_surname,
-                    u.id_number,
-                    p.Programme_name
-                FROM Certificate c
-                LEFT JOIN user u ON c.User_id = u.User_id
-                LEFT JOIN Programmes p ON c.Programme_id = p.Programme_id
-                WHERE c.Certificate_id = ?`,
+            // Confirm row exists
+            const [rows] = await pool.execute(
+                'SELECT Certificate_id FROM Certificate WHERE Certificate_id = ?',
                 [id]
             );
 
-            if (certificate.length === 0) {
+            if (rows.length === 0) {
                 return res.status(404).json({
                     success: false,
                     message: 'Certificate not found'
                 });
             }
 
-            const cert = certificate[0];
-            const learnerName = `${cert.learner_name} ${cert.learner_surname || ''}`.trim() || 'Learner';
+            const filePath = path.join(
+                __dirname, '..', 'uploads', 'certificates', `cert-${id}.pdf`
+            );
 
-            const pdfBytes = await CertificateService.generateCertificate({
-                learnerName: learnerName,
-                idNumber: cert.id_number || 'N/A',
-                completionDate: cert.Date_issued || new Date(),
-                programmeName: cert.Programme_name || 'Programme',
-                certificateNumber: `CERT-${cert.Certificate_id}`
-            });
+            if (!fs.existsSync(filePath)) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Certificate file is missing on the server.'
+                });
+            }
 
-            //  Display in browser instead of downloading
             res.setHeader('Content-Type', 'application/pdf');
             res.setHeader('Content-Disposition', 'inline; filename="certificate.pdf"');
-            res.setHeader('Content-Length', pdfBytes.length);
             res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-            res.end(pdfBytes);
+
+            fs.createReadStream(filePath).pipe(res);
 
         } catch (error) {
-            console.error(' Error viewing certificate:', error);
+            console.error('Error viewing certificate:', error);
             res.status(500).json({
                 success: false,
                 message: 'Failed to view certificate: ' + error.message
@@ -141,59 +131,49 @@ class CertificateController {
     }
 
     // ============================================
-    // ✅ DOWNLOAD CERTIFICATE
+    // DOWNLOAD CERTIFICATE
     // ============================================
     static async downloadCertificate(req, res) {
         try {
             const { id } = req.params;
 
-            const [certificate] = await pool.execute(
-                `SELECT 
-                    c.Certificate_id,
-                    c.Date_issued,
-                    u.name as learner_name,
-                    u.surname as learner_surname,
-                    u.id_number,
-                    p.Programme_name
-                FROM Certificate c
-                LEFT JOIN user u ON c.User_id = u.User_id
-                LEFT JOIN Programmes p ON c.Programme_id = p.Programme_id
-                WHERE c.Certificate_id = ?`,
+            const [rows] = await pool.execute(
+                `SELECT c.Certificate_id, u.name as learner_name, u.surname as learner_surname
+                 FROM Certificate c
+                 LEFT JOIN user u ON c.User_id = u.User_id
+                 WHERE c.Certificate_id = ?`,
                 [id]
             );
 
-            if (certificate.length === 0) {
+            if (rows.length === 0) {
                 return res.status(404).json({
                     success: false,
                     message: 'Certificate not found'
                 });
             }
 
-            const cert = certificate[0];
-            const learnerName = `${cert.learner_name} ${cert.learner_surname || ''}`.trim() || 'Learner';
+            const filePath = path.join(
+                __dirname, '..', 'uploads', 'certificates', `cert-${id}.pdf`
+            );
 
-            const pdfBytes = await CertificateService.generateCertificate({
-                learnerName: learnerName,
-                idNumber: cert.id_number || 'N/A',
-                completionDate: cert.Date_issued || new Date(),
-                programmeName: cert.Programme_name || 'Programme',
-                certificateNumber: `CERT-${cert.Certificate_id}`
-            });
+            if (!fs.existsSync(filePath)) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Certificate file is missing on the server.'
+                });
+            }
 
+            const learnerName = `${rows[0].learner_name || 'Learner'} ${rows[0].learner_surname || ''}`.trim();
             const fileName = `Certificate_${learnerName.replace(/\s/g, '_')}.pdf`;
 
-            res.writeHead(200, {
-                'Content-Type': 'application/pdf',
-                'Content-Disposition': `attachment; filename="${fileName}"`,
-                'Content-Length': pdfBytes.length,
-                'Cache-Control': 'no-cache, no-store, must-revalidate',
-                'Pragma': 'no-cache',
-                'Expires': '0'
-            });
-            res.end(pdfBytes);
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+
+            fs.createReadStream(filePath).pipe(res);
 
         } catch (error) {
-            console.error(' Error downloading certificate:', error);
+            console.error('Error downloading certificate:', error);
             res.status(500).json({
                 success: false,
                 message: 'Failed to download certificate: ' + error.message
@@ -202,16 +182,16 @@ class CertificateController {
     }
 
     // ============================================
-    // ✅ UPLOAD CERTIFICATE WITH FILE
+    // UPLOAD CERTIFICATE WITH FILE
     // ============================================
     static async uploadCertificate(req, res) {
         try {
             const { user_id, programme_id, issue_date, expiry_date } = req.body;
             const file = req.file;
 
-            console.log('📤 Uploading certificate for user:', user_id);
-            console.log('📄 File:', file ? file.originalname : 'No file');
-            console.log('📅 Issue Date received:', issue_date);
+            console.log('Uploading certificate for user:', user_id);
+            console.log('File:', file ? file.originalname : 'No file');
+            console.log('Issue Date received:', issue_date);
 
             if (!file) {
                 return res.status(400).json({
@@ -220,58 +200,160 @@ class CertificateController {
                 });
             }
 
-            // Get learner and programme details
-            const [learner] = await pool.execute(
-                'SELECT name, surname FROM user WHERE User_id = ?',
-                [user_id]
-            );
+            if (!user_id || !programme_id) {
+                try { fs.unlinkSync(file.path); } catch (e) { /* ignore */ }
+                return res.status(400).json({
+                    success: false,
+                    message: 'Learner and programme are required'
+                });
+            }
 
-            const [programme] = await pool.execute(
-                'SELECT Programme_name FROM Programmes WHERE Programme_id = ?',
-                [programme_id]
-            );
-
-            //  Ensure date is properly set
-            let dateIssued;
+            // ---- Date validations ----
             if (issue_date) {
-                dateIssued = new Date(issue_date);
-            } else {
-                dateIssued = new Date();
+                const today = new Date(); today.setHours(0, 0, 0, 0);
+                const parsedIssue = new Date(issue_date);
+                if (isNaN(parsedIssue.getTime())) {
+                    try { fs.unlinkSync(file.path); } catch (e) { /* ignore */ }
+                    return res.status(400).json({ success: false, message: 'Invalid issue date format.' });
+                }
+                parsedIssue.setHours(0, 0, 0, 0);
+                if (parsedIssue < today) {
+                    try { fs.unlinkSync(file.path); } catch (e) { /* ignore */ }
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Issue date cannot be in the past. Please choose today or a future date.'
+                    });
+                }
             }
 
-            let dateExpiry = null;
             if (expiry_date) {
-                dateExpiry = new Date(expiry_date);
+                const today = new Date(); today.setHours(0, 0, 0, 0);
+                const parsedExpiry = new Date(expiry_date);
+                if (isNaN(parsedExpiry.getTime())) {
+                    try { fs.unlinkSync(file.path); } catch (e) { /* ignore */ }
+                    return res.status(400).json({ success: false, message: 'Invalid expiry date format.' });
+                }
+                parsedExpiry.setHours(0, 0, 0, 0);
+                if (parsedExpiry < today) {
+                    try { fs.unlinkSync(file.path); } catch (e) { /* ignore */ }
+                    return res.status(400).json({ success: false, message: 'Expiry date cannot be in the past.' });
+                }
+                if (issue_date) {
+                    const parsedIssue = new Date(issue_date); parsedIssue.setHours(0, 0, 0, 0);
+                    if (parsedExpiry < parsedIssue) {
+                        try { fs.unlinkSync(file.path); } catch (e) { /* ignore */ }
+                        return res.status(400).json({
+                            success: false,
+                            message: 'Expiry date must be on or after the issue date.'
+                        });
+                    }
+                }
             }
 
-            console.log('📅 Saving Date_issued:', dateIssued);
+            // ---- Learner must have COMPLETED the programme ----
+            const [completedEnrolment] = await pool.execute(
+                `SELECT Enrolment_id FROM Enrolment
+                 WHERE User_id = ? AND Programme_id = ? AND Completion_status = 'Completed'
+                 LIMIT 1`,
+                [user_id, programme_id]
+            );
+            if (completedEnrolment.length === 0) {
+                try { fs.unlinkSync(file.path); } catch (e) { /* ignore */ }
+                return res.status(400).json({
+                    success: false,
+                    message: 'This learner has not completed this programme, so a certificate cannot be issued.'
+                });
+            }
 
-            // Insert into database
+            // ---- Duplicate check ----
+            const [existing] = await pool.execute(
+                `SELECT Certificate_id FROM Certificate WHERE User_id = ? AND Programme_id = ?`,
+                [user_id, programme_id]
+            );
+            if (existing.length > 0) {
+                try { fs.unlinkSync(file.path); } catch (e) { /* ignore */ }
+                return res.status(409).json({
+                    success: false,
+                    message: 'This learner already has a certificate for this programme.'
+                });
+            }
+
+            // ---- Insert the row ----
+            const dateIssued = issue_date ? new Date(issue_date) : new Date();
+            const dateExpiry = expiry_date ? new Date(expiry_date) : null;
+
             const [result] = await pool.execute(
                 `INSERT INTO Certificate 
                  (User_id, Programme_id, Date_issued, Expire_date)
                  VALUES (?, ?, ?, ?)`,
-                [
-                    user_id,
-                    programme_id,
-                    dateIssued,
-                    dateExpiry
-                ]
+                [user_id, programme_id, dateIssued, dateExpiry]
             );
 
-            console.log(` Certificate ${result.insertId} uploaded successfully`);
+            const certificateId = result.insertId;
+
+            // ---- Fill the uploaded PDF with the learner's data ----
+            const uploadDir = path.join(__dirname, '..', 'uploads', 'certificates');
+            const finalPath = path.join(uploadDir, `cert-${certificateId}.pdf`);
+
+            try {
+                const [detailsRows] = await pool.execute(
+                    `SELECT 
+                        u.name      AS learner_name,
+                        u.surname   AS learner_surname,
+                        u.id_number AS learner_id_number,
+                        p.Programme_name
+                     FROM user u
+                     LEFT JOIN Programmes p ON p.Programme_id = ?
+                     WHERE u.User_id = ?`,
+                    [programme_id, user_id]
+                );
+
+                const details = detailsRows[0] || {};
+                const learnerName = `${details.learner_name || ''} ${details.learner_surname || ''}`.trim();
+
+                const pdfBytes = await CertificateService.generateCertificate({
+                    learnerName,
+                    idNumber: details.learner_id_number || 'N/A',
+                    completionDate: dateIssued,
+                    programmeName: details.Programme_name || 'Programme',
+                    certificateNumber: `CERT-${certificateId}`,
+                    templatePath: file.path,   
+                });
+
+                fs.writeFileSync(finalPath, pdfBytes);
+                try { fs.unlinkSync(file.path); } catch (e) { /* ignore */ }
+
+            } catch (genError) {
+                console.error('Error generating certificate PDF:', genError);
+                await pool.execute('DELETE FROM Certificate WHERE Certificate_id = ?', [certificateId]);
+                try { fs.unlinkSync(file.path); } catch (e) { /* ignore */ }
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to generate the certificate PDF: ' + genError.message
+                });
+            }
+
+            console.log(`Certificate ${certificateId} uploaded and PDF generated successfully`);
 
             res.status(201).json({
                 success: true,
-                message: 'Certificate issued successfully',
+                message: 'Certificate issued and uploaded successfully',
                 data: {
-                    certificate_id: result.insertId,
+                    certificate_id: certificateId,
                     date_issued: dateIssued
                 }
             });
 
         } catch (error) {
-            console.error(' Error uploading certificate:', error);
+            console.error('Error uploading certificate:', error);
+
+            if (error.code === 'ER_DUP_ENTRY') {
+                return res.status(409).json({
+                    success: false,
+                    message: 'This learner already has a certificate for this programme.'
+                });
+            }
+
             res.status(500).json({
                 success: false,
                 message: 'Failed to upload certificate: ' + error.message
@@ -280,18 +362,28 @@ class CertificateController {
     }
 
     // ============================================
-    // ✅ UPDATE CERTIFICATE
+    // UPDATE CERTIFICATE
     // ============================================
     static async updateCertificate(req, res) {
         try {
             const { id } = req.params;
-            const { Expire_date } = req.body;
+            const { Programme_id, Expire_date, neverExpires } = req.body;
+
+            const updateFields = [];
+            const values = [];
+
+            if (Programme_id !== undefined && Programme_id !== '' && Programme_id !== null) {
+                updateFields.push('Programme_id = ?');
+                values.push(Programme_id);
+            }
+
+            updateFields.push('Expire_date = ?');
+            values.push(neverExpires ? null : Expire_date);
+            values.push(id);
 
             await pool.execute(
-                `UPDATE Certificate 
-                 SET Expire_date = ?
-                 WHERE Certificate_id = ?`,
-                [Expire_date, id]
+                `UPDATE Certificate SET ${updateFields.join(', ')} WHERE Certificate_id = ?`,
+                values
             );
 
             res.status(200).json({
@@ -300,7 +392,7 @@ class CertificateController {
             });
 
         } catch (error) {
-            console.error(' Error updating certificate:', error);
+            console.error('Error updating certificate:', error);
             res.status(500).json({
                 success: false,
                 message: 'Failed to update certificate'
@@ -309,11 +401,23 @@ class CertificateController {
     }
 
     // ============================================
-    // ✅ DELETE CERTIFICATE
+    // DELETE CERTIFICATE
     // ============================================
     static async deleteCertificate(req, res) {
         try {
             const { id } = req.params;
+
+            
+            const filePath = path.join(
+                __dirname, '..', 'uploads', 'certificates', `cert-${id}.pdf`
+            );
+            try {
+                if (fs.existsSync(filePath)) {
+                    fs.unlinkSync(filePath);
+                }
+            } catch (fileError) {
+                console.error('Could not delete certificate file from disk:', fileError.message);
+            }
 
             await pool.execute(
                 'DELETE FROM Certificate WHERE Certificate_id = ?',
@@ -326,7 +430,7 @@ class CertificateController {
             });
 
         } catch (error) {
-            console.error(' Error deleting certificate:', error);
+            console.error('Error deleting certificate:', error);
             res.status(500).json({
                 success: false,
                 message: 'Failed to delete certificate'
@@ -335,29 +439,92 @@ class CertificateController {
     }
 
     // ============================================
-    //  BULK UPLOAD CERTIFICATES
+    // BULK UPLOAD CERTIFICATES
     // ============================================
     static async bulkUploadCertificates(req, res) {
         try {
-            const { certificates: certData } = req.body;
-            
-            if (!certData || !Array.isArray(certData) || certData.length === 0) {
+            const templateFile = req.file;                   
+            const rawCertificates = req.body.certificates;
+
+           
+            let certData;
+            try {
+                certData = typeof rawCertificates === 'string'
+                    ? JSON.parse(rawCertificates)
+                    : rawCertificates;
+            } catch (parseErr) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Invalid certificates payload'
+                });
+            }
+
+            if (!Array.isArray(certData) || certData.length === 0) {
+                if (templateFile) { try { fs.unlinkSync(templateFile.path); } catch (e) {} }
                 return res.status(400).json({
                     success: false,
                     message: 'No certificate data provided'
                 });
             }
 
+            if (!templateFile) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Certificate template PDF is required'
+                });
+            }
+
+            const CertificateService = require('../services/certificateService');
+            const uploadDir = path.join(__dirname, '..', 'uploads', 'certificates');
+
+            // Make sure the directory exists
+            if (!fs.existsSync(uploadDir)) {
+                fs.mkdirSync(uploadDir, { recursive: true });
+            }
+
             const results = [];
             const errors = [];
 
             for (const data of certData) {
+                let insertedCertificateId = null;
+
                 try {
                     const { user_id, programme_id, issue_date, expiry_date } = data;
-                    
-                    let dateIssued = issue_date ? new Date(issue_date) : new Date();
-                    let dateExpiry = expiry_date ? new Date(expiry_date) : null;
 
+                    
+                    const [completedEnrolment] = await pool.execute(
+                        `SELECT Enrolment_id FROM Enrolment
+                         WHERE User_id = ? AND Programme_id = ? AND Completion_status = 'Completed'
+                         LIMIT 1`,
+                        [user_id, programme_id]
+                    );
+                    if (completedEnrolment.length === 0) {
+                        errors.push({
+                            user_id,
+                            programme_id,
+                            error: 'Learner has not completed this programme'
+                        });
+                        continue;
+                    }
+
+                    
+                    const [existing] = await pool.execute(
+                        `SELECT Certificate_id FROM Certificate WHERE User_id = ? AND Programme_id = ?`,
+                        [user_id, programme_id]
+                    );
+                    if (existing.length > 0) {
+                        errors.push({
+                            user_id,
+                            programme_id,
+                            error: 'Certificate already exists for this learner and programme'
+                        });
+                        continue;
+                    }
+
+                    const dateIssued = issue_date ? new Date(issue_date) : new Date();
+                    const dateExpiry = expiry_date ? new Date(expiry_date) : null;
+
+                    
                     const [result] = await pool.execute(
                         `INSERT INTO Certificate 
                          (User_id, Programme_id, Date_issued, Expire_date)
@@ -365,31 +532,88 @@ class CertificateController {
                         [user_id, programme_id, dateIssued, dateExpiry]
                     );
 
-                    results.push({
-                        certificate_id: result.insertId
+                    insertedCertificateId = result.insertId;
+
+                    const [detailsRows] = await pool.execute(
+                        `SELECT 
+                            u.name      AS learner_name,
+                            u.surname   AS learner_surname,
+                            u.id_number AS learner_id_number,
+                            p.Programme_name
+                         FROM user u
+                         LEFT JOIN Programmes p ON p.Programme_id = ?
+                         WHERE u.User_id = ?`,
+                        [programme_id, user_id]
+                    );
+
+                    const details = detailsRows[0] || {};
+                    const learnerName = `${details.learner_name || ''} ${details.learner_surname || ''}`.trim();
+
+                    const pdfBytes = await CertificateService.generateCertificate({
+                        learnerName,
+                        idNumber: details.learner_id_number || 'N/A',
+                        completionDate: dateIssued,
+                        programmeName: details.Programme_name || 'Programme',
+                        certificateNumber: `CERT-${insertedCertificateId}`,
+                        templatePath: templateFile.path    // <-- use the uploaded template
                     });
+
+                    const finalPath = path.join(uploadDir, `cert-${insertedCertificateId}.pdf`);
+                    fs.writeFileSync(finalPath, pdfBytes);
+
+                    results.push({
+                        user_id,
+                        certificate_id: insertedCertificateId,
+                        pdf: `cert-${insertedCertificateId}.pdf`
+                    });
+
                 } catch (err) {
-                    errors.push({ error: err.message, data });
+                    console.error(`Bulk cert failed for user ${data.user_id}:`, err.message);
+
+                 
+                    if (insertedCertificateId) {
+                        try {
+                            await pool.execute(
+                                'DELETE FROM Certificate WHERE Certificate_id = ?',
+                                [insertedCertificateId]
+                            );
+                        } catch (rollbackErr) {
+                            console.error('Rollback failed:', rollbackErr.message);
+                        }
+                    }
+
+                    errors.push({
+                        user_id: data.user_id,
+                        programme_id: data.programme_id,
+                        error: err.message
+                    });
                 }
             }
 
+            // Clean up the temp template file
+            try { fs.unlinkSync(templateFile.path); } catch (e) { /* ignore */ }
+
             res.status(200).json({
                 success: true,
-                message: `Processed ${results.length} certificates`,
+                message: `Issued ${results.length} of ${certData.length} certificates`,
                 data: {
                     successful: results,
-                    failed: errors
+                    failed: errors,
+                    total: certData.length
                 }
             });
 
         } catch (error) {
-            console.error(' Error bulk uploading certificates:', error);
+            console.error('Error bulk uploading certificates:', error);
+
+            // Clean up if we have the file
+            if (req.file) { try { fs.unlinkSync(req.file.path); } catch (e) {} }
+
             res.status(500).json({
                 success: false,
-                message: 'Failed to bulk upload certificates'
+                message: 'Failed to bulk upload certificates: ' + error.message
             });
         }
     }
 }
-
 module.exports = CertificateController;

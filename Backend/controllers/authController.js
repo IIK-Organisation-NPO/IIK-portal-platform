@@ -1,5 +1,6 @@
 // backend/controllers/authController.js
 const User = require('../models/User');
+const Admin = require('../models/Admin');
 const { validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
 const dotenv = require('dotenv');
@@ -7,12 +8,28 @@ const emailService = require('../services/emailService');
 const { OAuth2Client } = require('google-auth-library');
 const { pool } = require('../config/database');
 const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
 
 dotenv.config();
 
 const oauthClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const pendingSignups = new Map();
 
-// In-memory login attempt tracking
+setInterval(() => {
+    const now = Date.now();
+    let removed = 0;
+    for (const [email, entry] of pendingSignups.entries()) {
+        if (entry.expire_at < now) {
+            pendingSignups.delete(email);
+            removed++;
+        }
+    }
+    if (removed > 0) {
+        console.log(`🧹 Cleaned up ${removed} expired pending signup(s)`);
+    }
+}, 5 * 60 * 1000);
+
+
 const loginAttempts = {};
 
 // Lockout duration based on lockout count (progressive)
@@ -72,65 +89,70 @@ class AuthController {
         return Math.floor(100000 + Math.random() * 900000).toString();
     }
 
-    // ============================================
-    // ✅ GENERATE ACCESS TOKEN (Short-lived)
-    // ============================================
-    static generateAccessToken(user) {
-        return jwt.sign(
-            { 
-                userId: user.User_id, 
-                email: user.email,
-                name: user.name,
-                surname: user.surname,
-                role: user.role_type || 'USER',
-                roleId: user.role_id || 2
-            },
-            process.env.JWT_SECRET,
-            { expiresIn: '15m' }
-        );
-    }
+   // ============================================
+// ✅ GENERATE ACCESS TOKEN 
+// ============================================
+static generateAccessToken(user) {
+    const userId = user.userId ?? user.User_id;
 
-    // ============================================
-    // ✅ GENERATE REFRESH JWT
-    // ============================================
-    static generateRefreshJWT(user) {
-        return jwt.sign(
-            { 
-                userId: user.User_id,
-                type: 'refresh'
-            },
-            process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
-            { expiresIn: '7d' }
-        );
-    }
+    return jwt.sign(
+        {
+            userId,
+            email: user.email,
+            name: user.name,
+            surname: user.surname,
+            role: user.role ?? user.role_type ?? 'USER',
+            roleId: user.roleId ?? user.role_id ?? 2,
+            userType: user.userType ?? 'user',
+            centreId: user.centreId ?? user.Centre_ID ?? null
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: '7d' }
+    );
+}
 
+// ============================================
+// ✅ GENERATE REFRESH JWT
+// ============================================
+static generateRefreshJWT(user) {
+    const userId = user.userId ?? user.User_id;
+
+    return jwt.sign(
+        {
+            userId,
+            type: 'refresh'
+        },
+        process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
+        { expiresIn: '7d' }
+    );
+}
     // ============================================
     // ✅ CREATE SESSION ON LOGIN
     // ============================================
     static async createSession(userId, refreshToken, ipAddress, userAgent) {
-        try {
-            // Expire any existing active sessions for this user
-            await pool.execute(
-                'UPDATE session SET status = "expired" WHERE user_id = ? AND status = "active"',
-                [userId]
-            );
+    try {
+        // Expire any existing active sessions for this user
+        await pool.execute(
+            'UPDATE session SET status = "expired" WHERE user_id = ? AND status = "active"',
+            [userId]
+        );
 
-            // Create new session
-            const expireAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-            const [result] = await pool.execute(
-                `INSERT INTO session 
-                 (user_id, session_token, status, expire_at, ip_address, user_agent) 
-                 VALUES (?, ?, 'active', ?, ?, ?)`,
-                [userId, refreshToken, expireAt, ipAddress, userAgent]
-            );
+        // Create new session (schema-safe: only columns that exist)
+        const expireAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+        const [result] = await pool.execute(
+            `INSERT INTO session 
+             (user_id, status, expire_at, login_at) 
+             VALUES (?, 'active', ?, NOW())`,
+            [userId, expireAt]
+        );
 
-            console.log(` Session created for user ${userId}`);
-            return result.insertId;
-        } catch (error) {
-            console.error('Error creating session:', error.message);
-            return null;
-        }
+        console.log(`Session created for user ${userId}`);
+        return result.insertId;
+    } catch (error) {
+        console.error('Error creating session:', error.message);
+        return null;
     }
+}
 
     // ============================================
     // ✅ VALIDATE SESSION
@@ -158,7 +180,7 @@ class AuthController {
     }
 
     // ============================================
-    // ✅ VALIDATE AND CLEAN PHONE NUMBER
+    //  VALIDATE AND CLEAN PHONE NUMBER
     // ============================================
     static validateAndCleanPhone(phone) {
         if (!phone) {
@@ -250,12 +272,11 @@ class AuthController {
     }
 
     // ============================================
-    //  SIGNUP
+    //  SIGNUP 
     // ============================================
     static async signup(req, res) {
         try {
             console.log(' Signup request received');
-            
             const errors = validationResult(req);
             if (!errors.isEmpty()) {
                 return res.status(400).json({
@@ -278,7 +299,8 @@ class AuthController {
                 password,
                 confirmPassword,
                 terms_accepted,
-                captchaToken
+                captchaToken,
+                physicalAddress
             } = req.body;
 
             // Validate email with disposable blocking
@@ -307,7 +329,6 @@ class AuthController {
                         { method: 'POST' }
                     );
                     const data = await response.json();
-                    
                     if (!data.success) {
                         return res.status(400).json({
                             success: false,
@@ -349,132 +370,87 @@ class AuthController {
                 });
             }
 
-            const existingEmail = await User.findByEmail(email);
-            if (existingEmail) {
+            const normalizedEmail = email.toLowerCase().trim();
+
+          
+            const existingUserEmail = await User.findByEmail(normalizedEmail);
+                if (existingUserEmail) {
                 return res.status(409).json({
-                    success: false,
-                    message: 'Email already registered',
-                    errors: [{ field: 'email', message: 'Email already registered. Please use a different email or login.' }]
-                });
+                success: false,
+                message: 'Email already registered',
+                errors: [{ field: 'email', message: 'Email already registered. Please use a different email or login.' }]
+             });
             }
 
-            const existingId = await User.findByIdNumber(id_number);
-            if (existingId) {
-                return res.status(409).json({
-                    success: false,
-                    message: 'ID number already registered',
-                    errors: [{ field: 'id_number', message: 'ID number already registered. Please contact support.' }]
-                });
-            }
+            let existingAdminEmail = null;
+              try {
+    existingAdminEmail = await Admin.findByEmail(normalizedEmail);
+              } catch (adminErr) {
+               console.error('Admin lookup error during signup:', adminErr.message);
+              }
+              if (existingAdminEmail) {
+              return res.status(409).json({
+              success: false,
+              message: 'Email already in use',
+              errors: [{ field: 'email', message: 'This email is already linked to a staff account. Please use a different email.' }]
+              });
+              }
 
-            const newUser = await User.create({
+
+             const existingId = await User.findByIdNumber(id_number.trim());
+             if (existingId) {
+             return res.status(409).json({
+             success: false,
+             message: 'ID number already registered',
+             errors: [{ field: 'id_number', message: 'ID number already registered. Please contact support.' }]
+            });
+            }
+            // Generate OTP and stash the pending signup in memory
+            const otp = AuthController.generateOTP();
+            const now = Date.now();
+
+            pendingSignups.set(normalizedEmail, {
                 name: name.trim(),
                 surname: surname.trim(),
-                email: email.toLowerCase().trim(),
+                email: normalizedEmail,
                 phone_number: phoneValidation.cleaned,
                 gender_id: gender_id ? parseInt(gender_id) : null,
                 id_number: id_number.trim(),
-                password: password,
-                terms_accepted: terms_accepted,
-                role_id: 2
+                password: password,                                   
+                physicalAddress: physicalAddress ? physicalAddress.trim() : null,
+                terms_accepted: true,
+                role_id: 2,
+                otp,
+                issued_at: now,
+                expire_at: now + 30 * 60 * 1000,
+                attempts: 0
             });
 
-            console.log(' User created with ID:', newUser.user_id);
+            console.log(`Pending signup staged for ${normalizedEmail}`);
 
-            // Generate OTP for email verification
-            const otp = AuthController.generateOTP();
-            const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-
-            // Ensure email_verification_tokens table exists
-            try {
-                await pool.execute(`
-                    CREATE TABLE IF NOT EXISTS email_verification_tokens (
-                        token_id INT AUTO_INCREMENT PRIMARY KEY,
-                        user_id INT NOT NULL,
-                        token VARCHAR(255) NOT NULL,
-                        expires_at DATETIME NOT NULL,
-                        used BOOLEAN DEFAULT FALSE,
-                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                        CONSTRAINT fk_email_verification_user
-                            FOREIGN KEY (user_id)
-                            REFERENCES user(User_id)
-                            ON DELETE CASCADE,
-                        INDEX idx_token (token),
-                        INDEX idx_expires (expires_at),
-                        INDEX idx_user_token (user_id, token)
-                    )
-                `);
-            } catch (tableError) {
-                console.log(' Table creation error:', tableError.message);
-            }
-
-            // Store OTP in database
-            await pool.execute(
-                `INSERT INTO email_verification_tokens (user_id, token, expires_at, used, created_at)
-                 VALUES (?, ?, ?, 0, NOW())`,
-                [newUser.user_id, otp, expiresAt]
-            );
-
-            // Send OTP email
+            // ---- Send the OTP email ----
             let otpSent = false;
-            const fullName = `${newUser.name} ${newUser.surname}`;
-            
+            const fullName = `${name.trim()} ${surname.trim()}`;
+
             try {
-                await emailService.sendOTPEmail(email, fullName, otp);
+                await emailService.sendOTPEmail(normalizedEmail, fullName, otp);
                 otpSent = true;
-                console.log('OTP sent to:', email);
+                console.log('OTP sent to:', normalizedEmail);
             } catch (error) {
                 console.error(' Failed to send OTP email:', error.message);
                 if (process.env.NODE_ENV === 'development') {
-                    console.log(`📱 Development OTP for ${email}: ${otp}`);
+                    console.log(` Development OTP for ${normalizedEmail}: ${otp}`);
                 }
             }
 
-            // Generate tokens
-            const accessToken = AuthController.generateAccessToken(newUser);
-            const refreshToken = AuthController.generateRefreshJWT(newUser);
-
-            // Create session
-            const ipAddress = req.ip || req.connection.remoteAddress || 'Unknown';
-            const userAgent = req.headers['user-agent'] || 'Unknown';
-            await AuthController.createSession(newUser.user_id, refreshToken, ipAddress, userAgent);
-
-            // Set HTTP-only secure cookies
-            res.cookie('accessToken', accessToken, {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'strict',
-                maxAge: 15 * 60 * 1000
-            });
-
-            res.cookie('refreshToken', refreshToken, {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'strict',
-                maxAge: 7 * 24 * 60 * 60 * 1000
-            });
-
-            res.status(201).json({
+            return res.status(201).json({
                 success: true,
-                message: 'Account created! Please check your email for the OTP to verify your account.',
+                message: 'Verification code sent. Please check your email and enter the OTP to finish creating your account.',
                 data: {
-                    user: {
-                        id: newUser.user_id,
-                        name: newUser.name,
-                        surname: newUser.surname,
-                        email: newUser.email,
-                        phone_number: newUser.phone_number,
-                        gender_id: newUser.gender_id,
-                        id_number: newUser.id_number,
-                        role: 'USER',
-                        roleId: 2
-                    },
-                    accessToken,
-                    refreshToken,
+                    email: normalizedEmail,
                     requiresVerification: true,
-                    otpSent: otpSent,
-                    email: email,
-                    ...(process.env.NODE_ENV === 'development' && !otpSent ? { otp: otp } : {})
+                    otpSent,
+                    ...(process.env.NODE_ENV === 'development' && !otpSent ? { otp } : {})
                 }
             });
 
@@ -486,208 +462,294 @@ class AuthController {
             });
         }
     }
+// ============================================
+// ✅ LOGIN  
+// ============================================
+static async login(req, res) {
+    try {
+        console.log('Login request received');
 
-    // ============================================
-    // ✅ LOGIN
-    // ============================================
-    static async login(req, res) {
-        try {
-            console.log('🔐 Login request received');
+        const { email, password } = req.body;
+        const ipAddress = req.ip || req.connection.remoteAddress || 'Unknown';
+        const userAgent = req.headers['user-agent'] || 'Unknown';
 
-            const { email, password } = req.body;
-            const ipAddress = req.ip || req.connection.remoteAddress || 'Unknown';
-            const userAgent = req.headers['user-agent'] || 'Unknown';
+        if (!email || !password) {
+            return res.status(400).json({
+                success: false,
+                error: 'Email and password are required'
+            });
+        }
 
-            if (!email || !password) {
-                return res.status(400).json({
-                    success: false,
-                    error: 'Email and password are required'
-                });
-            }
+        const normalizedEmail = email.trim().toLowerCase();
 
-            const normalizedEmail = email.trim().toLowerCase();
+        //  Lockout check 
+        if (loginAttempts[normalizedEmail] && loginAttempts[normalizedEmail].lockedUntil) {
+            const lockedUntil = loginAttempts[normalizedEmail].lockedUntil;
+            const now = Date.now();
 
-            // Check if account is currently locked
-            if (loginAttempts[normalizedEmail] && loginAttempts[normalizedEmail].lockedUntil) {
-                const lockedUntil = loginAttempts[normalizedEmail].lockedUntil;
-                const now = Date.now();
-                
-                if (lockedUntil > now) {
-                    const timeLeft = Math.ceil((lockedUntil - now) / 60000);
-                    const lockoutCount = loginAttempts[normalizedEmail].lockoutCount || 0;
-                    return res.status(403).json({
-                        success: false,
-                        error: `Too many failed login attempts. Your account has been locked. Please try again in ${timeLeft} minute${timeLeft > 1 ? 's' : ''}.`,
-                        locked: true,
-                        timeLeft: timeLeft,
-                        attempts: loginAttempts[normalizedEmail].attempts,
-                        lockoutCount: lockoutCount
-                    });
-                } else {
-                    if (loginAttempts[normalizedEmail]) {
-                        loginAttempts[normalizedEmail].attempts = 0;
-                        loginAttempts[normalizedEmail].lockedUntil = null;
-                    }
-                }
-            }
-
-            const user = await User.findByEmail(normalizedEmail);
-            
-            if (!user) {
-                AuthController.recordFailedAttempt(normalizedEmail);
-                return res.status(401).json({
-                    success: false,
-                    error: 'Invalid email or password'
-                });
-            }
-
-            if (!user.email_verify) {
+            if (lockedUntil > now) {
+                const timeLeft = Math.ceil((lockedUntil - now) / 60000);
+                const lockoutCount = loginAttempts[normalizedEmail].lockoutCount || 0;
                 return res.status(403).json({
                     success: false,
-                    error: 'Please verify your email first. Check your inbox for the OTP.',
-                    requiresVerification: true,
-                    email: normalizedEmail
+                    error: `Too many failed login attempts. Your account has been locked. Please try again in ${timeLeft} minute${timeLeft > 1 ? 's' : ''}.`,
+                    locked: true,
+                    timeLeft: timeLeft,
+                    attempts: loginAttempts[normalizedEmail].attempts,
+                    lockoutCount: lockoutCount
                 });
+            } else {
+                if (loginAttempts[normalizedEmail]) {
+                    loginAttempts[normalizedEmail].attempts = 0;
+                    loginAttempts[normalizedEmail].lockedUntil = null;
+                }
+            }
+        }
+
+        
+        let account = await User.findByEmail(normalizedEmail);
+        let accountType = account ? 'user' : null;
+        if (!account) {
+            try {
+                account = await Admin.findByEmail(normalizedEmail);
+                if (account) accountType = 'admin';
+            } catch (adminError) {
+                console.error('Admin lookup error:', adminError.message);
+            }
+        }
+
+        
+        if (!account) {
+            AuthController.recordFailedAttempt(normalizedEmail);
+            return res.status(401).json({
+                success: false,
+                error: 'Invalid email or password'
+            });
+        }
+
+        // =====================================================
+        // Email verification gate — learners only.
+        // =====================================================
+        if (accountType === 'user' && !account.email_verify) {
+            return res.status(403).json({
+                success: false,
+                error: 'Please verify your email first. Check your inbox for the OTP.',
+                requiresVerification: true,
+                email: normalizedEmail
+            });
+        }
+
+        // =====================================================
+        //  Verify password 
+        // =====================================================
+        const storedHash = accountType === 'user'
+            ? account.password_hash
+            : account.Password;
+
+        let isValidPassword = false;
+        try {
+            isValidPassword = await bcrypt.compare(password, storedHash);
+        } catch (compareErr) {
+            console.error('Password compare error:', compareErr.message);
+            isValidPassword = false;
+        }
+
+        if (!isValidPassword) {
+            AuthController.recordFailedAttempt(normalizedEmail);
+
+            const attempts = loginAttempts[normalizedEmail]?.attempts || 0;
+            const maxAttempts = 3;
+
+            if (attempts === 2) {
+                try {
+                    const displayName = accountType === 'user'
+                        ? `${account.name} ${account.surname}`
+                        : `${account.Name} ${account.Surname}`;
+                    await emailService.sendLoginAlertEmail(
+                        normalizedEmail,
+                        displayName,
+                        ipAddress,
+                        userAgent
+                    );
+                } catch (emailError) {
+                    console.error('Failed to send login alert:', emailError.message);
+                }
             }
 
-            const isValidPassword = await User.verifyPassword(password, user.password_hash);
-            
-            if (!isValidPassword) {
-                AuthController.recordFailedAttempt(normalizedEmail);
-                
-                const attempts = loginAttempts[normalizedEmail]?.attempts || 0;
-                const maxAttempts = 3;
-                
-                if (attempts === 2) {
-                    try {
-                        await emailService.sendLoginAlertEmail(
-                            normalizedEmail,
-                            `${user.name} ${user.surname}`,
-                            ipAddress,
-                            userAgent
-                        );
-                    } catch (emailError) {
-                        console.error(' Failed to send login alert:', emailError.message);
-                    }
+            if (attempts >= maxAttempts) {
+                const currentLockoutCount = loginAttempts[normalizedEmail]?.lockoutCount || 0;
+                const newLockoutCount = currentLockoutCount + 1;
+
+                const lockDuration = getLockDuration(newLockoutCount);
+                const lockedUntil = Date.now() + lockDuration * 60000;
+
+                if (loginAttempts[normalizedEmail]) {
+                    loginAttempts[normalizedEmail].lockedUntil = lockedUntil;
+                    loginAttempts[normalizedEmail].lockoutCount = newLockoutCount;
+                    loginAttempts[normalizedEmail].attempts = 0;
                 }
-                
-                if (attempts >= maxAttempts) {
-                    const currentLockoutCount = loginAttempts[normalizedEmail]?.lockoutCount || 0;
-                    const newLockoutCount = currentLockoutCount + 1;
-                    
-                    const lockDuration = getLockDuration(newLockoutCount);
-                    const lockedUntil = Date.now() + lockDuration * 60000;
-                    
-                    if (loginAttempts[normalizedEmail]) {
-                        loginAttempts[normalizedEmail].lockedUntil = lockedUntil;
-                        loginAttempts[normalizedEmail].lockoutCount = newLockoutCount;
-                        loginAttempts[normalizedEmail].attempts = 0;
-                    }
-                    
-                    try {
-                        const lockoutDescription = getLockoutDescription(newLockoutCount, lockDuration);
-                        await emailService.sendLockNotificationEmail(
-                            normalizedEmail,
-                            `${user.name} ${user.surname}`,
-                            attempts,
-                            lockDuration,
-                            ipAddress,
-                            userAgent,
-                            newLockoutCount,
-                            lockoutDescription
-                        );
-                        console.log(`📧 Lock notification sent to: ${normalizedEmail}`);
-                    } catch (emailError) {
-                        console.error('Failed to send lock notification:', emailError.message);
-                    }
-                    
-                    return res.status(403).json({
-                        success: false,
-                        error: `Account locked due to ${attempts} failed login attempts. Please try again in ${lockDuration} minute${lockDuration > 1 ? 's' : ''}.`,
-                        locked: true,
-                        timeLeft: lockDuration,
-                        attempts: attempts,
-                        lockoutCount: newLockoutCount,
-                        lockDuration: lockDuration
-                    });
+
+                try {
+                    const displayName = accountType === 'user'
+                        ? `${account.name} ${account.surname}`
+                        : `${account.Name} ${account.Surname}`;
+                    const lockoutDescription = getLockoutDescription(newLockoutCount, lockDuration);
+                    await emailService.sendLockNotificationEmail(
+                        normalizedEmail,
+                        displayName,
+                        attempts,
+                        lockDuration,
+                        ipAddress,
+                        userAgent,
+                        newLockoutCount,
+                        lockoutDescription
+                    );
+                    console.log(` Lock notification sent to: ${normalizedEmail}`);
+                } catch (emailError) {
+                    console.error('Failed to send lock notification:', emailError.message);
                 }
-                
-                return res.status(401).json({
+
+                return res.status(403).json({
                     success: false,
-                    error: 'Invalid email or password',
+                    error: `Account locked due to ${attempts} failed login attempts. Please try again in ${lockDuration} minute${lockDuration > 1 ? 's' : ''}.`,
+                    locked: true,
+                    timeLeft: lockDuration,
                     attempts: attempts,
-                    maxAttempts: maxAttempts,
-                    remainingAttempts: maxAttempts - attempts
+                    lockoutCount: newLockoutCount,
+                    lockDuration: lockDuration
                 });
             }
 
-            // Successful login - reset all attempts
-            if (loginAttempts[normalizedEmail]) {
-                delete loginAttempts[normalizedEmail];
-            }
+            return res.status(401).json({
+                success: false,
+                error: 'Invalid email or password',
+                attempts: attempts,
+                maxAttempts: maxAttempts,
+                remainingAttempts: maxAttempts - attempts
+            });
+        }
 
+        
+        if (loginAttempts[normalizedEmail]) {
+            delete loginAttempts[normalizedEmail];
+        }
+
+        
+        let id, name, surname, userEmail, phone_number, role, roleId, isVerified, registerAt;
+        let centreId = null;
+        let centreName = null;
+
+        if (accountType === 'user') {
             const [roleResult] = await pool.execute(
                 'SELECT role_id, role_type FROM role WHERE role_id = ?',
-                [user.role_id || 2]
+                [account.role_id || 2]
             );
             const roleData = roleResult[0] || { role_id: 2, role_type: 'USER' };
 
-            // Generate tokens
-            const accessToken = AuthController.generateAccessToken({
-                ...user,
-                role_type: roleData.role_type,
-                role_id: roleData.role_id
-            });
-            const refreshToken = AuthController.generateRefreshJWT(user);
+            id = account.User_id;
+            name = account.name;
+            surname = account.surname;
+            userEmail = account.email;
+            phone_number = account.phone_number;
+            role = roleData.role_type || 'USER';
+            roleId = roleData.role_id || 2;
+            isVerified = account.email_verify === 1 || account.email_verify === true;
+            registerAt = account.register_at;
+        } else {
+            // Admin table
+            id = account.Admin_ID;
+            name = account.Name;
+            surname = account.Surname;
+            userEmail = account.Email_address;
+            phone_number = account.Phone_number;
+            roleId = account.role_ID;
+            // role_ID 1 = ADMIN, 3 = Super Admin, anything else = ADMIN
+            role = roleId === 3 ? 'Super Admin'
+                 : roleId === 1 ? 'ADMIN'
+                 : 'ADMIN';
+            isVerified = true; 
+            registerAt = account.created_at || null;
 
-            // Create session
-            await AuthController.createSession(user.User_id, refreshToken, ipAddress, userAgent);
+            
+            centreId = account.Centre_ID ?? null;
 
-            // Set HTTP-only secure cookies
-            res.cookie('accessToken', accessToken, {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'strict',
-                maxAge: 15 * 60 * 1000
-            });
-
-            res.cookie('refreshToken', refreshToken, {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'strict',
-                maxAge: 7 * 24 * 60 * 60 * 1000
-            });
-
-            res.status(200).json({
-                success: true,
-                message: 'Login successful',
-                data: {
-                    accessToken,
-                    refreshToken,
-                    user: {
-                        id: user.User_id,
-                        name: user.name,
-                        surname: user.surname,
-                        email: user.email,
-                        phone_number: user.phone_number,
-                        gender: user.gender_description,
-                        role: roleData.role_type || 'USER',
-                        roleId: roleData.role_id || 2,
-                        isVerified: user.email_verify === 1,
-                        register_at: user.register_at
-                    }
+            if (centreId) {
+                try {
+                    const [centreRows] = await pool.execute(
+                        'SELECT center_name FROM digital_center WHERE digital_center_id = ? LIMIT 1',
+                        [centreId]
+                    );
+                    centreName = centreRows[0]?.center_name || null;
+                } catch (centreErr) {
+                    console.warn('Could not resolve centre name:', centreErr.message);
                 }
-            });
-
-        } catch (error) {
-            console.error(' Login error:', error);
-            res.status(500).json({
-                success: false,
-                error: 'Internal server error: ' + error.message
-            });
+            }
         }
-    }
 
+        // Generate tokens
+        const tokenPayload = {
+            userId: id,
+            email: userEmail,
+            name,
+            surname,
+            role,
+            roleId,
+            userType: accountType,
+            centreId
+        };
+
+        const accessToken = AuthController.generateAccessToken(tokenPayload);
+        const refreshToken = AuthController.generateRefreshJWT(tokenPayload);
+
+        
+        await AuthController.createSession(id, refreshToken, ipAddress, userAgent);
+
+        // Set HTTP-only secure cookies
+        res.cookie('accessToken', accessToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 15 * 60 * 1000
+        });
+
+        res.cookie('refreshToken', refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: 'Login successful',
+            data: {
+                accessToken,
+                refreshToken,
+                user: {
+                    id,
+                    name,
+                    surname,
+                    email: userEmail,
+                    phone_number,
+                    role,
+                    roleId,
+                    userType: accountType,
+                    isVerified,
+                    register_at: registerAt,
+                    centreId,
+                    centreName
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error(' Login error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Internal server error: ' + error.message
+        });
+    }
+}
     // ============================================
     // ✅ REFRESH TOKEN
     // ============================================
@@ -719,18 +781,33 @@ class AuthController {
             );
             const roleData = roleResult[0] || { role_id: 2, role_type: 'USER' };
 
+            
+            let centreId = null;
+            if (session.role_id === 1 || session.role_id === 3) {
+                try {
+                    const [centreRows] = await pool.execute(
+                        'SELECT Centre_ID FROM Admin WHERE Admin_ID = ? LIMIT 1',
+                        [session.User_id]
+                    );
+                    centreId = centreRows[0]?.Centre_ID ?? null;
+                } catch (centreErr) {
+                    console.warn('Refresh: could not load centreId:', centreErr.message);
+                }
+            }
+
             // Generate new access token
             const accessToken = AuthController.generateAccessToken({
                 ...session,
                 role_type: roleData.role_type,
-                role_id: roleData.role_id
+                role_id: roleData.role_id,
+                centreId
             });
 
-            // Set new access token cookie
+         
             res.cookie('accessToken', accessToken, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                sameSite: 'strict',
+                sameSite: 'lax',
                 maxAge: 15 * 60 * 1000
             });
 
@@ -738,7 +815,7 @@ class AuthController {
                 success: true,
                 data: {
                     accessToken,
-                    expiresIn: '15m'
+                    expiresIn: '7d'
                 }
             });
 
@@ -758,7 +835,7 @@ class AuthController {
         try {
             const refreshToken = req.cookies?.refreshToken || req.body.refreshToken;
 
-            // Update session status to logged_out
+            
             if (refreshToken) {
                 await pool.execute(
                     'UPDATE session SET status = "logged_out", logout_at = NOW() WHERE session_token = ?',
@@ -770,7 +847,7 @@ class AuthController {
             res.clearCookie('accessToken', {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                sameSite: 'strict'
+                sameSite: 'lax'
             });
             res.clearCookie('refreshToken', {
                 httpOnly: true,
@@ -792,7 +869,7 @@ class AuthController {
     }
 
     // ============================================
-    // ✅ SEND REGISTRATION OTP
+    // SEND REGISTRATION OTP
     // ============================================
     static async sendRegistrationOTP(req, res) {
         try {
@@ -805,77 +882,53 @@ class AuthController {
                 });
             }
 
-            console.log(`📧 Sending registration OTP to ${email}`);
+            const normalizedEmail = email.toLowerCase().trim();
+            console.log(` Sending registration OTP to ${normalizedEmail}`);
 
-            const otp = AuthController.generateOTP();
-            const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+            const pending = pendingSignups.get(normalizedEmail);
 
-            const [users] = await pool.execute(
-                'SELECT User_id, name, surname FROM user WHERE email = ?',
-                [email]
-            );
-
-            if (users.length === 0) {
+            if (!pending) {
                 return res.status(404).json({
                     success: false,
                     message: 'User not found. Please register first.'
                 });
             }
 
-            const user = users[0];
-            const fullName = `${user.name} ${user.surname}`;
-
-            // Ensure table exists
-            try {
-                await pool.execute(`
-                    CREATE TABLE IF NOT EXISTS email_verification_tokens (
-                        token_id INT AUTO_INCREMENT PRIMARY KEY,
-                        user_id INT NOT NULL,
-                        token VARCHAR(255) NOT NULL,
-                        expires_at DATETIME NOT NULL,
-                        used BOOLEAN DEFAULT FALSE,
-                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                        CONSTRAINT fk_email_verification_user
-                            FOREIGN KEY (user_id)
-                            REFERENCES user(User_id)
-                            ON DELETE CASCADE,
-                        INDEX idx_token (token),
-                        INDEX idx_expires (expires_at),
-                        INDEX idx_user_token (user_id, token)
-                    )
-                `);
-            } catch (tableError) {
-                console.log('⚠️ Table creation error:', tableError.message);
+            
+            const age = Date.now() - (pending.issued_at || 0);
+            if (age < 2 * 60 * 1000 && pending.otp) {
+                return res.status(200).json({
+                    success: true,
+                    message: '6-digit OTP has already been sent to your email'
+                });
             }
 
-            await pool.execute(
-                `INSERT INTO email_verification_tokens (user_id, token, expires_at, used, created_at)
-                 VALUES (?, ?, ?, 0, NOW())
-                 ON DUPLICATE KEY UPDATE 
-                 token = VALUES(token), 
-                 expires_at = VALUES(expires_at), 
-                 used = 0, 
-                 created_at = NOW()`,
-                [user.User_id, otp, expiresAt]
-            );
+            
+            const otp = AuthController.generateOTP();
+            pending.otp = otp;
+            pending.issued_at = Date.now();
+            pending.expire_at = Date.now() + 30 * 60 * 1000;
+            pending.attempts = 0;
+
+            const fullName = `${pending.name} ${pending.surname}`;
 
             try {
-                await emailService.sendOTPEmail(email, fullName, otp);
-                console.log(`✅ OTP sent successfully to ${email}`);
-                
-                res.status(200).json({
+                await emailService.sendOTPEmail(normalizedEmail, fullName, otp);
+                console.log(` OTP sent successfully to ${normalizedEmail}`);
+
+                return res.status(200).json({
                     success: true,
                     message: '6-digit OTP has been sent to your email'
                 });
             } catch (emailError) {
-                console.error('❌ Email send error:', emailError.message);
-                
+                console.error(' Email send error:', emailError.message);
+
                 if (process.env.NODE_ENV === 'development') {
-                    console.log(`📱 Development OTP for ${email}: ${otp}`);
+                    console.log(`📱 Development OTP for ${normalizedEmail}: ${otp}`);
                     return res.status(200).json({
                         success: true,
                         message: 'OTP generated (development mode)',
-                        data: { otp, email }
+                        data: { otp, email: normalizedEmail }
                     });
                 }
                 throw emailError;
@@ -891,7 +944,7 @@ class AuthController {
     }
 
     // ============================================
-    // ✅ VERIFY REGISTRATION OTP
+    //  VERIFY REGISTRATION OTP
     // ============================================
     static async verifyRegistrationOTP(req, res) {
         try {
@@ -904,80 +957,154 @@ class AuthController {
                 });
             }
 
-            console.log(`🔐 Verifying registration OTP for ${email}`);
+            const normalizedEmail = email.toLowerCase().trim();
+            console.log(` Verifying registration OTP for ${normalizedEmail}`);
 
-            const [users] = await pool.execute(
-                'SELECT User_id FROM user WHERE email = ?',
-                [email]
-            );
+            const pending = pendingSignups.get(normalizedEmail);
 
-            if (users.length === 0) {
+            if (!pending) {
                 return res.status(404).json({
                     success: false,
-                    message: 'User not found'
+                    message: 'User not found. Please register first.'
                 });
             }
 
-            const userId = users[0].User_id;
-
-            const [tokens] = await pool.execute(
-                `SELECT token_id, token, expires_at, used
-                 FROM email_verification_tokens
-                 WHERE user_id = ? AND token = ? AND used = 0
-                 ORDER BY created_at DESC
-                 LIMIT 1`,
-                [userId, otp]
-            );
-
-            if (tokens.length === 0) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Invalid OTP. Please check and try again.'
-                });
-            }
-
-            const token = tokens[0];
-
-            if (new Date(token.expires_at) < new Date()) {
+            if (Date.now() > pending.expire_at) {
+                pendingSignups.delete(normalizedEmail);
                 return res.status(400).json({
                     success: false,
                     message: 'OTP has expired. Please request a new one.'
                 });
             }
 
-            await pool.execute(
-                'UPDATE email_verification_tokens SET used = 1 WHERE token_id = ?',
-                [token.token_id]
-            );
+            if (pending.otp !== String(otp)) {
+                pending.attempts = (pending.attempts || 0) + 1;
 
-            await pool.execute(
-                'UPDATE user SET email_verify = 1 WHERE User_id = ?',
-                [userId]
-            );
-
-            console.log(` Email verified successfully for ${email}`);
-
-            // Send welcome email
-            try {
-                const [userData] = await pool.execute(
-                    'SELECT name, surname FROM user WHERE User_id = ?',
-                    [userId]
-                );
-                if (userData.length > 0) {
-                    const fullName = `${userData[0].name} ${userData[0].surname}`;
-                    await emailService.sendWelcomeEmail(email, fullName);
-                    console.log(' Welcome email sent to:', email);
+                if (pending.attempts >= 5) {
+                    pendingSignups.delete(normalizedEmail);
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Too many incorrect attempts. Please register again.'
+                    });
                 }
+
+                return res.status(400).json({
+                    success: false,
+                    message: 'Invalid OTP. Please check and try again.'
+                });
+            }
+
+         
+            const existingEmail = await User.findByEmail(normalizedEmail);
+            if (existingEmail) {
+                pendingSignups.delete(normalizedEmail);
+                return res.status(409).json({
+                    success: false,
+                    message: 'This email was just registered by someone else. Please login.'
+                });
+            }
+
+            const existingId = await User.findByIdNumber(pending.id_number);
+            if (existingId) {
+                pendingSignups.delete(normalizedEmail);
+                return res.status(409).json({
+                    success: false,
+                    message: 'This ID number was just registered. Please contact support.'
+                });
+            }
+
+            // ============================================================
+            //  Create the user now — the insert to database after verify
+            // ============================================================
+            const newUser = await User.create({
+                name: pending.name,
+                surname: pending.surname,
+                email: pending.email,
+                phone_number: pending.phone_number,
+                gender_id: pending.gender_id,
+                id_number: pending.id_number,
+                password: pending.password,          
+                terms_accepted: pending.terms_accepted,
+                role_id: pending.role_id,
+                physicalAddress: pending.physicalAddress
+            });
+
+            console.log(`User created via OTP verification. ID: ${newUser.user_id}`);
+
+            
+            try {
+                await pool.execute(
+                    'UPDATE user SET email_verify = 1 WHERE User_id = ?',
+                    [newUser.user_id]
+                );
+            } catch (updateErr) {
+                console.error('Failed to set email_verify:', updateErr.message);
+            }
+
+            
+            pendingSignups.delete(normalizedEmail);
+
+            console.log(`Email verified successfully for ${normalizedEmail}`);
+
+             
+            try {
+                await emailService.sendWelcomeEmail(
+                    normalizedEmail,
+                    `${pending.name} ${pending.surname}`
+                );
+                console.log(' Welcome email sent to:', normalizedEmail);
             } catch (emailError) {
                 console.error(' Failed to send welcome email:', emailError.message);
             }
+            // ============================================
+            // NOTIFY SUPER ADMINS OF NEW REGISTRATION 
+            // ============================================
+             setImmediate(async () => {
+             try {
+                    const [admins] = await pool.execute(
+                     `SELECT Admin_ID, Name, Surname, Email_address
+                      FROM Admin
+                         WHERE role_ID = 3
+                         AND Email_address IS NOT NULL
+                         AND Email_address != ''`
+                       );
 
+                        if (admins.length === 0) {
+                        console.log('No super admins to notify.');
+                        return;
+                         }
+
+             const { getPrefs: getAdminPrefs } = require('../utils/adminNotificationPrefs');
+
+             const opted = admins.filter(
+             (a) => getAdminPrefs(a.Admin_ID).notifyOnRegistration === true
+             );
+
+                if (opted.length === 0) {
+                    console.log('📧 No super admins opted in to registration notifications.');
+                    return;
+                }
+
+                await emailService.sendNewLearnerRegistrationToMany(opted, {
+                name: newUser.name,
+                surname: newUser.surname,
+                email: newUser.email,
+                registeredAt: new Date(),
+                });
+                } catch (err) {
+               console.error('Background new-learner admin email failed:', err.message);
+               }
+            });
             res.status(200).json({
                 success: true,
-                message: 'Email verified successfully! You can now login.'
+                message: 'Email verified successfully! You can now login.',
+                data: {
+                    userId: newUser.user_id,
+                    email: newUser.email
+                }
             });
 
-        } catch (error) {
+            } catch (error) {
             console.error(' Error verifying registration OTP:', error);
             res.status(500).json({
                 success: false,
@@ -987,7 +1114,7 @@ class AuthController {
     }
 
     // ============================================
-    // ✅ RESEND REGISTRATION OTP
+    // RESEND REGISTRATION OTP
     // ============================================
     static async resendRegistrationOTP(req, res) {
         try {
@@ -1000,50 +1127,43 @@ class AuthController {
                 });
             }
 
-            console.log(`🔄 Resending registration OTP to ${email}`);
+            const normalizedEmail = email.toLowerCase().trim();
+            console.log(` Resending registration OTP to ${normalizedEmail}`);
 
-            const [users] = await pool.execute(
-                'SELECT User_id, name, surname FROM user WHERE email = ?',
-                [email]
-            );
+            const pending = pendingSignups.get(normalizedEmail);
 
-            if (users.length === 0) {
+            if (!pending) {
                 return res.status(404).json({
                     success: false,
-                    message: 'User not found'
+                    message: 'User not found. Please register first.'
                 });
             }
 
-            const user = users[0];
-            const fullName = `${user.name} ${user.surname}`;
-
             const otp = AuthController.generateOTP();
-            const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+            pending.otp = otp;
+            pending.issued_at = Date.now();
+            pending.expire_at = Date.now() + 30 * 60 * 1000;
+            pending.attempts = 0;
 
-            await pool.execute(
-                `UPDATE email_verification_tokens 
-                 SET token = ?, expires_at = ?, used = 0, created_at = NOW()
-                 WHERE user_id = ?`,
-                [otp, expiresAt, user.User_id]
-            );
+            const fullName = `${pending.name} ${pending.surname}`;
 
             try {
-                await emailService.sendOTPEmail(email, fullName, otp);
-                console.log(`✅ New OTP sent successfully to ${email}`);
-                
+                await emailService.sendOTPEmail(normalizedEmail, fullName, otp);
+                console.log(` New OTP sent successfully to ${normalizedEmail}`);
+
                 res.status(200).json({
                     success: true,
                     message: 'New 6-digit OTP sent successfully'
                 });
             } catch (emailError) {
                 console.error(' Email send error:', emailError.message);
-                
+
                 if (process.env.NODE_ENV === 'development') {
-                    console.log(`📱 Development OTP for ${email}: ${otp}`);
+                    console.log(`📱 Development OTP for ${normalizedEmail}: ${otp}`);
                     return res.status(200).json({
                         success: true,
                         message: 'New OTP generated (development mode)',
-                        data: { otp, email }
+                        data: { otp, email: normalizedEmail }
                     });
                 }
                 throw emailError;
@@ -1059,7 +1179,7 @@ class AuthController {
     }
 
     // ============================================
-    // ✅ FORGOT PASSWORD
+    // FORGOT PASSWORD 
     // ============================================
     static async forgotPassword(req, res) {
         try {
@@ -1073,8 +1193,35 @@ class AuthController {
                 });
             }
 
-            const user = await User.findByEmail(email);
-            if (!user) {
+            const normalizedEmail = email.toLowerCase().trim();
+
+            
+            let account = null;
+            let accountType = null;
+            let accountId = null;
+            let displayName = '';
+
+            const learner = await User.findByEmail(normalizedEmail);
+            if (learner) {
+                account = learner;
+                accountType = 'user';
+                accountId = learner.User_id;
+                displayName = `${learner.name} ${learner.surname}`;
+            } else {
+                try {
+                    const admin = await Admin.findByEmail(normalizedEmail);
+                    if (admin) {
+                        account = admin;
+                        accountType = 'admin';
+                        accountId = admin.Admin_ID;
+                        displayName = `${admin.Name} ${admin.Surname}`;
+                    }
+                } catch (adminErr) {
+                    console.error('Admin lookup error in forgotPassword:', adminErr.message);
+                }
+            }
+
+            if (!account) {
                 return res.status(404).json({
                     success: false,
                     error: 'No account found with this email address.'
@@ -1084,29 +1231,50 @@ class AuthController {
             const otpCode = AuthController.generateOTP();
             const expireAt = new Date(Date.now() + 15 * 60000);
 
-            await pool.execute(
-                'DELETE FROM password_reset WHERE user_id = ? AND used_at IS NULL',
-                [user.User_id]
-            );
-            
-            await pool.execute(
-                `INSERT INTO password_reset (user_id, token, expire_at) 
-                 VALUES (?, ?, ?)`,
-                [user.User_id, otpCode, expireAt]
-            );
+            // -Clear any previous unused OTP 
+            if (accountType === 'user') {
+                await pool.execute(
+                    'DELETE FROM password_reset WHERE user_id = ? AND use_at IS NULL',
+                    [accountId]
+                );
+            } else {
+                await pool.execute(
+                    'DELETE FROM password_reset WHERE admin_id = ? AND use_at IS NULL',
+                    [accountId]
+                );
+            }
+
+            // ---- Insert new OTP into the correct column ----
+            if (accountType === 'user') {
+                await pool.execute(
+                    `INSERT INTO password_reset (user_id, admin_id, otp, expire_at, created_at)
+                     VALUES (?, NULL, ?, ?, NOW())`,
+                    [accountId, otpCode, expireAt]
+                );
+            } else {
+                await pool.execute(
+                    `INSERT INTO password_reset (user_id, admin_id, otp, expire_at, created_at)
+                     VALUES (NULL, ?, ?, ?, NOW())`,
+                    [accountId, otpCode, expireAt]
+                );
+            }
 
             try {
-                await emailService.sendPasswordResetOTPEmail(email, `${user.name} ${user.surname}`, otpCode);
-                console.log(' Password reset OTP sent to:', email);
+                await emailService.sendPasswordResetOTPEmail(
+                    normalizedEmail,
+                    displayName,
+                    otpCode
+                );
+                console.log('Password reset OTP sent to:', normalizedEmail);
             } catch (emailError) {
-                console.error(' Failed to send OTP email:', emailError.message);
+                console.error('Failed to send OTP email:', emailError.message);
                 if (process.env.NODE_ENV === 'development') {
-                    console.log(`📱 Development OTP for ${email}: ${otpCode}`);
+                    console.log(`📱 Development OTP for ${normalizedEmail}: ${otpCode}`);
                     return res.status(200).json({
                         success: true,
                         message: 'OTP generated (development mode)',
-                        data: { 
-                            email: email, 
+                        data: {
+                            email: normalizedEmail,
                             expiresIn: '15 minutes',
                             otp: otpCode
                         }
@@ -1118,17 +1286,17 @@ class AuthController {
                 });
             }
 
-            res.status(200).json({
+            return res.status(200).json({
                 success: true,
                 message: 'OTP sent to your email. Please check your inbox.',
-                data: { 
-                    email: email, 
+                data: {
+                    email: normalizedEmail,
                     expiresIn: '15 minutes'
                 }
             });
 
         } catch (error) {
-            console.error(' Forgot password error:', error);
+            console.error('Forgot password error:', error);
             res.status(500).json({
                 success: false,
                 error: 'Internal server error. Please try again.'
@@ -1137,7 +1305,7 @@ class AuthController {
     }
 
     // ============================================
-    // ✅ VERIFY PASSWORD RESET OTP
+    // ✅ VERIFY PASSWORD RESET OTP (learners AND admins)
     // ============================================
     static async verifyPasswordResetOTP(req, res) {
         try {
@@ -1150,27 +1318,52 @@ class AuthController {
                 });
             }
 
-            const user = await User.findByEmail(email);
-            if (!user) {
+            const normalizedEmail = email.toLowerCase().trim();
+
+           
+            let accountType = null;
+            let accountId = null;
+
+            const learner = await User.findByEmail(normalizedEmail);
+            if (learner) {
+                accountType = 'user';
+                accountId = learner.User_id;
+            } else {
+                try {
+                    const admin = await Admin.findByEmail(normalizedEmail);
+                    if (admin) {
+                        accountType = 'admin';
+                        accountId = admin.Admin_ID;
+                    }
+                } catch (adminErr) {
+                    console.error('Admin lookup error in verifyPasswordResetOTP:', adminErr.message);
+                }
+            }
+
+            if (!accountType) {
                 return res.status(404).json({
                     success: false,
                     error: 'User not found'
                 });
             }
 
+            const idColumn = accountType === 'user' ? 'user_id' : 'admin_id';
+
+            
             const [rows] = await pool.execute(
-                `SELECT * FROM password_reset 
-                 WHERE user_id = ? AND token = ? AND used_at IS NULL AND expire_at > NOW()
+                `SELECT * FROM password_reset
+                 WHERE ${idColumn} = ? AND otp = ? AND use_at IS NULL AND expire_at > NOW()
                  ORDER BY created_at DESC LIMIT 1`,
-                [user.User_id, otpCode]
+                [accountId, otpCode]
             );
 
             if (rows.length === 0) {
+                
                 const [expiredRows] = await pool.execute(
-                    `SELECT * FROM password_reset 
-                     WHERE user_id = ? AND token = ? AND used_at IS NULL AND expire_at <= NOW()
+                    `SELECT * FROM password_reset
+                     WHERE ${idColumn} = ? AND otp = ? AND use_at IS NULL AND expire_at <= NOW()
                      ORDER BY created_at DESC LIMIT 1`,
-                    [user.User_id, otpCode]
+                    [accountId, otpCode]
                 );
 
                 if (expiredRows.length > 0) {
@@ -1187,13 +1380,21 @@ class AuthController {
             }
 
             const otpData = rows[0];
+
+            
             await pool.execute(
-                'UPDATE password_reset SET used_at = NOW() WHERE password_reset_id = ?',
+                'UPDATE password_reset SET use_at = NOW() WHERE password_reset_id = ?',
                 [otpData.password_reset_id]
             );
 
+           
             const resetToken = jwt.sign(
-                { userId: user.User_id, email: email, purpose: 'password_reset' },
+                {
+                    userId: accountId,
+                    email: normalizedEmail,
+                    userType: accountType,          
+                    purpose: 'password_reset'
+                },
                 process.env.JWT_SECRET,
                 { expiresIn: '15m' }
             );
@@ -1201,11 +1402,11 @@ class AuthController {
             res.status(200).json({
                 success: true,
                 message: 'OTP verified successfully! You can now reset your password.',
-                data: { resetToken: resetToken, userId: user.User_id }
+                data: { resetToken, userId: accountId }
             });
 
         } catch (error) {
-            console.error(' OTP verification error:', error);
+            console.error('OTP verification error:', error);
             res.status(500).json({
                 success: false,
                 error: 'Internal server error'
@@ -1214,7 +1415,7 @@ class AuthController {
     }
 
     // ============================================
-    // ✅ RESET PASSWORD
+    // ✅ RESET PASSWORD (learners AND admins)
     // ============================================
     static async resetPassword(req, res) {
         try {
@@ -1241,13 +1442,39 @@ class AuthController {
                 });
             }
 
+            // Strong password validation 
             if (newPassword.length < 8) {
                 return res.status(400).json({
                     success: false,
                     error: 'Password must be at least 8 characters long'
                 });
             }
+            if (!/(?=.*[a-z])/.test(newPassword)) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Password must contain at least one lowercase letter'
+                });
+            }
+            if (!/(?=.*[A-Z])/.test(newPassword)) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Password must contain at least one uppercase letter'
+                });
+            }
+            if (!/(?=.*\d)/.test(newPassword)) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Password must contain at least one number'
+                });
+            }
+            if (!/(?=.*[@$!%*?&])/.test(newPassword)) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Password must contain at least one special character (@$!%*?&)'
+                });
+            }
 
+            // ---- Verify the reset token ----
             let decoded;
             try {
                 decoded = jwt.verify(resetToken, process.env.JWT_SECRET);
@@ -1271,15 +1498,42 @@ class AuthController {
                 });
             }
 
-            const user = await User.findById(decoded.userId);
-            if (!user) {
-                return res.status(404).json({
+            const { userId, userType } = decoded;
+
+            if (!userId || !userType) {
+                return res.status(400).json({
                     success: false,
-                    error: 'User not found'
+                    error: 'Reset token is missing required fields'
                 });
             }
 
-            await User.updatePassword(decoded.userId, newPassword);
+            
+            if (userType === 'user') {
+                const user = await User.findById(userId);
+                if (!user) {
+                    return res.status(404).json({
+                        success: false,
+                        error: 'User not found'
+                    });
+                }
+                await User.updatePassword(userId, newPassword);
+
+            } else if (userType === 'admin') {
+                const admin = await Admin.getById(userId);
+                if (!admin) {
+                    return res.status(404).json({
+                        success: false,
+                        error: 'Admin not found'
+                    });
+                }
+                await Admin.updatePassword(userId, newPassword);
+
+            } else {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Unknown account type'
+                });
+            }
 
             res.status(200).json({
                 success: true,
@@ -1287,7 +1541,7 @@ class AuthController {
             });
 
         } catch (error) {
-            console.error(' Reset password error:', error);
+            console.error('Reset password error:', error);
             res.status(500).json({
                 success: false,
                 error: 'Internal server error: ' + error.message
@@ -1296,7 +1550,7 @@ class AuthController {
     }
 
     // ============================================
-    // ✅ RESEND PASSWORD RESET OTP
+    // RESEND PASSWORD RESET OTP (learners AND admins)
     // ============================================
     static async resendPasswordResetOTP(req, res) {
         try {
@@ -1309,40 +1563,88 @@ class AuthController {
                 });
             }
 
-            const user = await User.findByEmail(email);
-            if (!user) {
+            const normalizedEmail = email.toLowerCase().trim();
+
+            // ---- Try learner first, then admin ----
+            let account = null;
+            let accountType = null;
+            let accountId = null;
+            let displayName = '';
+
+            const learner = await User.findByEmail(normalizedEmail);
+            if (learner) {
+                account = learner;
+                accountType = 'user';
+                accountId = learner.User_id;
+                displayName = `${learner.name} ${learner.surname}`;
+            } else {
+                try {
+                    const admin = await Admin.findByEmail(normalizedEmail);
+                    if (admin) {
+                        account = admin;
+                        accountType = 'admin';
+                        accountId = admin.Admin_ID;
+                        displayName = `${admin.Name} ${admin.Surname}`;
+                    }
+                } catch (adminErr) {
+                    console.error('Admin lookup error in resendPasswordResetOTP:', adminErr.message);
+                }
+            }
+
+            if (!account) {
                 return res.status(404).json({
                     success: false,
-                    error: 'User not found'
+                    error: 'No account found with this email address.'
                 });
             }
 
             const otpCode = AuthController.generateOTP();
             const expireAt = new Date(Date.now() + 15 * 60000);
 
-            await pool.execute(
-                'DELETE FROM password_reset WHERE user_id = ? AND used_at IS NULL',
-                [user.User_id]
-            );
+            // ---- Clear any previous unused OTP ----
+            if (accountType === 'user') {
+                await pool.execute(
+                    'DELETE FROM password_reset WHERE user_id = ? AND use_at IS NULL',
+                    [accountId]
+                );
+            } else {
+                await pool.execute(
+                    'DELETE FROM password_reset WHERE admin_id = ? AND use_at IS NULL',
+                    [accountId]
+                );
+            }
 
-            await pool.execute(
-                `INSERT INTO password_reset (user_id, token, expire_at) 
-                 VALUES (?, ?, ?)`,
-                [user.User_id, otpCode, expireAt]
-            );
+            // ---- Insert new OTP into the correct column ----
+            if (accountType === 'user') {
+                await pool.execute(
+                    `INSERT INTO password_reset (user_id, admin_id, otp, expire_at, created_at)
+                     VALUES (?, NULL, ?, ?, NOW())`,
+                    [accountId, otpCode, expireAt]
+                );
+            } else {
+                await pool.execute(
+                    `INSERT INTO password_reset (user_id, admin_id, otp, expire_at, created_at)
+                     VALUES (NULL, ?, ?, ?, NOW())`,
+                    [accountId, otpCode, expireAt]
+                );
+            }
 
             try {
-                await emailService.sendPasswordResetOTPEmail(email, `${user.name} ${user.surname}`, otpCode);
-                console.log(' Password reset OTP resent to:', email);
+                await emailService.sendPasswordResetOTPEmail(
+                    normalizedEmail,
+                    displayName,
+                    otpCode
+                );
+                console.log('Password reset OTP resent to:', normalizedEmail);
             } catch (emailError) {
-                console.error(' Failed to send OTP email:', emailError.message);
+                console.error('Failed to send OTP email:', emailError.message);
                 if (process.env.NODE_ENV === 'development') {
-                    console.log(`📱 Development OTP for ${email}: ${otpCode}`);
+                    console.log(`📱 Development OTP for ${normalizedEmail}: ${otpCode}`);
                     return res.status(200).json({
                         success: true,
                         message: 'New OTP generated (development mode)',
-                        data: { 
-                            email: email, 
+                        data: {
+                            email: normalizedEmail,
                             expiresIn: '15 minutes',
                             otp: otpCode
                         }
@@ -1357,20 +1659,19 @@ class AuthController {
             res.status(200).json({
                 success: true,
                 message: 'New OTP sent to your email. Please check your inbox.',
-                data: { email: email, expiresIn: '15 minutes' }
+                data: { email: normalizedEmail, expiresIn: '15 minutes' }
             });
 
         } catch (error) {
-            console.error(' Resend password reset OTP error:', error);
+            console.error('Resend password reset OTP error:', error);
             res.status(500).json({
                 success: false,
                 error: 'Internal server error'
             });
         }
     }
-
     // ============================================
-    // ✅ GET GENDERS
+    //  GET GENDERS
     // ============================================
     static async getGenders(req, res) {
         try {
@@ -1395,7 +1696,7 @@ class AuthController {
     }
 
     // ============================================
-    // ✅ GET ROLES
+    //  GET ROLES
     // ============================================
     static async getRoles(req, res) {
         try {
@@ -1420,7 +1721,7 @@ class AuthController {
     }
 
     // ============================================
-    // ✅ GOOGLE OAUTH
+    //  GOOGLE OAUTH
     // ============================================
     static async googleAuth(req, res) {
         try {
@@ -1504,7 +1805,7 @@ class AuthController {
                     });
                 }
 
-                // User exists but not verified - send OTP
+                
                 const otp = AuthController.generateOTP();
                 const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 

@@ -15,25 +15,24 @@ const Admin_Learners = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [programmes, setProgrammes] = useState([]);
-  
   // Filter states
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedProgramme, setSelectedProgramme] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("");
-  
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
 
-  // Edit state - using ID instead of index
+  // Edit state — keyed by learner id
   const [editingId, setEditingId] = useState(null);
-  const [editedLearner, setEditedLearner] = useState({ 
+  const [editedLearner, setEditedLearner] = useState({
     id: '',
-    name: '', 
+    name: '',
     surname: '',
-    email: '', 
+    email: '',
     phone: ''
   });
+
   const [deactivatingId, setDeactivatingId] = useState(null);
   const [deactivateTarget, setDeactivateTarget] = useState(null);
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
@@ -45,7 +44,6 @@ const Admin_Learners = () => {
     { label: "Completed Programmes", value: 0 },
   ]);
 
-  // Status options
   const statusOptions = [
     { value: "", label: "Status: All" },
     { value: "Active", label: "Active" },
@@ -53,23 +51,13 @@ const Admin_Learners = () => {
     { value: "Completed", label: "Completed" },
   ];
 
-  const toggleMobileMenu = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen);
-  };
+  const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
+  const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
-  const closeMobileMenu = () => {
-    setIsMobileMenuOpen(false);
-  };
+  const pluralize = (count, singular, plural) => (count === 1 ? singular : plural);
 
   // ============================================
-  // PLURALIZATION HELPER
-  // ============================================
-  const pluralize = (count, singular, plural) => {
-    return count === 1 ? singular : plural;
-  };
-
-  // ============================================
-  // FETCH PROGRAMMES FROM DATABASE
+  // FETCH PROGRAMMES
   // ============================================
   const fetchProgrammes = async () => {
     try {
@@ -95,18 +83,17 @@ const Admin_Learners = () => {
   };
 
   // ============================================
-  // FETCH STATS (UPDATED)
+  // FETCH STATS
   // ============================================
   const fetchStats = async () => {
     try {
       const response = await api.get('/admin/stats');
       console.log('Stats response:', response.data);
-      
+
       if (response.data.success) {
         const data = response.data.data;
-        
         const activeEnrolments = data.activeEnrolments || data.enrolledEnrollments || 0;
-        
+
         setStats([
           { label: "Total Learners", value: data.totalLearners || 0 },
           { label: "Active Enrolments", value: activeEnrolments },
@@ -127,7 +114,6 @@ const Admin_Learners = () => {
       setError(null);
 
       const response = await api.get('/admin/learners?limit=1000');
-      
       if (response.data.success) {
         const data = response.data.data || [];
         setLearners(data);
@@ -142,55 +128,71 @@ const Admin_Learners = () => {
   };
 
   // ============================================
-  // UPDATE LEARNER IN DATABASE
+  // UPDATE LEARNER
   // ============================================
   const updateLearner = async (id, updatedData) => {
     try {
       setIsSaving(true);
       const response = await api.put(`/admin/learners/${id}`, updatedData);
-      
       if (response.data.success) {
         await fetchLearners();
         await fetchStats();
         setEditingId(null);
         setEditedLearner({ id: '', name: '', surname: '', email: '', phone: '' });
-        alert(' Learner updated successfully!');
+        alert('Learner updated successfully!');
         return true;
       } else {
-        alert(' ' + (response.data.message || 'Failed to update learner'));
+        alert(response.data.message || 'Failed to update learner');
         return false;
       }
     } catch (err) {
       console.error('Error updating learner:', err);
-      alert('' + (err.response?.data?.message || 'Failed to update learner'));
+      alert(err.response?.data?.message || 'Failed to update learner');
       return false;
     } finally {
       setIsSaving(false);
     }
   };
 
-  // ============================================
-  //  DEACTIVATE LEARNER IN DATABASE
-  // ============================================
+  
+  // DEACTIVATE LEARNER
+ 
   const deactivateLearner = async (id) => {
     try {
       const response = await api.put(`/admin/learners/${id}`, { status: 'Inactive' });
-      
+
       if (response.data.success) {
-        await fetchLearners();
-        await fetchStats();
+        
+        const patch = (l) =>
+          l.id === id
+            ? {
+                ...l,
+                status: 'Inactive',
+                programme_name: null,
+                Programme_name: null,
+                programme: null,
+                enrolment_date: null,
+              }
+            : l;
+
+        setLearners(prev => prev.map(patch));
+        setFilteredLearners(prev => prev.map(patch));
+
         setDeactivatingId(null);
         setDeactivateTarget(null);
         setShowDeactivateModal(false);
-        alert(' Learner deactivated successfully!');
+        alert('Learner deactivated successfully!');
         return true;
       } else {
-        alert(' ' + (response.data.message || 'Failed to deactivate learner'));
+        alert(response.data.message || 'Failed to deactivate learner');
         return false;
       }
     } catch (err) {
       console.error('Error deactivating learner:', err);
-      alert(' ' + (err.response?.data?.message || 'Failed to deactivate learner'));
+      alert(
+        err.response?.data?.message ||
+          'Failed to deactivate learner'
+      );
       return false;
     }
   };
@@ -203,7 +205,7 @@ const Admin_Learners = () => {
 
     if (searchTerm.trim()) {
       const term = searchTerm.trim().toLowerCase();
-      filtered = filtered.filter(learner => 
+      filtered = filtered.filter(learner =>
         learner.name?.toLowerCase().includes(term) ||
         learner.surname?.toLowerCase().includes(term) ||
         learner.email?.toLowerCase().includes(term) ||
@@ -229,20 +231,9 @@ const Admin_Learners = () => {
     setCurrentPage(1);
   }, [learners, searchTerm, selectedProgramme, selectedStatus]);
 
-  // ============================================
-  // HANDLE FILTER CHANGES
-  // ============================================
-  const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
-  };
-
-  const handleProgrammeChange = (e) => {
-    setSelectedProgramme(e.target.value);
-  };
-
-  const handleStatusChange = (e) => {
-    setSelectedStatus(e.target.value);
-  };
+  const handleSearchChange = (e) => setSearchTerm(e.target.value);
+  const handleProgrammeChange = (e) => setSelectedProgramme(e.target.value);
+  const handleStatusChange = (e) => setSelectedStatus(e.target.value);
 
   const clearFilters = () => {
     setSearchTerm("");
@@ -267,7 +258,7 @@ const Admin_Learners = () => {
   };
 
   // ============================================
-  // LOAD DATA ON MOUNT
+  // LOAD ON MOUNT
   // ============================================
   useEffect(() => {
     fetchStats();
@@ -275,29 +266,23 @@ const Admin_Learners = () => {
     fetchLearners();
   }, []);
 
-  // ============================================
-  // APPLY FILTERS WHEN DEPENDENCIES CHANGE
-  // ============================================
   useEffect(() => {
     applyFilters();
   }, [applyFilters]);
 
   // ============================================
-  // FORMAT DATE
+  // HELPERS
   // ============================================
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
     });
   };
 
-  // ============================================
-  // GET STATUS CLASS
-  // ============================================
   const getStatusClass = (status) => {
     if (!status) return 'inactive';
     const statusLower = status.toLowerCase();
@@ -308,7 +293,7 @@ const Admin_Learners = () => {
   };
 
   // ============================================
-  // RENDER PAGINATION
+  // PAGINATION RENDER
   // ============================================
   const renderPagination = () => {
     if (totalPages <= 1) return null;
@@ -328,8 +313,8 @@ const Admin_Learners = () => {
 
     return (
       <div className="admin-learners-pagination">
-        <button 
-          className="pagination-btn prev" 
+        <button
+          className="pagination-btn prev"
           onClick={() => paginate(currentPage - 1)}
           disabled={currentPage === 1}
         >
@@ -343,8 +328,8 @@ const Admin_Learners = () => {
             </>
           )}
           {pageNumbers.map(number => (
-            <button 
-              key={number} 
+            <button
+              key={number}
               className={`pagination-num ${currentPage === number ? 'active' : ''}`}
               onClick={() => paginate(number)}
             >
@@ -360,8 +345,8 @@ const Admin_Learners = () => {
             </>
           )}
         </span>
-        <button 
-          className="pagination-btn next" 
+        <button
+          className="pagination-btn next"
           onClick={() => paginate(currentPage + 1)}
           disabled={currentPage === totalPages}
         >
@@ -371,20 +356,82 @@ const Admin_Learners = () => {
     );
   };
 
+  // ============================================
+  // EDIT HANDLERS
+  // ============================================
+  const handleEditClick = (learner) => {
+    const learnerId = learner.id || learner.learner_id;
+    setEditingId(learnerId);
+    setEditedLearner({
+      id: learnerId,
+      name: learner.name || '',
+      surname: learner.surname || '',
+      email: learner.email || '',
+      phone: learner.phone || learner.phone_number || ''
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditedLearner({ id: '', name: '', surname: '', email: '', phone: '' });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editedLearner.name.trim()) {
+      alert('Please enter a name');
+      return;
+    }
+    if (!editedLearner.email.trim()) {
+      alert('Please enter an email');
+      return;
+    }
+
+    const updatedData = {
+      name: editedLearner.name,
+      surname: editedLearner.surname,
+      email: editedLearner.email,
+      phone: editedLearner.phone
+    };
+
+    await updateLearner(editedLearner.id, updatedData);
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setEditedLearner({
+      ...editedLearner,
+      [name]: value
+    });
+  };
+
+  // ============================================
+  // DEACTIVATE HANDLERS
+  // ============================================
+  const handleDeactivateClick = (learner) => {
+    const learnerId = learner.id || learner.learner_id;
+    setDeactivateTarget(learnerId);
+    setShowDeactivateModal(true);
+  };
+
+  const confirmDeactivate = async () => {
+    if (deactivateTarget) {
+      setDeactivatingId(deactivateTarget);
+      await deactivateLearner(deactivateTarget);
+    }
+  };
+
+  const cancelDeactivate = () => {
+    setShowDeactivateModal(false);
+    setDeactivateTarget(null);
+  };
+
   // Loading state
   if (loading && learners.length === 0) {
     return (
       <div className="admin-learners-layout">
-        <Admin_Header
-          onMenuToggle={toggleMobileMenu}
-          isMobileMenuOpen={isMobileMenuOpen}
-        />
+        <Admin_Header onMenuToggle={toggleMobileMenu} isMobileMenuOpen={isMobileMenuOpen} />
         <div className="admin-learners-body">
-          <Admin_Sidebar
-            active={activeNav}
-            isMobileOpen={isMobileMenuOpen}
-            onClose={closeMobileMenu}
-          />
+          <Admin_Sidebar active={activeNav} isMobileOpen={isMobileMenuOpen} onClose={closeMobileMenu} />
           <div className="admin-learners-content">
             <div style={{ textAlign: 'center', padding: '60px 20px' }}>
               <p>Loading learners...</p>
@@ -399,20 +446,13 @@ const Admin_Learners = () => {
   if (error) {
     return (
       <div className="admin-learners-layout">
-        <Admin_Header
-          onMenuToggle={toggleMobileMenu}
-          isMobileMenuOpen={isMobileMenuOpen}
-        />
+        <Admin_Header onMenuToggle={toggleMobileMenu} isMobileMenuOpen={isMobileMenuOpen} />
         <div className="admin-learners-body">
-          <Admin_Sidebar
-            active={activeNav}
-            isMobileOpen={isMobileMenuOpen}
-            onClose={closeMobileMenu}
-          />
+          <Admin_Sidebar active={activeNav} isMobileOpen={isMobileMenuOpen} onClose={closeMobileMenu} />
           <div className="admin-learners-content">
             <div style={{ textAlign: 'center', padding: '60px 20px' }}>
               <h3 style={{ color: '#dc3545' }}>Error: {error}</h3>
-              <button 
+              <button
                 onClick={fetchLearners}
                 style={{
                   marginTop: '20px',
@@ -433,117 +473,20 @@ const Admin_Learners = () => {
     );
   }
 
-  // ============================================
-  // PROGRAMMES FROM DATABASE
-  // ============================================
   const programmeOptions = programmes.map(p => p.Programme_name || p.name).filter(Boolean);
-
-  // ============================================
-  // HANDLE EDIT CLICK
-  // ============================================
-  const handleEditClick = (learner) => {
-    const learnerId = learner.id || learner.learner_id;
-    setEditingId(learnerId);
-    setEditedLearner({
-      id: learnerId,
-      name: learner.name || '',
-      surname: learner.surname || '',
-      email: learner.email || '',
-      phone: learner.phone || learner.phone_number || ''
-    });
-  };
-
-  // ============================================
-  // HANDLE CANCEL EDIT
-  // ============================================
-  const handleCancelEdit = () => {
-    setEditingId(null);
-    setEditedLearner({ id: '', name: '', surname: '', email: '', phone: '' });
-  };
-
-  // ============================================
-  // HANDLE SAVE EDIT
-  // ============================================
-  const handleSaveEdit = async () => {
-    if (!editedLearner.name.trim()) {
-      alert(' Please enter a name');
-      return;
-    }
-    if (!editedLearner.email.trim()) {
-      alert(' Please enter an email');
-      return;
-    }
-
-    const updatedData = {
-      name: editedLearner.name,
-      surname: editedLearner.surname,
-      email: editedLearner.email,
-      phone: editedLearner.phone
-    };
-
-    await updateLearner(editedLearner.id, updatedData);
-  };
-
-  // ============================================
-  // HANDLE INPUT CHANGE
-  // ============================================
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setEditedLearner({
-      ...editedLearner,
-      [name]: value
-    });
-  };
-
-  // ============================================
-  // HANDLE DEACTIVATE CLICK
-  // ============================================
-  const handleDeactivateClick = (learner) => {
-    const learnerId = learner.id || learner.learner_id;
-    setDeactivateTarget(learnerId);
-    setShowDeactivateModal(true);
-  };
-
-  // ============================================
-  // CONFIRM DEACTIVATE
-  // ============================================
-  const confirmDeactivate = async () => {
-    if (deactivateTarget) {
-      setDeactivatingId(deactivateTarget);
-      await deactivateLearner(deactivateTarget);
-    }
-  };
-
-  // ============================================
-  // CANCEL DEACTIVATE
-  // ============================================
-  const cancelDeactivate = () => {
-    setShowDeactivateModal(false);
-    setDeactivateTarget(null);
-  };
 
   return (
     <div className="admin-learners-layout">
-      <Admin_Header
-        onMenuToggle={toggleMobileMenu}
-        isMobileMenuOpen={isMobileMenuOpen}
-      />
+      <Admin_Header onMenuToggle={toggleMobileMenu} isMobileMenuOpen={isMobileMenuOpen} />
 
       <div className="admin-learners-body">
-        <Admin_Sidebar
-          active={activeNav}
-          isMobileOpen={isMobileMenuOpen}
-          onClose={closeMobileMenu}
-        />
+        <Admin_Sidebar active={activeNav} isMobileOpen={isMobileMenuOpen} onClose={closeMobileMenu} />
 
         <div className="admin-learners-content">
           {/* Page Header */}
           <div className="admin-learners-header">
             <h1>Learner Management</h1>
-            <p>
-              Manage corporate professionals, track enrolment progression, and
-              monitor profile accessibility.
-            </p>
+            <p>Manage corporate professionals, track enrolment progression, and monitor profile accessibility.</p>
           </div>
 
           {/* Stats */}
@@ -560,14 +503,11 @@ const Admin_Learners = () => {
           <div className="admin-learners-toolbar">
             <div className="toolbar-left">
               <button className="btn-outline">Export Records</button>
-              <button
-                className="btn-solid"
-                onClick={() => navigate("/admin/interested-learners")}
-              >
+              <button className="btn-solid" onClick={() => navigate("/admin/interested-learners")}>
                 Interested Learners
               </button>
               {filteredLearners.length !== learners.length && (
-                <button 
+                <button
                   className="btn-clear-filters"
                   onClick={clearFilters}
                   style={{
@@ -585,11 +525,7 @@ const Admin_Learners = () => {
               )}
             </div>
             <div className="toolbar-right">
-              <select 
-                className="filter-select" 
-                value={selectedProgramme} 
-                onChange={handleProgrammeChange}
-              >
+              <select className="filter-select" value={selectedProgramme} onChange={handleProgrammeChange}>
                 <option value="">Prog: All</option>
                 {programmeOptions.length > 0 ? (
                   programmeOptions.map((prog, index) => (
@@ -603,11 +539,7 @@ const Admin_Learners = () => {
                   </>
                 )}
               </select>
-              <select 
-                className="filter-select" 
-                value={selectedStatus} 
-                onChange={handleStatusChange}
-              >
+              <select className="filter-select" value={selectedStatus} onChange={handleStatusChange}>
                 {statusOptions.map((status, index) => (
                   <option key={index} value={status.value}>{status.label}</option>
                 ))}
@@ -623,9 +555,9 @@ const Admin_Learners = () => {
           </div>
 
           {/* Results Count */}
-          <div style={{ 
-            padding: '10px 0', 
-            fontSize: '14px', 
+          <div style={{
+            padding: '10px 0',
+            fontSize: '14px',
             color: '#666',
             borderBottom: '1px solid #eee'
           }}>
@@ -654,13 +586,10 @@ const Admin_Learners = () => {
                   const learnerId = learner.id || learner.learner_id;
                   const isEditing = editingId === learnerId;
                   const isDeactivating = deactivatingId === learnerId;
-                  
+                  const isInactive = learner.status === 'Inactive';
+
                   return (
-                    <tr 
-                      key={learnerId} 
-                      className={isDeactivating ? "deactivating-row" : ""}
-                    >
-                      {/* NAME column - editable */}
+                    <tr key={learnerId} className={isDeactivating ? "deactivating-row" : ""}>
                       <td>
                         {isEditing ? (
                           <input
@@ -675,8 +604,6 @@ const Admin_Learners = () => {
                           `${learner.name || ''} ${learner.surname || ''}`.trim() || 'N/A'
                         )}
                       </td>
-                      
-                      {/* EMAIL column - editable */}
                       <td>
                         {isEditing ? (
                           <input
@@ -691,8 +618,6 @@ const Admin_Learners = () => {
                           learner.email || 'N/A'
                         )}
                       </td>
-                      
-                      {/* PHONE column - editable */}
                       <td>
                         {isEditing ? (
                           <input
@@ -707,53 +632,63 @@ const Admin_Learners = () => {
                           learner.phone || learner.phone_number || 'N/A'
                         )}
                       </td>
-                      
-                      {/* PROGRAMME - display only */}
-                      <td>{learner.programme_name || learner.Programme_name || learner.programme || 'N/A'}</td>
-                      
-                      {/* ENROLMENT DATE - display only */}
-                      <td>{formatDate(learner.enrolment_date || learner.date || learner.created_at)}</td>
-                      
-                      {/* STATUS - display only */}
+
+                      {/* PROGRAMME — N/A for inactive learners */}
+                      <td>
+                        {isInactive
+                          ? 'N/A'
+                          : (learner.programme_name || learner.Programme_name || learner.programme || 'N/A')}
+                      </td>
+
+                      {/* ENROLMENT DATE — N/A for inactive learners */}
+                      <td>
+                        {isInactive
+                          ? 'N/A'
+                          : formatDate(learner.enrolment_date || learner.date || learner.created_at)}
+                      </td>
+
                       <td>
                         <span className={`status-badge ${getStatusClass(learner.status)}`}>
                           {learner.status || 'Inactive'}
                         </span>
                       </td>
-                      
-                      {/* ACTIONS column */}
+
                       <td>
                         {isEditing ? (
                           <>
-                            <button 
-                              className="action-btn save" 
+                            <button
+                              className="action-btn save"
                               onClick={handleSaveEdit}
                               disabled={isSaving}
                             >
                               {isSaving ? 'Saving...' : 'Save'}
                             </button>
-                            <button 
-                              className="action-btn cancel" 
+                            <button
+                              className="action-btn cancel"
                               onClick={handleCancelEdit}
                             >
-                              
+                              Cancel
                             </button>
                           </>
                         ) : (
                           <>
-                            <button 
-                              className="action-btn edit" 
+                            <button
+                              className="action-btn edit"
                               onClick={() => handleEditClick(learner)}
                               disabled={isDeactivating}
                             >
                               Edit
                             </button>
-                            <button 
-                              className="action-btn deactivate" 
+                            <button
+                              className="action-btn deactivate"
                               onClick={() => handleDeactivateClick(learner)}
-                              disabled={isDeactivating}
+                              disabled={isDeactivating || isInactive}
                             >
-                              {isDeactivating ? "Deactivating..." : "Deactivate"}
+                              {isDeactivating
+                                ? "Deactivating..."
+                                : isInactive
+                                  ? 'Inactive'
+                                  : 'Deactivate'}
                             </button>
                           </>
                         )}
@@ -765,7 +700,6 @@ const Admin_Learners = () => {
             </table>
           </div>
 
-          {/* Pagination */}
           {renderPagination()}
 
           {/* POPIA Notice */}
@@ -783,19 +717,15 @@ const Admin_Learners = () => {
       {/* Deactivate Confirmation Modal */}
       {showDeactivateModal && (
         <div className="modal-overlay">
-          <div className="modal-content">
+          <div className="modal-content confirmation-modal">
             <h2>Confirm Deactivation</h2>
-            <p>Are you sure you want to deactivate this student?</p>
-            <p className="modal-warning">
-              This action will change the student's status to "Inactive" in the database.
+            <p className="confirmation-message confirmation-question">Are you sure you want to deactivate this student?</p>
+            <p className="modal-warning confirmation-message">
+              This action will change the student's status to "Inactive" and hide their enrolment details.
             </p>
             <div className="modal-actions">
-              <button className="modal-btn cancel-btn" onClick={cancelDeactivate}>
-                Cancel
-              </button>
-              <button className="modal-btn confirm-btn" onClick={confirmDeactivate}>
-                Yes, Deactivate
-              </button>
+              <button className="modal-btn cancel-btn" onClick={cancelDeactivate}>Cancel</button>
+              <button className="modal-btn confirm-btn" onClick={confirmDeactivate}>Yes, Deactivate</button>
             </div>
           </div>
         </div>

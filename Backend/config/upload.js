@@ -15,18 +15,17 @@ const storage = multer.diskStorage({
         cb(null, uploadDir);
     },
     filename: (req, file, cb) => {
-        const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(file.originalname)}`;
+        const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1E9)}.pdf`;
         cb(null, uniqueName);
     }
 });
 
-// File filter - accept PDF, JPEG, PNG
+// File filter — PDF only
 const fileFilter = (req, file, cb) => {
-    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
-    if (allowedTypes.includes(file.mimetype)) {
+    if (file.mimetype === 'application/pdf') {
         cb(null, true);
     } else {
-        cb(new Error('Invalid file type. Only PDF, JPEG, and PNG are allowed.'), false);
+        cb(new Error('Invalid file type. Only PDF files are allowed.'), false);
     }
 };
 

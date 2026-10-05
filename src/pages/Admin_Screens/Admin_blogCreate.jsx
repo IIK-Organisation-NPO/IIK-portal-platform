@@ -1,36 +1,22 @@
 // src/pages/Admin_Screens/Admin_BlogCreate.jsx
-// ============================================================
-// Admin_BlogCreate — Create New Post page
-// Handles Blog Posts, Events, Announcements and News.
-// Uses the same native <input type="date"> pattern as
-// Admin_Certificates for the Event Date picker.
-// Article Body uses a lightweight contentEditable rich-text
-// editor so Bold / Italic / Underline / Lists / Links work.
-// ============================================================
-
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Admin_Header from '../../components/Admin/Admin_Header';
 import Admin_Sidebar from '../../components/Admin/Admin_Sidebar';
 import '../../styles/Admin/Admin_BlogCreate.css';
+import { blogAPI } from '../../services/api';
+import { API_BASE } from '../../config/api';
 
 const Admin_BlogCreate = () => {
-    // -----------------------------------------------------------
-    // 1. HOOKS & STATE
-    // -----------------------------------------------------------
     const navigate = useNavigate();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-    // Reference to the contentEditable div so we can read its HTML
-    // and restore focus after toolbar clicks.
     const editorRef = useRef(null);
 
-    // Form values — same shape as before, but `articleBody` now
-    // holds HTML (from the rich-text editor) instead of plain text.
     const [formData, setFormData] = useState({
         postType: 'Blog Post',
         officialTitle: '',
-        authorReference: 'Admin User',
+        authorReference: 'Admin',
         tags: '',
         articleBody: '',
         featuredImage: null,
@@ -38,25 +24,24 @@ const Admin_BlogCreate = () => {
         venue: '',
     });
 
-    // Validation errors — keyed by formData field name.
     const [errors, setErrors] = useState({});
 
-    const adminName = 'Admin User';
+    const [toast, setToast] = useState(null);
 
-    // -----------------------------------------------------------
-    // 2. SIDEBAR / HEADER HELPERS
-    // -----------------------------------------------------------
+    const adminName = 'Admin';
+
     const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
     const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
-    // -----------------------------------------------------------
-    // 3. GENERIC INPUT HANDLER
-    // -----------------------------------------------------------
+    const showToast = (type, text) => {
+        setToast({ type, text });
+        window.setTimeout(() => setToast(null), 3500);
+    };
+
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData((prev) => ({ ...prev, [name]: value }));
 
-        // Clear this field's error as soon as the user edits it.
         setErrors((prev) => {
             if (!prev[name]) return prev;
             const next = { ...prev };
@@ -65,21 +50,11 @@ const Admin_BlogCreate = () => {
         });
     };
 
-    // -----------------------------------------------------------
-    // 4. RICH TEXT EDITOR HANDLERS
-    //    The editor is a <div contentEditable>.
-    //    On every keystroke we sync its HTML into formData.articleBody.
-    //    The toolbar uses document.execCommand, which browsers still
-    //    support and is perfect for a lightweight editor like this.
-    // -----------------------------------------------------------
-
-    // Sync the editor's HTML into state so validation and publish work.
     const handleEditorInput = () => {
         if (!editorRef.current) return;
         const html = editorRef.current.innerHTML;
         setFormData((prev) => ({ ...prev, articleBody: html }));
 
-        // Clear error once the user starts typing.
         setErrors((prev) => {
             if (!prev.articleBody) return prev;
             const next = { ...prev };
@@ -88,53 +63,36 @@ const Admin_BlogCreate = () => {
         });
     };
 
-    // Called by each toolbar button.
-    // `command` is a document.execCommand name (bold, italic, ...).
-    // `value` is optional (used for createLink, formatBlock, etc.).
     const applyFormat = (command, value = null) => {
-        // Restore focus to the editor if the user clicked a toolbar button.
         editorRef.current?.focus();
-
-        // Apply the command to the current selection.
         document.execCommand(command, false, value);
-
-        // Push the updated HTML into state.
         handleEditorInput();
     };
 
-    // Insert-link prompt — asks the user for a URL then applies it.
     const handleInsertLink = () => {
         const url = window.prompt('Enter the URL (include https://):');
         if (!url) return;
 
-        // Basic safety: prepend https:// if the user forgot the scheme.
         const safeUrl = /^https?:\/\//i.test(url) ? url : `https://${url}`;
         applyFormat('createLink', safeUrl);
     };
 
-    // -----------------------------------------------------------
-    // 5. FEATURED IMAGE UPLOAD
-    // -----------------------------------------------------------
     const handleFileUpload = (e) => {
         const file = e.target.files[0];
-        if (file) {
-            setFormData((prev) => ({ ...prev, featuredImage: file }));
-        }
+        if (!file) return;
+
+        setFormData((prev) => ({ ...prev, featuredImage: file }));
+
+        setErrors((prev) => {
+            if (!prev.featuredImage) return prev;
+            const next = { ...prev };
+            delete next.featuredImage;
+            return next;
+        });
     };
 
-    // -----------------------------------------------------------
-    // 6. VALIDATION
-    //    - Title and body always required (for publish).
-    //    - Events additionally require date + venue.
-    //    - Drafts only require the title.
-    //
-    //    Note: the contentEditable div may contain empty markup like
-    //    "<br>" or "<p></p>" even when the user hasn't typed anything,
-    //    so we strip tags before checking for real content.
-    // -----------------------------------------------------------
     const isEvent = formData.postType === 'Event';
 
-    // Strips HTML tags and returns the visible text.
     const stripHtml = (html) => {
         const temp = document.createElement('div');
         temp.innerHTML = html || '';
@@ -146,6 +104,10 @@ const Admin_BlogCreate = () => {
 
         if (!formData.officialTitle.trim()) {
             nextErrors.officialTitle = 'Official Title is required.';
+        }
+
+        if (!formData.featuredImage) {
+            nextErrors.featuredImage = 'Featured image is required.';
         }
 
         if (requireBody && !stripHtml(formData.articleBody)) {
@@ -164,42 +126,87 @@ const Admin_BlogCreate = () => {
         return nextErrors;
     };
 
-    // -----------------------------------------------------------
-    // 7. ACTION HANDLERS
-    // -----------------------------------------------------------
-    const handleSaveDraft = () => {
+    const uploadFeaturedImage = async () => {
+        if (!formData.featuredImage) return null;
+        const res = await blogAPI.uploadImage(formData.featuredImage);
+        return res.data?.url || null;
+    };
+
+    // ---- FIXED: don't prepend API_BASE to data URLs ----
+    const buildPayload = (status, imageUrl) => {
+        const safeAlt = (formData.officialTitle || 'Post image').replace(/"/g, '&quot;');
+
+        const src = !imageUrl
+            ? ''
+            : imageUrl.startsWith('data:')
+                ? imageUrl                        // data URLs are complete on their own
+                : `${API_BASE}${imageUrl}`;       // legacy /uploads paths need the host
+
+        const imageTag = src
+            ? `<img src="${src}" alt="${safeAlt}" style="max-width:100%;height:auto;border-radius:8px;margin-bottom:16px;display:block;" />`
+            : '';
+
+        return {
+            postType:      formData.postType,
+            officialTitle: formData.officialTitle,
+            tags:          formData.tags,
+            articleBody:   `${imageTag}${formData.articleBody || ''}`,
+            eventDate:     formData.eventDate || null,
+            venue:         formData.venue     || null,
+            status,
+        };
+    };
+
+    const handleSaveDraft = async () => {
         const nextErrors = validate({ requireBody: false });
 
         if (Object.keys(nextErrors).length > 0) {
             setErrors(nextErrors);
-            alert('Please fix the highlighted fields before saving a draft.');
+            showToast('error', 'Please fix the highlighted fields before saving a draft.');
             return;
         }
 
-        console.log('Draft saved:', { ...formData, status: 'draft' });
-        alert('Draft saved successfully!');
+        try {
+            const imageUrl = await uploadFeaturedImage();
+            await blogAPI.createPost(buildPayload('draft', imageUrl));
+            showToast('success', `Draft "${formData.officialTitle}" saved successfully.`);
+
+            window.setTimeout(() => {
+                navigate('/admin/blog-management');
+            }, 900);
+        } catch (err) {
+            showToast('error', err.response?.data?.error || err.message || 'Failed to save draft.');
+        }
     };
 
-    const handlePublish = () => {
+    const handlePublish = async () => {
         const nextErrors = validate({ requireBody: true });
 
         if (Object.keys(nextErrors).length > 0) {
             setErrors(nextErrors);
-            alert('Please complete all required fields before publishing.');
+            showToast('error', 'Please complete all required fields before publishing.');
             return;
         }
 
         setErrors({});
-        console.log('Published:', { ...formData, status: 'published' });
-        alert('Post published successfully!');
-        navigate('/admin/blog-management');
+        try {
+            const imageUrl = await uploadFeaturedImage();
+            await blogAPI.createPost(buildPayload('published', imageUrl));
+            showToast('success', `${formData.postType} published successfully.`);
+
+            window.setTimeout(() => {
+                navigate('/admin/blog-management');
+            }, 900);
+        } catch (err) {
+            showToast('error', err.response?.data?.error || err.message || 'Failed to publish post.');
+        }
     };
 
     const handleCancel = () => {
         setFormData({
             postType: 'Blog Post',
             officialTitle: '',
-            authorReference: 'Admin User',
+            authorReference: 'Admin',
             tags: '',
             articleBody: '',
             featuredImage: null,
@@ -208,16 +215,13 @@ const Admin_BlogCreate = () => {
         });
         setErrors({});
 
-        // Clear the contentEditable div manually since it's uncontrolled.
         if (editorRef.current) {
             editorRef.current.innerHTML = '';
         }
 
-        alert('Form has been reset');
+        showToast('success', 'Form has been reset.');
     };
 
-    // Keep the editor DOM in sync if articleBody is reset programmatically
-    // (e.g. via handleCancel or future "load draft" logic).
     useEffect(() => {
         if (editorRef.current && editorRef.current.innerHTML !== formData.articleBody) {
             editorRef.current.innerHTML = formData.articleBody || '';
@@ -226,9 +230,6 @@ const Admin_BlogCreate = () => {
 
     const postTypeOptions = ['Blog Post', 'Event', 'Announcement', 'News'];
 
-    // -----------------------------------------------------------
-    // 8. RENDER
-    // -----------------------------------------------------------
     return (
         <div className="admin-blogcreate-layout">
             <Admin_Header
@@ -238,6 +239,16 @@ const Admin_BlogCreate = () => {
                 notificationCount={3}
             />
 
+            {toast && (
+                <div
+                    className={`blogcreate-toast blogcreate-toast--${toast.type}`}
+                    role="status"
+                    aria-live="polite"
+                >
+                    {toast.text}
+                </div>
+            )}
+
             <div className="admin-blogcreate-body">
                 <Admin_Sidebar
                     active="blog-news"
@@ -246,7 +257,6 @@ const Admin_BlogCreate = () => {
                 />
 
                 <main className="admin-blogcreate-content">
-                    {/* Page heading */}
                     <div className="blogcreate-page-header">
                         <h1>Create New Post</h1>
                         <p>
@@ -256,11 +266,7 @@ const Admin_BlogCreate = () => {
                     </div>
 
                     <div className="blogcreate-grid">
-                        {/* ============================================
-                            LEFT COLUMN — main post fields
-                           ============================================ */}
                         <div className="blogcreate-left">
-                            {/* Post Type */}
                             <div className="form-group">
                                 <label>Post Type</label>
                                 <div className="select-wrapper">
@@ -277,7 +283,6 @@ const Admin_BlogCreate = () => {
                                 </div>
                             </div>
 
-                            {/* Official Title */}
                             <div className="form-group">
                                 <label>Official Title</label>
                                 <input
@@ -293,7 +298,6 @@ const Admin_BlogCreate = () => {
                                 )}
                             </div>
 
-                            {/* Author + Tags */}
                             <div className="form-row">
                                 <div className="form-group half">
                                     <label>Author Reference</label>
@@ -318,11 +322,6 @@ const Admin_BlogCreate = () => {
                                 </div>
                             </div>
 
-                            {/* ------------------------------------------------
-                                RICH TEXT EDITOR
-                                A contentEditable div replaces the textarea
-                                so the toolbar commands can actually format.
-                            ------------------------------------------------ */}
                             <div className="form-group">
                                 <label>Article Body / Event Description</label>
 
@@ -402,7 +401,6 @@ const Admin_BlogCreate = () => {
                                     </button>
                                 </div>
 
-                                {/* The actual editable area */}
                                 <div
                                     ref={editorRef}
                                     className={`rich-text-editor ${errors.articleBody ? 'input-error' : ''}`}
@@ -418,14 +416,10 @@ const Admin_BlogCreate = () => {
                             </div>
                         </div>
 
-                        {/* ============================================
-                            RIGHT COLUMN — media + event logistics
-                           ============================================ */}
                         <div className="blogcreate-right">
-                            {/* Featured Image */}
                             <div className="blogcreate-card">
                                 <h3 className="card-title">Featured Display Image</h3>
-                                <div className="upload-area">
+                                <div className={`upload-area ${errors.featuredImage ? 'upload-area--error' : ''}`}>
                                     <input
                                         type="file"
                                         id="imageUpload"
@@ -460,9 +454,11 @@ const Admin_BlogCreate = () => {
                                         </div>
                                     </label>
                                 </div>
+                                {errors.featuredImage && (
+                                    <span className="field-error">{errors.featuredImage}</span>
+                                )}
                             </div>
 
-                            {/* EVENT LOGISTICS — only rendered when post type = Event */}
                             {isEvent && (
                                 <div className="blogcreate-card event-card">
                                     <h3 className="card-title">
@@ -505,7 +501,6 @@ const Admin_BlogCreate = () => {
                         </div>
                     </div>
 
-                    {/* Bottom action bar */}
                     <div className="blogcreate-actions">
                         <button
                             className="btn-back"

@@ -4,17 +4,19 @@ import { useNavigate } from 'react-router-dom';
 import Admin_Sidebar from '../../components/Admin/Admin_Sidebar';
 import Admin_Header from '../../components/Admin/Admin_Header';
 import '../../styles/Admin/Admin_CreateProgramme.css';
+import { API_BASE } from '../../config/api';
 
 const Admin_CreateProgramme = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [showCalendar, setShowCalendar] = useState(false);
     const [selectedDate, setSelectedDate] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [programmeData, setProgrammeData] = useState({
         programmeName: '',
         description: '',
         duration: '',
         startDate: '',
-        status: 'Upcoming'
+        status: 'Draft'
     });
     const [showDraftConfirmation, setShowDraftConfirmation] = useState(false);
     const [showPublishConfirmation, setShowPublishConfirmation] = useState(false);
@@ -36,13 +38,6 @@ const Admin_CreateProgramme = () => {
     ]);
     const navigate = useNavigate();
 
-    // Status options for dropdown
-    const statusOptions = [
-        'Upcoming',
-        'Active',
-        'Draft'
-    ];
-
     const toggleMobileMenu = () => {
         setIsMobileMenuOpen(!isMobileMenuOpen);
     };
@@ -62,11 +57,29 @@ const Admin_CreateProgramme = () => {
         setShowCalendar(!showCalendar);
     };
 
-    const handleDateSelect = (date) => {
+    const isPastDate = (date) => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const compare = new Date(date);
+        compare.setHours(0, 0, 0, 0);
+        return compare < today;
+    };
+
+    const handleDateSelect = (date, disabled) => {
+        if (disabled) return;
+
+        const parsed = new Date(date);
+        if (isNaN(parsed.getTime())) return;
+
+        const yyyy = parsed.getFullYear();
+        const mm = String(parsed.getMonth() + 1).padStart(2, '0');
+        const dd = String(parsed.getDate()).padStart(2, '0');
+        const isoDate = `${yyyy}-${mm}-${dd}`;
+
         setSelectedDate(date);
         setProgrammeData(prev => ({
             ...prev,
-            startDate: date
+            startDate: isoDate
         }));
         setShowCalendar(false);
     };
@@ -77,14 +90,12 @@ const Admin_CreateProgramme = () => {
         const month = today.getMonth();
         const daysInMonth = new Date(year, month + 1, 0).getDate();
         const firstDay = new Date(year, month, 1).getDay();
-        
+
         const days = [];
-        // Empty days for start of month
         for (let i = 0; i < firstDay; i++) {
             days.push(null);
         }
-        
-        // Actual days
+
         for (let i = 1; i <= daysInMonth; i++) {
             const date = new Date(year, month, i);
             const dateString = date.toLocaleDateString('en-US', {
@@ -95,34 +106,61 @@ const Admin_CreateProgramme = () => {
             days.push({
                 day: i,
                 date: dateString,
-                isToday: date.toDateString() === today.toDateString()
+                isToday: date.toDateString() === today.toDateString(),
+                isPast: isPastDate(date)
             });
         }
         return days;
     };
 
     const handleCancel = () => {
-          navigate('/admin/programmes');
+        navigate('/admin/programmes');
     };
 
     const handleSaveDraft = () => {
         setShowDraftConfirmation(true);
     };
 
-    const confirmSaveDraft = () => {
+    const confirmSaveDraft = async () => {
         setShowDraftConfirmation(false);
-        // Update status to Draft
-        setProgrammeData(prev => ({
-            ...prev,
-            status: 'Draft'
-        }));
-        // Navigate back with draft status
-        navigate('/admin/programmes', { 
-            state: { 
-                message: 'Programme saved as draft successfully!',
-                programme: { ...programmeData, status: 'Draft' }
-            } 
-        });
+
+        if (!programmeData.programmeName.trim()) {
+            alert('Programme name is required.');
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const res = await fetch(`${API_BASE}/api/programmes`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    programmeName: programmeData.programmeName.trim(),
+                    description: programmeData.description || '',
+                    duration: programmeData.duration || '',
+                    startDate: null,
+                    status: 'Draft'
+                })
+            });
+
+            const data = await res.json();
+
+            if (!res.ok || !data.success) {
+                throw new Error(data.message || 'Failed to save draft.');
+            }
+
+            navigate('/admin/programmes', {
+                state: {
+                    message: data.message,
+                    programme: data.programme
+                }
+            });
+        } catch (err) {
+            console.error('Save draft error:', err);
+            alert(err.message || 'Failed to save draft.');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const cancelSaveDraft = () => {
@@ -130,34 +168,56 @@ const Admin_CreateProgramme = () => {
     };
 
     const handlePublishProgramme = () => {
+        if (!programmeData.programmeName.trim()) {
+            alert('Programme name is required.');
+            return;
+        }
+        if (!programmeData.startDate) {
+            alert('Please select a start date before publishing.');
+            return;
+        }
         setShowPublishConfirmation(true);
     };
 
-    const confirmPublishProgramme = () => {
-        const publishedProgramme = {
-            id: Date.now(),
-            name: programmeData.programmeName || 'Untitled Programme',
-            enrolled: 0,
-            startDate: programmeData.startDate || 'Not set',
-            status: 'Active',
-            category: 'General',
-            duration: programmeData.duration,
-            archived: false
-        };
-
-        setProgrammeData(prev => ({ ...prev, status: 'Active' }));
+    const confirmPublishProgramme = async () => {
         setShowPublishConfirmation(false);
-        setShowPublishMessage(true);
+        setIsSubmitting(true);
 
-        setTimeout(() => {
-            setShowPublishMessage(false);
-            navigate('/admin/programmes', {
-                state: {
-                    message: 'Programme published successfully!',
-                    programme: publishedProgramme
-                }
+        try {
+            const res = await fetch(`${API_BASE}/api/programmes`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    programmeName: programmeData.programmeName.trim(),
+                    description: programmeData.description || '',
+                    duration: programmeData.duration || '',
+                    startDate: programmeData.startDate,
+                    status: 'Publish'
+                })
             });
-        }, 1500);
+
+            const data = await res.json();
+
+            if (!res.ok || !data.success) {
+                throw new Error(data.message || 'Failed to publish programme.');
+            }
+
+            setShowPublishMessage(true);
+            setTimeout(() => {
+                setShowPublishMessage(false);
+                navigate('/admin/programmes', {
+                    state: {
+                        message: data.message,
+                        programme: data.programme
+                    }
+                });
+            }, 1200);
+        } catch (err) {
+            console.error('Publish error:', err);
+            alert(err.message || 'Failed to publish programme.');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const cancelPublishProgramme = () => {
@@ -171,20 +231,19 @@ const Admin_CreateProgramme = () => {
 
     return (
         <div className="admin-create-programme-layout">
-            <Admin_Header 
+            <Admin_Header
                 onMenuToggle={toggleMobileMenu}
                 isMobileMenuOpen={isMobileMenuOpen}
             />
-            
+
             <div className="admin-create-programme-body">
-                <Admin_Sidebar 
+                <Admin_Sidebar
                     active="programmes"
                     isMobileOpen={isMobileMenuOpen}
                     onClose={closeMobileMenu}
                 />
 
                 <div className="admin-create-programme-content">
-                    {/* Header Section */}
                     <div className="admin-page-header">
                         <div className="admin-page-header-left">
                             <h1>Create New Programme</h1>
@@ -194,7 +253,6 @@ const Admin_CreateProgramme = () => {
                         </div>
                     </div>
 
-                    {/* Publish Success Message */}
                     {showPublishMessage && (
                         <div className="admin-publish-message">
                             <div className="admin-publish-message-content">
@@ -202,15 +260,13 @@ const Admin_CreateProgramme = () => {
                                     <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" strokeLinecap="round" strokeLinejoin="round"/>
                                     <path d="M22 4L12 14.01l-3-3" strokeLinecap="round" strokeLinejoin="round"/>
                                 </svg>
-                                <span>Programme "{programmeData.programmeName || 'Untitled'}" is now published! ✅</span>
+                                <span>Programme "{programmeData.programmeName || 'Untitled'}" is now published.</span>
                             </div>
                         </div>
                     )}
 
-                    {/* Main Form Section */}
                     <div className="admin-programme-form-container">
                         <div className="admin-form-main">
-                            {/* Programme Name */}
                             <div className="admin-form-group">
                                 <label className="admin-form-label">PROGRAMME NAME</label>
                                 <input
@@ -231,10 +287,9 @@ const Admin_CreateProgramme = () => {
                                 </datalist>
                             </div>
 
-                            {/* Description */}
                             <div className="admin-form-group">
                                 <label className="admin-form-label">DESCRIPTION</label>
-                                <textarea 
+                                <textarea
                                     className="admin-form-textarea"
                                     placeholder="Describe the programme objectives, outcomes, and target audience..."
                                     value={programmeData.description}
@@ -243,7 +298,6 @@ const Admin_CreateProgramme = () => {
                                 />
                             </div>
 
-                            {/* Duration */}
                             <div className="admin-form-group">
                                 <label className="admin-form-label">DURATION</label>
                                 <div className="admin-duration-container">
@@ -266,12 +320,11 @@ const Admin_CreateProgramme = () => {
                                 </div>
                             </div>
 
-                            {/* Start Date */}
                             <div className="admin-form-group">
                                 <label className="admin-form-label">START DATE</label>
                                 <div className="admin-date-picker-container">
                                     <div className="admin-date-input-wrapper" onClick={toggleCalendar}>
-                                        <input 
+                                        <input
                                             type="text"
                                             className="admin-form-input admin-date-input"
                                             placeholder="Select Date..."
@@ -285,7 +338,7 @@ const Admin_CreateProgramme = () => {
                                             <line x1="3" y1="10" x2="21" y2="10"/>
                                         </svg>
                                     </div>
-                                    
+
                                     {showCalendar && (
                                         <div className="admin-calendar-dropdown">
                                             <div className="admin-calendar-header">
@@ -297,18 +350,26 @@ const Admin_CreateProgramme = () => {
                                                 {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
                                                     <div key={day} className="admin-calendar-weekday">{day}</div>
                                                 ))}
-                                                {generateCalendarDays().map((day, index) => (
-                                                    <div 
-                                                        key={index}
-                                                        className={`admin-calendar-day ${day?.isToday ? 'admin-calendar-today' : ''} ${selectedDate === day?.date ? 'admin-calendar-selected' : ''}`}
-                                                        onClick={() => day && handleDateSelect(day.date)}
-                                                    >
-                                                        {day?.day || ''}
-                                                    </div>
-                                                ))}
+                                                {generateCalendarDays().map((day, index) => {
+                                                    const isDisabled = !day || day.isPast;
+                                                    return (
+                                                        <div
+                                                            key={index}
+                                                            className={
+                                                                `admin-calendar-day` +
+                                                                `${day?.isToday ? ' admin-calendar-today' : ''}` +
+                                                                `${selectedDate === day?.date ? ' admin-calendar-selected' : ''}` +
+                                                                `${isDisabled ? ' admin-calendar-disabled' : ''}`
+                                                            }
+                                                            onClick={() => handleDateSelect(day?.date, isDisabled)}
+                                                        >
+                                                            {day?.day || ''}
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
                                             <div className="admin-calendar-footer">
-                                                <button 
+                                                <button
                                                     className="admin-calendar-close"
                                                     onClick={() => setShowCalendar(false)}
                                                 >
@@ -321,54 +382,37 @@ const Admin_CreateProgramme = () => {
                             </div>
 
                             <div className="admin-action-buttons">
-                                <button 
+                                <button
                                     className="admin-cancel-btn"
                                     onClick={handleCancel}
+                                    disabled={isSubmitting}
                                 >
                                     Cancel
                                 </button>
-                                <button 
+                                <button
                                     className="admin-save-draft-btn"
                                     onClick={handleSaveDraft}
+                                    disabled={isSubmitting}
                                 >
                                     Save as Draft
                                 </button>
-                                <button 
+                                <button
                                     className="admin-publish-btn"
                                     onClick={handlePublishProgramme}
+                                    disabled={isSubmitting}
                                 >
-                                    Publish Programme
+                                    {isSubmitting ? 'Saving...' : 'Publish Programme'}
                                 </button>
-                            </div>
-                        </div>
-
-                        {/* Status Sidebar */}
-                        <div className="admin-form-sidebar">
-                            <div className="admin-status-card">
-                                <h3 className="admin-status-title">Programme Status</h3>
-                                <div className="admin-status-display">
-                                    <span className="admin-status-label">STATUS</span>
-                                    <select 
-                                        className="admin-status-select"
-                                        value={programmeData.status}
-                                        onChange={(e) => handleInputChange('status', e.target.value)}
-                                    >
-                                        {statusOptions.map((option, index) => (
-                                            <option key={index} value={option}>{option}</option>
-                                        ))}
-                                    </select>
-                                </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Draft Confirmation Modal */}
                     {showDraftConfirmation && (
                         <div className="admin-modal-overlay">
-                            <div className="admin-modal">
+                            <div className="admin-modal confirmation-modal">
                                 <div className="admin-modal-header">
                                     <h3>Save as Draft</h3>
-                                    <button 
+                                    <button
                                         className="admin-modal-close"
                                         onClick={cancelSaveDraft}
                                     >
@@ -376,19 +420,19 @@ const Admin_CreateProgramme = () => {
                                     </button>
                                 </div>
                                 <div className="admin-modal-body">
-                                    <p>Are you sure you want to save this programme as a draft?</p>
+                                    <p className="confirmation-message confirmation-question">Are you sure you want to save this programme as a draft?</p>
                                     <p className="admin-modal-subtext">
                                         Programme will be saved with status "Draft" in the Programme Management page.
                                     </p>
                                 </div>
                                 <div className="admin-modal-footer">
-                                    <button 
+                                    <button
                                         className="admin-modal-cancel-btn"
                                         onClick={cancelSaveDraft}
                                     >
                                         Cancel
                                     </button>
-                                    <button 
+                                    <button
                                         className="admin-modal-confirm-btn"
                                         onClick={confirmSaveDraft}
                                     >
@@ -401,7 +445,7 @@ const Admin_CreateProgramme = () => {
 
                     {showPublishConfirmation && (
                         <div className="admin-modal-overlay">
-                            <div className="admin-modal">
+                            <div className="admin-modal confirmation-modal">
                                 <div className="admin-modal-header">
                                     <h3>Publish Programme</h3>
                                     <button className="admin-modal-close" onClick={cancelPublishProgramme}>
@@ -409,7 +453,7 @@ const Admin_CreateProgramme = () => {
                                     </button>
                                 </div>
                                 <div className="admin-modal-body">
-                                    <p>Are you sure you want to publish this programme?</p>
+                                    <p className="confirmation-message confirmation-question">Are you sure you want to publish this programme?</p>
                                     <p className="admin-modal-subtext">
                                         It will be added to Programme Management as an active programme.
                                     </p>

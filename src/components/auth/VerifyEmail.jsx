@@ -1,3 +1,4 @@
+// src/components/auth/VerifyEmail.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import "/src/styles/components/VerifyEmail.css";
@@ -7,26 +8,29 @@ import api from '../../services/api';
 const VerifyEmail = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [timer, setTimer] = useState(60);
   const [isResendDisabled, setIsResendDisabled] = useState(true);
   const [isVerified, setIsVerified] = useState(false);
   const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+
+  const [isInitialSending, setIsInitialSending] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+
   const [userEmail, setUserEmail] = useState('');
-  
+
   const inputRefs = useRef([]);
 
   useEffect(() => {
     if (inputRefs.current[0]) {
       inputRefs.current[0].focus();
     }
-    
+
     const email = location.state?.email || sessionStorage.getItem('verifyEmail') || '';
-    console.log('📧 Email from location/state:', email);
+    console.log('Email from location/state:', email);
     setUserEmail(email);
-    
+
     if (email) {
       sendOTP(email);
     } else {
@@ -49,30 +53,29 @@ const VerifyEmail = () => {
 
   const sendOTP = async (email) => {
     try {
-      setIsLoading(true);
+      setIsInitialSending(true);
       setError('');
-      
-      console.log('📤 Sending OTP to:', email);
-      console.log('🔗 API URL:', '/auth/send-otp');
-      
+
+      console.log('Sending OTP to:', email);
+
       const response = await api.post('/auth/send-otp', { email });
-      
-      console.log('📥 Response:', response.data);
-      
+
+      console.log('Response:', response.data);
+
       if (response.data.success) {
-        console.log('✅ OTP sent successfully');
+        console.log('OTP sent successfully');
         setTimer(60);
         setIsResendDisabled(true);
       } else {
         setError(response.data.message || 'Failed to send OTP. Please try again.');
       }
     } catch (err) {
-      console.error('❌ Error sending OTP:', err);
-      console.error('❌ Error response:', err.response?.data);
-      console.error('❌ Error status:', err.response?.status);
+      console.error('Error sending OTP:', err);
+      console.error('Error response:', err.response?.data);
+      console.error('Error status:', err.response?.status);
       setError(err.response?.data?.message || 'Failed to send OTP. Please try again.');
     } finally {
-      setIsLoading(false);
+      setIsInitialSending(false);
     }
   };
 
@@ -111,7 +114,6 @@ const VerifyEmail = () => {
 
   const handleVerify = async () => {
     const enteredCode = code.join('');
-    
     if (enteredCode.length !== 6) {
       setError('Please enter all 6 digits.');
       return;
@@ -122,19 +124,21 @@ const VerifyEmail = () => {
       return;
     }
 
+    if (isVerifying) return;
+
     try {
-      setIsLoading(true);
+      setIsVerifying(true);
       setError('');
 
-      console.log('🔐 Verifying OTP for:', userEmail);
-      console.log('🔑 OTP:', enteredCode);
+      console.log('Verifying OTP for:', userEmail);
+      console.log('OTP:', enteredCode);
 
       const response = await api.post('/auth/verify-otp', {
         email: userEmail,
         otp: enteredCode
       });
 
-      console.log('📥 Verify response:', response.data);
+      console.log('Verify response:', response.data);
 
       if (response.data.success) {
         setIsVerified(true);
@@ -144,10 +148,10 @@ const VerifyEmail = () => {
         setError(response.data.message || 'Invalid code. Please try again.');
       }
     } catch (err) {
-      console.error('❌ Error verifying OTP:', err);
+      console.error('Error verifying OTP:', err);
       setError(err.response?.data?.message || 'Verification failed. Please try again.');
     } finally {
-      setIsLoading(false);
+      setIsVerifying(false);
     }
   };
 
@@ -157,35 +161,37 @@ const VerifyEmail = () => {
       return;
     }
 
+    if (isResending) return;
+
     try {
-      setIsLoading(true);
+      setIsResending(true);
       setError('');
-      
-      console.log('🔄 Resending OTP to:', userEmail);
-      
+
+      console.log('Resending OTP to:', userEmail);
+
       const response = await api.post('/auth/resend-otp', { email: userEmail });
-      
-      console.log('📥 Resend response:', response.data);
-      
+
+      console.log('Resend response:', response.data);
+
       if (response.data.success) {
         setTimer(60);
         setIsResendDisabled(true);
         setCode(['', '', '', '', '', '']);
         setError('');
-        
+
         if (inputRefs.current[0]) {
           inputRefs.current[0].focus();
         }
-        
-        console.log('✅ New OTP sent successfully');
+
+        console.log('New OTP sent successfully');
       } else {
         setError(response.data.message || 'Failed to resend OTP. Please try again.');
       }
     } catch (err) {
-      console.error('❌ Error resending OTP:', err);
+      console.error('Error resending OTP:', err);
       setError(err.response?.data?.message || 'Failed to resend OTP. Please try again.');
     } finally {
-      setIsLoading(false);
+      setIsResending(false);
     }
   };
 
@@ -202,7 +208,7 @@ const VerifyEmail = () => {
             </div>
             <h2>Email Verified!</h2>
             <p>Your email has been successfully verified. You can now access your portal.</p>
-            <Link to="/Login" className="btn-primary">Go to Dashboard</Link>
+            <Link to="/Login" className="btn-primary">Go to Login</Link>
           </div>
         </div>
       </div>
@@ -242,7 +248,6 @@ const VerifyEmail = () => {
             We have sent a 6-digit verification code to your registered email address.
             Please enter the code below to confirm and activate your portal access.
           </p>
-          
           <div className="email-display">
             <span className="email-icon">✉</span>
             <span className="email-address">
@@ -263,7 +268,7 @@ const VerifyEmail = () => {
                 ref={(el) => (inputRefs.current[index] = el)}
                 className="code-input"
                 aria-label={`Digit ${index + 1}`}
-                disabled={isLoading}
+                disabled={isVerifying || isResending}
                 autoComplete="off"
               />
             ))}
@@ -271,12 +276,12 @@ const VerifyEmail = () => {
 
           {error && <p className="error-message">{error}</p>}
 
-          <button 
-            onClick={handleVerify} 
+          <button
+            onClick={handleVerify}
             className="btn-primary verify-btn"
-            disabled={isLoading}
+            disabled={isVerifying || isInitialSending}
           >
-            {isLoading ? 'Verifying...' : 'Verify Email'}
+            {isVerifying ? 'Verifying...' : 'Verify Email'}
           </button>
 
           <div className="resend-section">
@@ -284,10 +289,10 @@ const VerifyEmail = () => {
               Didn't receive the email?{' '}
               <button
                 onClick={handleResend}
-                disabled={isResendDisabled || isLoading}
+                disabled={isResendDisabled || isResending}
                 className={`resend-link ${isResendDisabled ? 'disabled' : ''}`}
               >
-                {isLoading ? 'Sending...' : 'Resend Code'}
+                {isResending ? 'Sending...' : 'Resend Code'}
               </button>
               {isResendDisabled && <span className="timer"> ({timer}s)</span>}
             </p>

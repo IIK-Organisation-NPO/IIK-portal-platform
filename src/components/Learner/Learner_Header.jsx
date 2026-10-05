@@ -1,31 +1,116 @@
-import React from 'react';
+// src/components/Learner/Learner_Header.jsx
+import React, { useEffect, useState } from 'react';
 import '../../styles/Learner/Learner_Header.css';
-import logo from '../../assets/images/small Mki.png'; // Adjust path as needed
+import logo from '../../assets/images/small Mki.png';
+import { API } from '../../config/api';
 
-const Learner_Header = ({ 
-  userName = 'Sarah Khumalo', 
-  onMenuToggle, 
-  isMobileMenuOpen 
+// ---------------------------------------------------------------------------
+// Extract a display name from whatever shape the user object happens to be.
+// Supports: { fullName } | { name } | { firstName, lastName } | { email }
+// ---------------------------------------------------------------------------
+const resolveUserName = (user) => {
+  if (!user) return '';
+  const full =
+    user.fullName ||
+    user.name ||
+    `${user.firstName || ''} ${user.lastName || ''}`.trim();
+  if (full) return full;
+  if (user.email) {
+    const local = user.email.split('@')[0];
+    return local.charAt(0).toUpperCase() + local.slice(1);
+  }
+  return '';
+};
+
+// ---------------------------------------------------------------------------
+// Read the cached user synchronously (first paint), then confirm with the API.
+// ---------------------------------------------------------------------------
+const readCachedUser = () => {
+  try {
+    const raw = localStorage.getItem('user');
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+};
+
+const Learner_Header = ({
+  userName,
+  onMenuToggle,
+  isMobileMenuOpen
 }) => {
-  // Get initials from user name
+  const [resolvedName, setResolvedName] = useState(
+    () => userName || resolveUserName(readCachedUser()) || ''
+  );
+
+  useEffect(() => {
+    if (userName) {
+      setResolvedName(userName);
+    }
+  }, [userName]);
+
+  useEffect(() => {
+    if (userName) return;
+
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    let cancelled = false;
+
+    const loadProfile = async () => {
+      try {
+        const res = await fetch(API.learner.profile, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        const profile = data?.data;
+        const name = resolveUserName(profile);
+
+        if (!cancelled && name) {
+          setResolvedName(name);
+          localStorage.setItem('user', JSON.stringify(profile));
+        }
+      } catch {
+        // Silent — the cached name is already displayed.
+      }
+    };
+
+    loadProfile();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userName]);
+
+  const displayName = resolvedName || 'Learner';
+
   const getInitials = (name) => {
     if (!name) return 'U';
-    const nameParts = name.trim().split(' ');
-    if (nameParts.length === 1) return nameParts[0].charAt(0).toUpperCase();
-    return (nameParts[0].charAt(0) + nameParts[nameParts.length - 1].charAt(0)).toUpperCase();
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+    return (
+      parts[0].charAt(0) + parts[parts.length - 1].charAt(0)
+    ).toUpperCase();
   };
 
-  const initials = getInitials(userName);
+  const initials = getInitials(displayName);
+  const first = displayName.split(/\s+/)[0] || '';
+  const rest = displayName.split(/\s+/).slice(1).join(' ');
 
   return (
     <header className="learner-header">
       <div className="header-left">
-        <button 
-          className="menu-toggle" 
+        <button
+          className="menu-toggle"
           onClick={onMenuToggle}
           aria-label="Toggle menu"
         >
-          <i className={`fas ${isMobileMenuOpen ? 'fa-times' : 'fa-bars'}`}></i>
+          <i className={`fas ${isMobileMenuOpen ? 'fa-times' : 'fa-bars'}`} />
         </button>
         <div className="header-logo">
           <img src={logo} alt="IIK Portal Logo" />
@@ -34,11 +119,11 @@ const Learner_Header = ({
       </div>
 
       <div className="header-right">
-        <div className="user-avatar" title={userName}>
+        <div className="user-avatar" title={displayName}>
           {initials}
         </div>
         <span className="user-name">
-          {userName.split(' ')[0]} <span>{userName.split(' ').slice(1).join(' ')}</span>
+          {first} <span>{rest}</span>
         </span>
       </div>
     </header>

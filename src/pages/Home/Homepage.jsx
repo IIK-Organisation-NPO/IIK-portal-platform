@@ -1,15 +1,69 @@
 // src/pages/learner/Homepage.jsx
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { FaChevronRight } from "react-icons/fa";
 import Footer from "../../components/common/Footer";
 import "../../styles/pages/learner.css";
-import logo from "../../assets/images/small Mki.png"; // Change to your actual filename
+import logo from "../../assets/images/small Mki.png";
+import { API_BASE } from "../../config/api";
 
 const Homepage = () => {
+  const [programmes, setProgrammes] = useState([]);
+  const [loadingProgrammes, setLoadingProgrammes] = useState(true);
+
+  // Handles navigation to the signup page when "View Programmes" is clicked
+  const handleViewProgrammes = () => {
+    navigate("/signup");
+  };
+
+  // Set up the scroll listener when the component mounts,
+  // and clean it up when the component unmounts
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchProgrammes = async () => {
+      try {
+        setLoadingProgrammes(true);
+        const res = await fetch(`${API_BASE}/api/programmes`);
+        const data = await res.json();
+
+        if (cancelled) return;
+
+        if (data.success && Array.isArray(data.programmes)) {
+          const visible = data.programmes
+            .filter(
+              (p) => p.status === "Active" || p.status === "Upcoming"
+            )
+            .map((p) => ({
+              id: p.id,
+              name: p.name,
+              description: p.description || "",
+            }));
+
+          setProgrammes(visible);
+        } else {
+          setProgrammes([]);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.error("Homepage: fetch programmes error:", err);
+          setProgrammes([]);
+        }
+      } finally {
+        if (!cancelled) setLoadingProgrammes(false);
+      }
+    };
+
+    fetchProgrammes();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const displayedProgrammes = programmes.slice(0, 6);
+
   return (
     <div className="learner-home">
-      {/* Header */}
       <header className="home-header">
         <div className="header-container">
           <div className="header-logo">
@@ -17,7 +71,7 @@ const Homepage = () => {
             <span>Learner Certificate Portal</span>
           </div>
           <nav className="header-nav">
-            <Link to="/Homepage">Home</Link>
+            <Link to="/">Home</Link>
             <a
               href="https://www.iik.co.za/contact-us"
               target="_blank"
@@ -39,7 +93,6 @@ const Homepage = () => {
         </div>
       </header>
 
-      {/* Hero Section */}
       <section className="hero-section">
         <div
           className="container"
@@ -51,17 +104,24 @@ const Homepage = () => {
             Digital Marketing and more. Earn your certificate today.
           </p>
           <div className="hero-buttons">
+            {/* Primary CTA: routes to signup page */}
             <Link to="/signup" className="btn-hero-primary">
               Get Started
             </Link>
-            <Link to="/learn-more" className="btn-hero-secondary">
+            {/* Secondary CTA: external link to the About page */}
+            
+            <a
+              href="https://www.iik.co.za/About-Us"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-hero-secondary"
+            >
               Learn More
-            </Link>
+            </a>
           </div>
         </div>
       </section>
 
-      {/* Programmes Section */}
       <section className="programmes-section">
         <div
           className="container"
@@ -72,45 +132,31 @@ const Homepage = () => {
             Choose from our high-impact professional courses designed to
             accelerate your digital capabilities.
           </p>
-          <div className="programmes-grid">
-            <div className="programme-card">
-              <div className="icon">💻</div>
-              <h3>Digital Literacy</h3>
-              <p>
-                Master essential computer skills, Internet navigation, email
-                management, and online safety.
-              </p>
-              <button className="btn-view">
-                View Programmes <FaChevronRight size={14} />
-              </button>
+
+          {loadingProgrammes ? (
+            <div style={{ padding: "2rem 0", color: "#64748b" }}>
+              Loading programmes...
             </div>
-            <div className="programme-card">
-              <div className="icon">📊</div>
-              <h3>Microsoft 365</h3>
-              <p>
-                Learn Word, Excel, PowerPoint, Outlook and Teams for high-grade
-                professional productivity.
-              </p>
-              <button className="btn-view">
-                View Programmes <FaChevronRight size={14} />
-              </button>
+          ) : displayedProgrammes.length === 0 ? (
+            <div style={{ padding: "2rem 0", color: "#64748b", textAlign:"center"}}>
+              No programmes available right now. Please check back soon.
             </div>
-            <div className="programme-card">
-              <div className="icon">📈</div>
-              <h3>Digital Marketing</h3>
-              <p>
-                Social media marketing, search engine optimization, content
-                strategy, email campaigns, and analytics.
-              </p>
-              <button className="btn-view">
-                View Programmes <FaChevronRight size={14} />
-              </button>
+          ) : (
+            <div className="programmes-grid">
+              {displayedProgrammes.map((programme) => (
+                <div className="programme-card" key={programme.id}>
+                  <h3>{programme.name}</h3>
+                  <p>{programme.description}</p>
+                  <button className="btn-view">
+                    View Programmes <FaChevronRight size={14} />
+                  </button>
+                </div>
+              ))}
             </div>
-          </div>
+          )}
         </div>
       </section>
 
-      {/* Testimonials Section */}
       <section className="testimonials-section">
         <div
           className="container"
@@ -118,6 +164,7 @@ const Homepage = () => {
         >
           <h2>What Our Learners Say</h2>
           <div className="testimonials-grid">
+            {/* Testimonial 1 */}
             <div className="testimonial-card">
               <p className="quote">
                 "The Microsoft 365 course completely transformed how I organize
@@ -127,6 +174,8 @@ const Homepage = () => {
               <p className="author">Thomas Clamini</p>
               <p className="author-role">Customer Analyst</p>
             </div>
+
+            {/* Testimonial 2 */}
             <div className="testimonial-card">
               <p className="quote">
                 "Excellent content delivery. Getting my Digital Literacy
@@ -136,6 +185,8 @@ const Homepage = () => {
               <p className="author">Nicole Smith</p>
               <p className="author-role">Administrative Head</p>
             </div>
+
+            {/* Testimonial 3 */}
             <div className="testimonial-card">
               <p className="quote">
                 "The Digital Marketing modules were cutting-edge. It helped us
@@ -148,7 +199,6 @@ const Homepage = () => {
         </div>
       </section>
 
-      {/* Ready to start(CTA Section)*/}
       <section className="cta-section">
         <div
           className="container"
@@ -156,6 +206,7 @@ const Homepage = () => {
         >
           <h2>Ready to start your learning journey?</h2>
           <p>Join thousands of professionals who have upskilled with IIK.</p>
+          {/* Routes to the signup page */}
           <Link to="/signup" className="btn-cta">
             Sign Up Now
           </Link>

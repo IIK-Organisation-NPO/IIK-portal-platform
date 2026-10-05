@@ -5,15 +5,15 @@ import { FaLock, FaEye, FaEyeSlash, FaArrowLeft, FaSpinner, FaCheckCircle, FaExc
 import Footer from '../common/Footer';
 import '../../styles/components/forgotpassword.css';
 import logo from '../../assets/images/small Mki.png';
+import { API } from '../../config/api';
 
 const ResetPassword = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  
-  // Get resetToken and email from navigation state
+
   const resetToken = location.state?.resetToken || '';
   const email = location.state?.email || '';
-  
+
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -25,9 +25,6 @@ const ResetPassword = () => {
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [confirmPasswordFocused, setConfirmPasswordFocused] = useState(false);
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-
-  // Password requirements
   const passwordRequirements = [
     { id: 'length', label: 'At least 8 characters', test: (pwd) => pwd.length >= 8 },
     { id: 'lowercase', label: 'At least one lowercase letter', test: (pwd) => /[a-z]/.test(pwd) },
@@ -36,16 +33,10 @@ const ResetPassword = () => {
     { id: 'special', label: 'At least one special character (@$!%*?&)', test: (pwd) => /[@$!%*?&]/.test(pwd) }
   ];
 
-  // Check if all password requirements are met
   const allRequirementsMet = passwordRequirements.every(req => req.test(newPassword));
 
-  // Show requirements only when:
-  // 1. Password field is focused AND requirements are NOT all met
-  // OR
-  // 2. Password has value AND requirements are NOT all met AND confirm password is NOT focused
   const showRequirements = (!allRequirementsMet) && (passwordFocused || (newPassword && !confirmPasswordFocused));
 
-  // Check if resetToken exists, if not redirect
   useEffect(() => {
     if (!resetToken) {
       setServerError('Invalid reset session. Please request a new OTP.');
@@ -76,7 +67,7 @@ const ResetPassword = () => {
 
   const validateForm = () => {
     const newErrors = {};
-    
+
     if (!newPassword) {
       newErrors.newPassword = 'Password is required';
     } else {
@@ -85,22 +76,22 @@ const ResetPassword = () => {
         newErrors.newPassword = validation.message;
       }
     }
-    
+
     if (!confirmPassword) {
       newErrors.confirmPassword = 'Please confirm your password';
     } else if (confirmPassword !== newPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     setServerError('');
-    
+
     if (!validateForm()) {
       return;
     }
@@ -113,7 +104,7 @@ const ResetPassword = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${API_URL}/api/auth/reset-password`, {
+      const response = await fetch(API.auth.resetPassword, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -130,12 +121,12 @@ const ResetPassword = () => {
       if (response.ok && data.success) {
         setSuccess(true);
         setServerError('');
-        
+
         setTimeout(() => {
-          navigate('/login', { 
-            state: { 
-              message: 'Password reset successfully! Please login with your new password.' 
-            } 
+          navigate('/login', {
+            state: {
+              message: 'Password reset successfully! Please login with your new password.'
+            }
           });
         }, 3000);
       } else {
@@ -167,7 +158,6 @@ const ResetPassword = () => {
 
   return (
     <div className="reset-password-page">
-      {/* Header */}
       <header className="reset-password-header">
         <div className="header-container">
           <div className="header-logo">
@@ -177,7 +167,6 @@ const ResetPassword = () => {
         </div>
       </header>
 
-      {/* Reset Password Form */}
       <div className="reset-password-container">
         <div className="reset-password-card">
           <div className="logo">
@@ -196,7 +185,6 @@ const ResetPassword = () => {
             </div>
           )}
 
-          {/* Success Message */}
           {success && (
             <div className="success-message">
               <FaCheckCircle />
@@ -204,7 +192,6 @@ const ResetPassword = () => {
             </div>
           )}
 
-          {/* Error Message */}
           {serverError && !success && (
             <div className="server-error">
               <FaExclamationCircle />
@@ -246,8 +233,7 @@ const ResetPassword = () => {
                   </button>
                 </div>
                 {errors.newPassword && <span className="error-text">{errors.newPassword}</span>}
-                
-                {/* Password Requirements - Show only when not all met and conditions are right */}
+
                 {showRequirements && (
                   <div className="password-requirements">
                     <p className="requirements-title">Password must contain:</p>
@@ -269,7 +255,6 @@ const ResetPassword = () => {
                   </div>
                 )}
 
-                {/* Show success message when all requirements are met */}
                 {allRequirementsMet && newPassword && (
                   <div className="valid-text" style={{ marginTop: '4px' }}>
                     ✓ Password meets all requirements

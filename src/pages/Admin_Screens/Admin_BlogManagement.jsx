@@ -1,8 +1,10 @@
-import React, { useEffect, useState } from 'react';
+// src/pages/Admin_Screens/AdminBlogManagement.jsx
+import { useEffect, useState } from 'react';
 import Admin_Sidebar from '../../components/Admin/Admin_Sidebar';
 import Admin_Header from '../../components/Admin/Admin_Header';
 import '../../styles/Admin/Admin_BlogManagement.css';
 import { useNavigate } from 'react-router-dom';
+import { blogAPI } from '../../services/api';
 
 const formatDateForInput = (dateValue) => {
   const date = new Date(dateValue);
@@ -23,117 +25,81 @@ const AdminBlogManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [modal, setModal] = useState(null);
-  const [formData, setFormData] = useState({ title: '', type: 'Blog Post', author: 'Admin User', date: '', status: 'Draft' });
-
-  const toggleMobileMenu = () => {
-    setIsMobileMenuOpen((isOpen) => !isOpen);
-  };
-
-  const closeMobileMenu = () => {
-    setIsMobileMenuOpen(false);
-  };
-
-  const [blogPosts, setBlogPosts] = useState(() => {
-    const savedPosts = localStorage.getItem('iik-admin-blog-posts');
-    if (savedPosts) {
-      try {
-        return JSON.parse(savedPosts).map((post) => ({
-          ...post,
-          title: post.id === 3
-            ? 'Why Basic Digital Literacy Dictates Current Careers'
-            : post.id === 4
-              ? 'AI-Driven Professional Certification Accreditations'
-              : post.title
-        }));
-      } catch {
-        localStorage.removeItem('iik-admin-blog-posts');
-      }
-    }
-
-    return [
-    {
-      id: 1,
-      title: 'Navigating POPIA in South African Corporate...',
-      type: 'Blog Post',
-      author: 'Prof. AM. Ndlovu',
-      date: 'May 12, 2026',
-      status: 'Published'
-    },
-    {
-      id: 2,
-      title: 'Unlocking Collaborative Power inside Micro...',
-      type: 'Blog Post',
-      author: 'Sarah Jenkins',
-      date: 'Apr 28, 2026',
-      status: 'Published'
-    },
-    {
-      id: 3,
-      title: 'Why Basic Digital Literacy Dictates Current Careers',
-      type: 'Blog Post',
-      author: 'Dr. Thabo Molefe',
-      date: 'Apr 15, 2026',
-      status: 'Draft'
-    },
-    {
-      id: 4,
-      title: 'AI-Driven Professional Certification Accreditations',
-      type: 'News',
-      author: 'Admin User',
-      date: 'Mar 30, 2026',
-      status: 'Published'
-    },
-    {
-      id: 5,
-      title: 'Annual Corporate Digitisation Summit 2026',
-      type: 'Event',
-      author: 'Admin User',
-      date: 'Feb 10, 2026',
-      status: 'Draft'
-    }
-    ];
+  const [formData, setFormData] = useState({
+    title: '',
+    type: 'Blog Post',
+    author: 'Admin User',
+    date: '',
+    status: 'Draft',
   });
 
-  useEffect(() => {
-    localStorage.setItem('iik-admin-blog-posts', JSON.stringify(blogPosts));
-  }, [blogPosts]);
+  const [blogPosts, setBlogPosts] = useState([]);
+  const [loading, setLoading]     = useState(true);
+  const [error, setError]         = useState(null);
+
+  const toggleMobileMenu = () => setIsMobileMenuOpen((isOpen) => !isOpen);
+  const closeMobileMenu  = () => setIsMobileMenuOpen(false);
 
   const tabs = ['All', 'Blog Posts', 'News', 'Events', 'Drafts'];
 
-  const filteredPosts = blogPosts.filter(post => {
-    const matchesTab = activeTab === 'All'
-      ? true
-      : activeTab === 'Blog Posts'
-      ? post.type === 'Blog Post'
-      : activeTab === 'Drafts'
-        ? post.status === 'Draft'
-        : post.type === activeTab;
-    const matchesSearch = post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         post.author.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesTab && matchesSearch;
-  });
+  
+  useEffect(() => {
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const res = await blogAPI.getPosts({ tab: activeTab, search: searchTerm });
+        if (!cancelled) setBlogPosts(res.data);
+      } catch (err) {
+        if (!cancelled) {
+          setError(err.response?.data?.error || err.message);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }, 300);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [activeTab, searchTerm]);
 
-  const getStatusClass = (status) => {
-    return status.toLowerCase();
-  };
+  const filteredPosts = blogPosts;
+
+  const getStatusClass = (status) => status.toLowerCase();
 
   const openEditModal = (post) => {
     setFormData(post);
     setModal({ type: 'edit', postId: post.id });
   };
 
-  const savePost = (event) => {
+  
+  const savePost = async (event) => {
     event.preventDefault();
     if (!formData.title.trim()) return;
-    setBlogPosts((posts) => posts.map((post) => (
-      post.id === modal.postId ? { ...formData, id: post.id } : post
-    )));
-    setModal(null);
+    try {
+      await blogAPI.updatePost(modal.postId, {
+        title:  formData.title,
+        type:   formData.type,
+        author: formData.author,
+        status: formData.status,
+        date:   formData.date,
+      });
+      const res = await blogAPI.getPosts({ tab: activeTab, search: searchTerm });
+      setBlogPosts(res.data);
+      setModal(null);
+    } catch (err) {
+      alert(err.response?.data?.error || err.message);
+    }
   };
 
-  const confirmDelete = () => {
-    setBlogPosts((posts) => posts.filter((post) => post.id !== modal.postId));
-    setModal(null);
+  //  DELETE to API 
+  const confirmDelete = async () => {
+    try {
+      await blogAPI.deletePost(modal.postId);
+      setBlogPosts((posts) => posts.filter((p) => p.id !== modal.postId));
+      setModal(null);
+    } catch (err) {
+      alert(err.response?.data?.error || err.message);
+    }
   };
 
   const closeModal = () => setModal(null);
@@ -147,7 +113,7 @@ const AdminBlogManagement = () => {
       />
 
       <div className="admin-blog-body">
-          <Admin_Sidebar
+        <Admin_Sidebar
           active="blog"
           isMobileOpen={isMobileMenuOpen}
           onClose={closeMobileMenu}
@@ -159,10 +125,12 @@ const AdminBlogManagement = () => {
             <div className="hero-content">
               <div>
                 <h1>Blog &amp; Content Management</h1>
-                <p className="hero-subtitle">Create and manage blog posts, news updates, and organisation events.</p>
+                <p className="hero-subtitle">
+                  Create and manage blog posts, news updates, and organisation events.
+                </p>
               </div>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 className="create-post-button"
                 onClick={() => navigate('/admin/blog-create')}
               >
@@ -215,7 +183,15 @@ const AdminBlogManagement = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredPosts.length > 0 ? (
+                    {loading ? (
+                      <tr>
+                        <td colSpan="6" className="no-results">Loading posts…</td>
+                      </tr>
+                    ) : error ? (
+                      <tr>
+                        <td colSpan="6" className="no-results">Error: {error}</td>
+                      </tr>
+                    ) : filteredPosts.length > 0 ? (
                       filteredPosts.map((post) => (
                         <tr key={post.id}>
                           <td className="title-cell">{post.title}</td>
@@ -233,15 +209,19 @@ const AdminBlogManagement = () => {
                           </td>
                           <td>
                             <div className="action-buttons">
-                              <button 
+                              <button
                                 className="btn-edit"
                                 onClick={() => openEditModal(post)}
                               >
                                 Edit
                               </button>
-                              <button 
+                              <button
                                 className="btn-delete"
-                                onClick={() => setModal({ type: 'delete', postId: post.id, title: post.title })}
+                                onClick={() => setModal({
+                                  type: 'delete',
+                                  postId: post.id,
+                                  title: post.title,
+                                })}
                               >
                                 Delete
                               </button>
@@ -266,26 +246,26 @@ const AdminBlogManagement = () => {
                   Showing 1–{filteredPosts.length} of {filteredPosts.length} posts
                 </div>
                 <div className="pagination">
-                  <button 
+                  <button
                     className="page-btn prev"
                     onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                     disabled={currentPage === 1}
                   >
                     Previous
                   </button>
-                  <button 
+                  <button
                     className={`page-btn ${currentPage === 1 ? 'active' : ''}`}
                     onClick={() => setCurrentPage(1)}
                   >
                     1
                   </button>
-                  <button 
+                  <button
                     className={`page-btn ${currentPage === 2 ? 'active' : ''}`}
                     onClick={() => setCurrentPage(2)}
                   >
                     2
                   </button>
-                  <button 
+                  <button
                     className="page-btn next"
                     onClick={() => setCurrentPage(Math.min(2, currentPage + 1))}
                     disabled={currentPage === 2}
@@ -299,40 +279,137 @@ const AdminBlogManagement = () => {
 
           {modal && (
             <div className="admin-blog-modal-overlay" onClick={closeModal}>
-              <div className="admin-blog-modal" onClick={(event) => event.stopPropagation()}>
+              <div
+                className={`admin-blog-modal ${modal.type === 'delete' ? 'admin-blog-delete-modal' : ''}`}
+                onClick={(event) => event.stopPropagation()}
+              >
                 {modal.type === 'delete' ? (
                   <>
-                    <div className="admin-blog-modal-header">
+                    <div className="admin-blog-delete-header">
                       <h2>Delete Post</h2>
-                      <button type="button" className="modal-close-button" onClick={closeModal} aria-label="Close">&times;</button>
+                      <button
+                        type="button"
+                        className="admin-blog-delete-close"
+                        onClick={closeModal}
+                        aria-label="Close"
+                      >
+                        &times;
+                      </button>
                     </div>
-                    <div className="admin-blog-modal-body">
-                      <p>Are you sure you want to delete this post?</p>
-                      <p className="delete-post-title">{modal.title}</p>
+                    <div className="admin-blog-delete-body">
+                      <p className="admin-blog-delete-question">
+                        Are you sure you want to delete this post?
+                      </p>
+                      <p className="admin-blog-delete-warning">
+                        {modal.title}<br />
+                        This action will permanently delete the post.
+                      </p>
                     </div>
-                    <div className="admin-blog-modal-actions">
-                      <button type="button" className="modal-cancel-button" onClick={closeModal}>Cancel</button>
-                      <button type="button" className="modal-confirm-delete-button" onClick={confirmDelete}>Delete Post</button>
+                    <div className="admin-blog-delete-actions">
+                      <button
+                        type="button"
+                        className="admin-blog-delete-cancel"
+                        onClick={closeModal}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        className="admin-blog-delete-confirm"
+                        onClick={confirmDelete}
+                      >
+                        Delete Post
+                      </button>
                     </div>
                   </>
                 ) : (
                   <form onSubmit={savePost}>
                     <div className="admin-blog-modal-header">
                       <h2>Edit Post</h2>
-                      <button type="button" className="modal-close-button" onClick={closeModal} aria-label="Close">&times;</button>
+                      <button
+                        type="button"
+                        className="modal-close-button"
+                        onClick={closeModal}
+                        aria-label="Close"
+                      >
+                        &times;
+                      </button>
                     </div>
                     <div className="admin-blog-modal-body post-form">
-                      <label>Title<input value={formData.title} onChange={(event) => setFormData({ ...formData, title: event.target.value })} required /></label>
-                      <label>Type<select value={formData.type} onChange={(event) => setFormData({ ...formData, type: event.target.value })}><option>Blog Post</option><option>News</option><option>Event</option></select></label>
-                      <label>Author<input value={formData.author} onChange={(event) => setFormData({ ...formData, author: event.target.value })} required /></label>
+                      <label>
+                        Title
+                        <input
+                          value={formData.title}
+                          onChange={(event) =>
+                            setFormData({ ...formData, title: event.target.value })
+                          }
+                          required
+                        />
+                      </label>
+                      <label>
+                        Type
+                        <select
+                          value={formData.type}
+                          onChange={(event) =>
+                            setFormData({ ...formData, type: event.target.value })
+                          }
+                        >
+                          <option>Blog Post</option>
+                          <option>News</option>
+                          <option>Event</option>
+                        </select>
+                      </label>
+                      <label>
+                        Author
+                        <input
+                          value={formData.author}
+                          onChange={(event) =>
+                            setFormData({ ...formData, author: event.target.value })
+                          }
+                          required
+                        />
+                      </label>
                       <div className="post-form-row">
-                        <label>Date Published<input type="date" value={formatDateForInput(formData.date)} onChange={(event) => setFormData({ ...formData, date: formatDateForDisplay(event.target.value) })} onKeyDown={(event) => event.preventDefault()} required /></label>
-                        <label>Status<select value={formData.status} onChange={(event) => setFormData({ ...formData, status: event.target.value })}><option>Draft</option><option>Published</option></select></label>
+                        <label>
+                          Date Published
+                          <input
+                            type="date"
+                            value={formatDateForInput(formData.date)}
+                            onChange={(event) =>
+                              setFormData({
+                                ...formData,
+                                date: formatDateForDisplay(event.target.value),
+                              })
+                            }
+                            onKeyDown={(event) => event.preventDefault()}
+                            required
+                          />
+                        </label>
+                        <label>
+                          Status
+                          <select
+                            value={formData.status}
+                            onChange={(event) =>
+                              setFormData({ ...formData, status: event.target.value })
+                            }
+                          >
+                            <option>Draft</option>
+                            <option>Published</option>
+                          </select>
+                        </label>
                       </div>
                     </div>
                     <div className="admin-blog-modal-actions">
-                      <button type="button" className="modal-cancel-button" onClick={closeModal}>Cancel</button>
-                      <button type="submit" className="modal-save-button">Save Post</button>
+                      <button
+                        type="button"
+                        className="modal-cancel-button"
+                        onClick={closeModal}
+                      >
+                        Cancel
+                      </button>
+                      <button type="submit" className="modal-save-button">
+                        Save Post
+                      </button>
                     </div>
                   </form>
                 )}

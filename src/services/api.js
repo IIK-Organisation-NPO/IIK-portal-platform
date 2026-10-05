@@ -1,13 +1,24 @@
 // src/services/api.js
 import axios from 'axios';
 
+// Read the API base URL from the environment
+const API_BASE = import.meta.env.VITE_API_URL;
+
+if (!API_BASE) {
+  throw new Error(
+    'VITE_API_URL is not set. Create a .env.local file in the frontend root with:\n' +
+    'VITE_API_URL=http://localhost:5000'
+  );
+}
+
 // Create axios instance with base URL
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api', // Your backend URL
+  baseURL: `${API_BASE.replace(/\/+$/, '')}/api`,
   headers: {
     'Content-Type': 'application/json',
   },
   timeout: 10000, // 10 seconds timeout
+  withCredentials: true, // send cookies (accessToken, refreshToken) cross-origin
 });
 
 // Request interceptor - Add token to requests
@@ -34,27 +45,24 @@ api.interceptors.response.use(
     if (error.response && error.response.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      
       // Redirect to login if not already there
       if (!window.location.pathname.includes('/login')) {
         window.location.href = '/login';
       }
     }
-    
     // Handle 429 Too Many Requests
     if (error.response && error.response.status === 429) {
       console.error('Too many requests. Please try again later.');
     }
-    
     // Handle network errors
     if (error.code === 'ECONNABORTED') {
       console.error('Request timeout. Please check your connection.');
     }
-    
+
     if (!error.response) {
       console.error('Network error. Please check your connection.');
     }
-    
+
     return Promise.reject(error);
   }
 );
@@ -92,6 +100,29 @@ export const adminAPI = {
   updateLearnerStatus: (id, status) => api.put(`/admin/learners/${id}/status`, { status }),
   getCertificates: () => api.get('/admin/certificates'),
   generateCertificate: (data) => api.post('/admin/certificates', data),
+};
+
+// API methods for blog
+export const blogAPI = {
+  getPosts:   (params = {}) => api.get('/blog', { params }),
+  getPost:    (id)          => api.get(`/blog/${id}`),
+  createPost: (data)        => api.post('/blog', data),
+  updatePost: (id, data)    => api.put(`/blog/${id}`, data),
+  deletePost: (id)          => api.delete(`/blog/${id}`),
+
+  // Upload the featured image, returns { success, url }
+  uploadImage: (file) => {
+    const fd = new FormData();
+    fd.append('image', file);
+    return api.post('/upload/blog', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+};
+
+// API methods for navigation
+export const navigationAPI = {
+  getAdminNav: () => api.get('/navigation/admin'),
 };
 
 // Default export for convenience

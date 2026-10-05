@@ -15,6 +15,9 @@ const Admin_Certificates = () => {
     const [successMessage, setSuccessMessage] = useState('');
     const [adminName, setAdminName] = useState('Admin');
 
+    // Per-field errors
+    const [fieldErrors, setFieldErrors] = useState({});
+
     // Certificate Form State
     const [certificateForm, setCertificateForm] = useState({
         learner_id: '',
@@ -27,7 +30,7 @@ const Admin_Certificates = () => {
         certificateFile: null,
     });
 
-    // Certificate data from database
+    // Certificate data
     const [certificates, setCertificates] = useState([]);
     const [learners, setLearners] = useState([]);
     const [programmes, setProgrammes] = useState([]);
@@ -39,21 +42,22 @@ const Admin_Certificates = () => {
     const [deletingCertificate, setDeletingCertificate] = useState(null);
     const [viewPdfUrl, setViewPdfUrl] = useState('');
 
-    // Issuance confirmation modal state
+    // Learner-specific completed programmes
+    const [learnerProgrammes, setLearnerProgrammes] = useState([]);
+    const [loadingProgrammes, setLoadingProgrammes] = useState(false);
+
+    // Confirmation modal
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [confirmData, setConfirmData] = useState(null);
 
     const navigate = useNavigate();
 
-    const toggleMobileMenu = () => {
-        setIsMobileMenuOpen(!isMobileMenuOpen);
-    };
+    const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
+    const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
-    const closeMobileMenu = () => {
-        setIsMobileMenuOpen(false);
-    };
-
-    // Get user data from localStorage
+    // ============================================
+    // GET USER DATA
+    // ============================================
     const getUserData = () => {
         try {
             const userData = localStorage.getItem('user');
@@ -73,9 +77,7 @@ const Admin_Certificates = () => {
     // FORMAT DATE
     // ============================================
     const formatDate = (dateString) => {
-        if (!dateString) {
-            return 'N/A';
-        }
+        if (!dateString) return 'N/A';
 
         try {
             if (typeof dateString === 'string' && dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
@@ -88,9 +90,7 @@ const Admin_Certificates = () => {
             }
 
             const date = new Date(dateString);
-            if (isNaN(date.getTime())) {
-                return 'N/A';
-            }
+            if (isNaN(date.getTime())) return 'N/A';
 
             const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
             return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
@@ -100,17 +100,11 @@ const Admin_Certificates = () => {
         }
     };
 
-    // ============================================
-    // FORMAT DATE FOR DISPLAY (used inside the confirm modal)
-    // ============================================
     const formatDateForDisplay = (dateString) => {
         if (!dateString) return '';
         return formatDate(dateString);
     };
 
-    // ============================================
-    // FORMAT DATE FOR INPUT (YYYY-MM-DD)
-    // ============================================
     const formatDateForInput = (dateString) => {
         if (!dateString) return '';
         try {
@@ -125,9 +119,6 @@ const Admin_Certificates = () => {
         }
     };
 
-    // ============================================
-    // HELPER: Is the file a PDF?
-    // ============================================
     const isPdfFile = (file) => {
         if (!file) return false;
         if (file.type === 'application/pdf') return true;
@@ -135,7 +126,7 @@ const Admin_Certificates = () => {
     };
 
     // ============================================
-    // FETCH CERTIFICATES FROM DATABASE
+    // FETCHERS
     // ============================================
     const fetchCertificates = async () => {
         try {
@@ -151,7 +142,7 @@ const Admin_Certificates = () => {
                         ...cert,
                         formattedDate: formattedDate,
                         certificateNumber: cert.Certificate_id || 'N/A',
-                        status: 'Active'
+                        status: cert.status || 'Issued'
                     };
                 });
                 setCertificates(formattedCerts);
@@ -161,9 +152,6 @@ const Admin_Certificates = () => {
         }
     };
 
-    // ============================================
-    // FETCH LEARNERS FROM DATABASE
-    // ============================================
     const fetchLearners = async () => {
         try {
             const response = await api.get('/admin/learners?limit=1000');
@@ -175,9 +163,6 @@ const Admin_Certificates = () => {
         }
     };
 
-    // ============================================
-    // FETCH PROGRAMMES FROM DATABASE
-    // ============================================
     const fetchProgrammes = async () => {
         try {
             const response = await api.get('/admin/programmes');
@@ -190,8 +175,32 @@ const Admin_Certificates = () => {
     };
 
     // ============================================
-    // FETCH ALL DATA
+    // FETCH LEARNER'S COMPLETED PROGRAMMES
     // ============================================
+    const fetchLearnerCompletedProgrammes = async (learnerId) => {
+        setLearnerProgrammes([]);
+
+        if (!learnerId) {
+            setLoadingProgrammes(false);
+            return;
+        }
+
+        try {
+            setLoadingProgrammes(true);
+            const response = await api.get(`/admin/learners/${learnerId}/completed-programmes`);
+            if (response.data.success) {
+                setLearnerProgrammes(response.data.data || []);
+            } else {
+                setLearnerProgrammes([]);
+            }
+        } catch (err) {
+            console.error('Error fetching learner completed programmes:', err);
+            setLearnerProgrammes([]);
+        } finally {
+            setLoadingProgrammes(false);
+        }
+    };
+
     const fetchAllData = async () => {
         try {
             setLoading(true);
@@ -209,15 +218,10 @@ const Admin_Certificates = () => {
         }
     };
 
-    // ============================================
-    // UPLOAD CERTIFICATE WITH FILE
-    // ============================================
     const uploadCertificate = async (formData) => {
         try {
             const response = await api.post('/admin/certificates/upload', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
+                headers: { 'Content-Type': 'multipart/form-data' },
             });
             return response.data;
         } catch (err) {
@@ -232,124 +236,189 @@ const Admin_Certificates = () => {
     const handleFormChange = (e) => {
         const { name, value, type, checked } = e.target;
 
+        // Clear the error for whichever field changed
+        setFieldErrors((prev) => {
+            if (!prev[name]) return prev;
+            const next = { ...prev };
+            delete next[name];
+            return next;
+        });
+
         if (name === 'learner_id') {
             const selectedLearner = learners.find(l => l.id === parseInt(value));
-            setCertificateForm({
-                ...certificateForm,
+
+            setCertificateForm((prev) => ({
+                ...prev,
                 learner_id: value,
-                learner_name: selectedLearner ? `${selectedLearner.name} ${selectedLearner.surname}` : ''
+                learner_name: selectedLearner ? `${selectedLearner.name} ${selectedLearner.surname}` : '',
+                programme_id: '',
+                programme_name: '',
+            }));
+
+            setFieldErrors((prev) => {
+                const next = { ...prev };
+                delete next.programme_id;
+                return next;
             });
-        } else if (name === 'programme_id') {
-            const selectedProgramme = programmes.find(p => p.Programme_id === parseInt(value));
-            setCertificateForm({
-                ...certificateForm,
+
+            fetchLearnerCompletedProgrammes(value);
+            return;
+        }
+
+        if (name === 'programme_id') {
+            const selectedProgramme = learnerProgrammes.find(
+                p => String(p.Programme_id) === String(value)
+            );
+            setCertificateForm((prev) => ({
+                ...prev,
                 programme_id: value,
                 programme_name: selectedProgramme ? selectedProgramme.Programme_name : ''
-            });
-        } else if (name === 'neverExpires') {
-            setCertificateForm({
-                ...certificateForm,
-                [name]: checked,
-                expiryDate: checked ? '' : certificateForm.expiryDate
-            });
-        } else {
-            setCertificateForm({
-                ...certificateForm,
-                [name]: type === 'checkbox' ? checked : value,
-            });
+            }));
+            return;
         }
+
+        if (name === 'neverExpires') {
+            setCertificateForm((prev) => ({
+                ...prev,
+                neverExpires: checked,
+                expiryDate: checked ? '' : prev.expiryDate
+            }));
+            if (checked) {
+                setFieldErrors((prev) => {
+                    const next = { ...prev };
+                    delete next.expiryDate;
+                    return next;
+                });
+            }
+            return;
+        }
+
+        setCertificateForm((prev) => ({
+            ...prev,
+            [name]: type === 'checkbox' ? checked : value,
+        }));
     };
 
     // ============================================
-    // HANDLE FILE CHANGE - PDF ONLY
+    // FILE HANDLERS
     // ============================================
     const handleFileChange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
         if (!isPdfFile(file)) {
-            setError('Only PDF files are allowed.');
-            setTimeout(() => setError(null), 5000);
+            setFieldErrors((prev) => ({ ...prev, certificateFile: 'Only PDF files are allowed.' }));
             e.target.value = '';
             return;
         }
 
         if (file.size > 10 * 1024 * 1024) {
-            setError('File size must be less than 10MB');
-            setTimeout(() => setError(null), 5000);
+            setFieldErrors((prev) => ({ ...prev, certificateFile: 'File size must be less than 10MB.' }));
             e.target.value = '';
             return;
         }
 
-        setCertificateForm({
-            ...certificateForm,
-            certificateFile: file,
+        setFieldErrors((prev) => {
+            const next = { ...prev };
+            delete next.certificateFile;
+            return next;
         });
+
+        setCertificateForm((prev) => ({ ...prev, certificateFile: file }));
     };
 
-    // ============================================
-    // HANDLE DROP - PDF ONLY
-    // ============================================
     const handleDrop = (e) => {
         e.preventDefault();
         const file = e.dataTransfer.files[0];
         if (!file) return;
 
         if (!isPdfFile(file)) {
-            setError('Only PDF files are allowed.');
-            setTimeout(() => setError(null), 5000);
+            setFieldErrors((prev) => ({ ...prev, certificateFile: 'Only PDF files are allowed.' }));
             return;
         }
 
         if (file.size > 10 * 1024 * 1024) {
-            setError('File size must be less than 10MB');
-            setTimeout(() => setError(null), 5000);
+            setFieldErrors((prev) => ({ ...prev, certificateFile: 'File size must be less than 10MB.' }));
             return;
         }
 
-        setCertificateForm({
-            ...certificateForm,
-            certificateFile: file,
+        setFieldErrors((prev) => {
+            const next = { ...prev };
+            delete next.certificateFile;
+            return next;
         });
+
+        setCertificateForm((prev) => ({ ...prev, certificateFile: file }));
     };
 
-    const handleDragOver = (e) => {
-        e.preventDefault();
+    const handleDragOver = (e) => e.preventDefault();
+
+    // ============================================
+    // VALIDATE FORM
+    // ============================================
+    const validateCertificateForm = () => {
+        const newErrors = {};
+
+        if (!certificateForm.learner_id) {
+            newErrors.learner_id = 'Please select a learner.';
+        }
+  
+        if (!certificateForm.learner_id) {
+    
+    newErrors.programme_id = 'Please select an academic programme.';
+        } else if (learnerProgrammes.length === 0) {
+          newErrors.programme_id = 'This learner has no completed programmes. Certificates cannot be issued.';
+        } else if (!certificateForm.programme_id) {
+          newErrors.programme_id = 'Please select an academic programme.';
+        }
+
+        if (!certificateForm.issueDate) {
+            newErrors.issueDate = 'Please select a date of issue.';
+        }
+
+        if (!certificateForm.neverExpires && certificateForm.expiryDate) {
+            if (certificateForm.issueDate &&
+                new Date(certificateForm.expiryDate) <= new Date(certificateForm.issueDate)) {
+                newErrors.expiryDate = 'Expiry date must be after the date of issue.';
+            }
+        }
+
+        if (!certificateForm.certificateFile) {
+            newErrors.certificateFile = 'Please upload a certificate PDF file.';
+        } else if (!isPdfFile(certificateForm.certificateFile)) {
+            newErrors.certificateFile = 'Only PDF files are allowed.';
+        } else if (certificateForm.certificateFile.size > 10 * 1024 * 1024) {
+            newErrors.certificateFile = 'File size must be less than 10MB.';
+        }
+
+        return newErrors;
     };
 
     // ============================================
-    // HANDLE SUBMIT - Validate, then open confirmation modal
+    // SUBMIT + CONFIRM
     // ============================================
     const handleSubmitCertificate = (e) => {
         e.preventDefault();
 
-        if (!certificateForm.learner_id) {
-            setError('Please select a learner');
-            setTimeout(() => setError(null), 5000);
-            return;
-        }
-        if (!certificateForm.programme_id) {
-            setError('Please select a programme');
-            setTimeout(() => setError(null), 5000);
-            return;
-        }
-        if (!certificateForm.issueDate) {
-            setError('Please select an issue date');
-            setTimeout(() => setError(null), 5000);
-            return;
-        }
-        if (!certificateForm.certificateFile) {
-            setError('Please upload a certificate PDF file');
-            setTimeout(() => setError(null), 5000);
-            return;
-        }
-        if (!isPdfFile(certificateForm.certificateFile)) {
-            setError('Only PDF files are allowed.');
-            setTimeout(() => setError(null), 5000);
+        const newErrors = validateCertificateForm();
+
+        if (Object.keys(newErrors).length > 0) {
+            setFieldErrors(newErrors);
+
+            const firstKey = Object.keys(newErrors)[0];
+            const targetId = firstKey === 'certificateFile' ? 'fileInput' : firstKey;
+            const el = document.getElementById(targetId);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                if (typeof el.focus === 'function' && firstKey !== 'certificateFile') {
+                    el.focus();
+                }
+            }
             return;
         }
 
-        // Everything checks out - open the review modal
+        setFieldErrors({});
+
         setConfirmData({
             learner: certificateForm.learner_name,
             programme: certificateForm.programme_name,
@@ -361,17 +430,11 @@ const Admin_Certificates = () => {
         setShowConfirmModal(true);
     };
 
-    // ============================================
-    // HANDLE CANCEL ISSUE - Close confirmation modal
-    // ============================================
     const handleCancelIssue = () => {
         setShowConfirmModal(false);
         setConfirmData(null);
     };
 
-    // ============================================
-    // HANDLE CONFIRM ISSUE - Actually upload
-    // ============================================
     const handleConfirmIssue = async () => {
         setShowConfirmModal(false);
 
@@ -401,12 +464,13 @@ const Admin_Certificates = () => {
                     neverExpires: false,
                     certificateFile: null,
                 });
+                setLearnerProgrammes([]);
+                setFieldErrors({});
 
                 const fileInput = document.getElementById('fileInput');
                 if (fileInput) fileInput.value = '';
 
                 setConfirmData(null);
-
                 await fetchCertificates();
             } else {
                 setError(result.message || 'Failed to issue certificate');
@@ -422,7 +486,7 @@ const Admin_Certificates = () => {
     };
 
     // ============================================
-    // HANDLE DELETE CERTIFICATE - Opens Confirmation Modal
+    // DELETE
     // ============================================
     const handleDeleteClick = (cert) => {
         setDeletingCertificate(cert);
@@ -461,7 +525,7 @@ const Admin_Certificates = () => {
     };
 
     // ============================================
-    // HANDLE VIEW CERTIFICATE
+    // VIEW / EDIT
     // ============================================
     const handleViewCertificate = (cert) => {
         setSelectedCertificate(cert);
@@ -470,24 +534,13 @@ const Admin_Certificates = () => {
         setShowViewModal(true);
     };
 
-    // ============================================
-    // HANDLE EDIT CERTIFICATE - Opens Edit Modal
-    // ============================================
     const handleEditCertificate = (cert) => {
         setSelectedCertificate(cert);
         setShowEditModal(true);
     };
 
-    // ============================================
-    // HANDLE UPDATE CERTIFICATE
-    // ============================================
     const handleUpdateCertificate = async (e) => {
         e.preventDefault();
-
-        console.log('selectedCertificate:', selectedCertificate);
-        console.log('Certificate_id:', selectedCertificate?.Certificate_id);
-        console.log('Programme_id:', selectedCertificate?.Programme_id);
-        console.log('Expire_date:', selectedCertificate?.Expire_date);
 
         try {
             const updateData = {
@@ -496,15 +549,10 @@ const Admin_Certificates = () => {
                 neverExpires: selectedCertificate.neverExpires || false
             };
 
-            console.log('Sending to backend:', updateData);
-            console.log('URL:', `/admin/certificates/${selectedCertificate.Certificate_id}`);
-
             const response = await api.put(
                 `/admin/certificates/${selectedCertificate.Certificate_id}`,
                 updateData
             );
-
-            console.log('Backend response:', response.data);
 
             if (response.data.success) {
                 setSuccessMessage('Certificate updated successfully!');
@@ -515,14 +563,13 @@ const Admin_Certificates = () => {
             }
         } catch (err) {
             console.error('Error updating certificate:', err);
-            console.error('Error response:', err.response?.data);
             setError(err.response?.data?.message || 'Failed to update certificate');
             setTimeout(() => setError(null), 5000);
         }
     };
 
     // ============================================
-    // LOAD DATA ON MOUNT
+    // LOAD
     // ============================================
     useEffect(() => {
         getUserData();
@@ -530,7 +577,7 @@ const Admin_Certificates = () => {
     }, []);
 
     // ============================================
-    // GET STATUS CLASS
+    // STATUS HELPERS
     // ============================================
     const getStatusClass = (status) => {
         if (!status) return 'active';
@@ -542,9 +589,6 @@ const Admin_Certificates = () => {
         return 'active';
     };
 
-    // ============================================
-    // GET STATUS LABEL
-    // ============================================
     const getStatusLabel = (status) => {
         if (!status) return 'Active';
         const statusLower = status.toLowerCase();
@@ -556,8 +600,16 @@ const Admin_Certificates = () => {
     };
 
     // ============================================
-    // FILTER CERTIFICATES
+    // SAFE SELECT VALUE
     // ============================================
+    const safeProgrammeSelectValue = (
+        learnerProgrammes.some(
+            p => String(p.Programme_id) === String(certificateForm.programme_id)
+        )
+            ? certificateForm.programme_id
+            : ''
+    );
+
     const filteredCertificates = certificates.filter(cert => {
         const learnerName = `${cert.learner_name || ''} ${cert.learner_surname || ''}`.toLowerCase();
         const matchesSearch = learnerName.includes(searchTerm.toLowerCase()) ||
@@ -629,18 +681,12 @@ const Admin_Certificates = () => {
 
                 {/* Main Content */}
                 <main className="admin-certificates-content">
-                    {/* Success Message */}
                     {successMessage && (
                         <div className="success-toast" style={{
-                            position: 'fixed',
-                            top: '80px',
-                            right: '20px',
-                            backgroundColor: '#d4edda',
-                            color: '#155724',
-                            padding: '15px 25px',
-                            borderRadius: '8px',
-                            border: '1px solid #c3e6cb',
-                            zIndex: 9999,
+                            position: 'fixed', top: '80px', right: '20px',
+                            backgroundColor: '#d4edda', color: '#155724',
+                            padding: '15px 25px', borderRadius: '8px',
+                            border: '1px solid #c3e6cb', zIndex: 9999,
                             boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                             animation: 'slideIn 0.3s ease-out'
                         }}>
@@ -648,18 +694,12 @@ const Admin_Certificates = () => {
                         </div>
                     )}
 
-                    {/* Error Message */}
                     {error && (
                         <div className="error-toast" style={{
-                            position: 'fixed',
-                            top: '80px',
-                            right: '20px',
-                            backgroundColor: '#f8d7da',
-                            color: '#721c24',
-                            padding: '15px 25px',
-                            borderRadius: '8px',
-                            border: '1px solid #f5c6cb',
-                            zIndex: 9999,
+                            position: 'fixed', top: '80px', right: '20px',
+                            backgroundColor: '#f8d7da', color: '#721c24',
+                            padding: '15px 25px', borderRadius: '8px',
+                            border: '1px solid #f5c6cb', zIndex: 9999,
                             boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                             animation: 'slideIn 0.3s ease-out'
                         }}>
@@ -667,7 +707,6 @@ const Admin_Certificates = () => {
                         </div>
                     )}
 
-                    {/* 1. Page Header with Action Buttons */}
                     <div className="certificates-page-header">
                         <div className="page-header-left">
                             <h1>Certificate Management</h1>
@@ -683,45 +722,59 @@ const Admin_Certificates = () => {
                         </div>
                     </div>
 
-                    {/* 2. Upload & Assign - Side by Side */}
                     <div className="certificates-two-column">
-                        {/* Left: Upload Area */}
+                        {/* ===== UPLOAD COLUMN — file error now stacks below the dropzone ===== */}
                         <div className="upload-column">
-                            <div
-                                className={`file-upload-area ${certificateForm.certificateFile ? 'has-file' : ''}`}
-                                onDrop={handleDrop}
-                                onDragOver={handleDragOver}
-                                onClick={() => document.getElementById('fileInput').click()}
-                            >
-                                {certificateForm.certificateFile ? (
-                                    <div className="file-info">
-                                        <i className="fas fa-file-pdf"></i>
-                                        <span>{certificateForm.certificateFile.name}</span>
-                                        <button
-                                            type="button"
-                                            className="file-remove-btn"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setCertificateForm({ ...certificateForm, certificateFile: null });
-                                            }}
-                                        >
-                                            <i className="fas fa-times"></i>
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <i className="fas fa-cloud-upload-alt"></i>
-                                        <p>Drag and drop certificate PDF</p>
-                                        <span className="file-upload-hint">or click to browse (Max 10MB)</span>
-                                    </>
+                            <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+                                <div
+                                    className={`file-upload-area ${certificateForm.certificateFile ? 'has-file' : ''} ${fieldErrors.certificateFile ? 'error' : ''}`}
+                                    style={fieldErrors.certificateFile ? { borderColor: '#dc3545' } : undefined}
+                                    onDrop={handleDrop}
+                                    onDragOver={handleDragOver}
+                                    onClick={() => document.getElementById('fileInput').click()}
+                                >
+                                    {certificateForm.certificateFile ? (
+                                        <div className="file-info">
+                                            <i className="fas fa-file-pdf"></i>
+                                            <span>{certificateForm.certificateFile.name}</span>
+                                            <button
+                                                type="button"
+                                                className="file-remove-btn"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setCertificateForm((prev) => ({ ...prev, certificateFile: null }));
+                                                }}
+                                            >
+                                                <i className="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <i className="fas fa-cloud-upload-alt"></i>
+                                            <p>Drag and drop certificate PDF</p>
+                                            <span className="file-upload-hint">or click to browse (Max 10MB)</span>
+                                        </>
+                                    )}
+                                    <input
+                                        type="file"
+                                        id="fileInput"
+                                        accept=".pdf,application/pdf"
+                                        onChange={handleFileChange}
+                                        style={{ display: 'none' }}
+                                    />
+                                </div>
+
+                                {fieldErrors.certificateFile && (
+                                    <p style={{
+                                        color: '#dc3545',
+                                        fontSize: '13px',
+                                        marginTop: '8px',
+                                        width: '100%',
+                                        textAlign: 'left'
+                                    }}>
+                                        {fieldErrors.certificateFile}
+                                    </p>
                                 )}
-                                <input
-                                    type="file"
-                                    id="fileInput"
-                                    accept=".pdf,application/pdf"
-                                    onChange={handleFileChange}
-                                    style={{ display: 'none' }}
-                                />
                             </div>
                         </div>
 
@@ -733,10 +786,11 @@ const Admin_Certificates = () => {
                                 <div className="assign-form-group">
                                     <label>Select Learner Profile</label>
                                     <select
+                                        id="learner_id"
                                         name="learner_id"
                                         value={certificateForm.learner_id}
                                         onChange={handleFormChange}
-                                        required
+                                        style={fieldErrors.learner_id ? { borderColor: '#dc3545' } : undefined}
                                     >
                                         <option value="">Select a learner...</option>
                                         {learners.map((learner) => (
@@ -745,23 +799,46 @@ const Admin_Certificates = () => {
                                             </option>
                                         ))}
                                     </select>
+                                    {fieldErrors.learner_id && (
+                                        <p style={{ color: '#dc3545', fontSize: '13px', marginTop: '6px' }}>
+                                            {fieldErrors.learner_id}
+                                        </p>
+                                    )}
                                 </div>
 
                                 <div className="assign-form-group">
                                     <label>Academic Programme</label>
                                     <select
+                                        id="programme_id"
                                         name="programme_id"
-                                        value={certificateForm.programme_id}
+                                        value={safeProgrammeSelectValue}
                                         onChange={handleFormChange}
-                                        required
+                                        disabled={!certificateForm.learner_id || loadingProgrammes || learnerProgrammes.length === 0}
+                                        style={fieldErrors.programme_id ? { borderColor: '#dc3545' } : undefined}
                                     >
-                                        <option value="">Select a programme...</option>
-                                        {programmes.map((programme) => (
-                                            <option key={programme.Programme_id} value={programme.Programme_id}>
+                                        <option value="">
+                                            {!certificateForm.learner_id
+                                                ? 'Select a learner first...'
+                                                : loadingProgrammes
+                                                    ? 'Loading completed programmes...'
+                                                    : learnerProgrammes.length === 0
+                                                        ? 'No completed programmes for this learner'
+                                                        : 'Select a programme...'}
+                                        </option>
+                                        {learnerProgrammes.map((programme) => (
+                                            <option
+                                                key={programme.Programme_id}
+                                                value={programme.Programme_id}
+                                            >
                                                 {programme.Programme_name}
                                             </option>
                                         ))}
                                     </select>
+                                    {fieldErrors.programme_id && (
+                                        <p style={{ color: '#dc3545', fontSize: '13px', marginTop: '6px' }}>
+                                            {fieldErrors.programme_id}
+                                        </p>
+                                    )}
                                 </div>
 
                                 <div className="assign-form-row">
@@ -769,22 +846,37 @@ const Admin_Certificates = () => {
                                         <label>Date of Issue</label>
                                         <input
                                             type="date"
+                                            id="issueDate"
                                             name="issueDate"
                                             value={certificateForm.issueDate}
                                             onChange={handleFormChange}
-                                            required
+                                            min={new Date().toISOString().split('T')[0]}
+                                            style={fieldErrors.issueDate ? { borderColor: '#dc3545' } : undefined}
                                         />
+                                        {fieldErrors.issueDate && (
+                                            <p style={{ color: '#dc3545', fontSize: '13px', marginTop: '6px' }}>
+                                                {fieldErrors.issueDate}
+                                            </p>
+                                        )}
                                     </div>
 
                                     <div className="assign-form-group">
                                         <label>Expiry Date (Optional)</label>
                                         <input
                                             type="date"
+                                            id="expiryDate"
                                             name="expiryDate"
                                             value={certificateForm.expiryDate}
                                             onChange={handleFormChange}
                                             disabled={certificateForm.neverExpires}
+                                            min={certificateForm.issueDate || new Date().toISOString().split('T')[0]}
+                                            style={fieldErrors.expiryDate ? { borderColor: '#dc3545' } : undefined}
                                         />
+                                        {fieldErrors.expiryDate && (
+                                            <p style={{ color: '#dc3545', fontSize: '13px', marginTop: '6px' }}>
+                                                {fieldErrors.expiryDate}
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
 
@@ -812,7 +904,7 @@ const Admin_Certificates = () => {
                         </div>
                     </div>
 
-                    {/* 3. Recently Issued Certificates Table */}
+                    {/* Certificate Table */}
                     <div className="certificates-table-wrapper">
                         <div className="table-header">
                             <h3>
@@ -926,7 +1018,7 @@ const Admin_Certificates = () => {
                 </main>
             </div>
 
-            {/* ===== ISSUANCE CONFIRMATION MODAL ===== */}
+            {/* Issuance Confirmation Modal */}
             {showConfirmModal && confirmData && (
                 <div className="modal-overlay" onClick={handleCancelIssue}>
                     <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -966,7 +1058,7 @@ const Admin_Certificates = () => {
                 </div>
             )}
 
-            {/* ===== VIEW CERTIFICATE MODAL ===== */}
+            {/* View Modal */}
             {showViewModal && selectedCertificate && (
                 <div className="modal-overlay" onClick={() => setShowViewModal(false)}>
                     <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '900px', width: '95%' }}>
@@ -986,11 +1078,7 @@ const Admin_Certificates = () => {
                         }}>
                             <iframe
                                 src={viewPdfUrl}
-                                style={{
-                                    width: '100%',
-                                    height: '100%',
-                                    border: 'none'
-                                }}
+                                style={{ width: '100%', height: '100%', border: 'none' }}
                                 title="Certificate PDF"
                             />
                         </div>
@@ -1013,7 +1101,7 @@ const Admin_Certificates = () => {
                 </div>
             )}
 
-            {/* ===== EDIT CERTIFICATE MODAL ===== */}
+            {/* Edit Modal */}
             {showEditModal && selectedCertificate && (
                 <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
                     <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -1109,16 +1197,10 @@ const Admin_Certificates = () => {
                         </div>
 
                         <div className="modal-actions">
-                            <button
-                                className="modal-btn cancel-btn"
-                                onClick={() => setShowEditModal(false)}
-                            >
+                            <button className="modal-btn cancel-btn" onClick={() => setShowEditModal(false)}>
                                 Cancel
                             </button>
-                            <button
-                                className="modal-btn confirm-btn"
-                                onClick={handleUpdateCertificate}
-                            >
+                            <button className="modal-btn confirm-btn" onClick={handleUpdateCertificate}>
                                 Save Changes
                             </button>
                         </div>
@@ -1126,7 +1208,7 @@ const Admin_Certificates = () => {
                 </div>
             )}
 
-            {/* ===== DELETE CONFIRMATION MODAL ===== */}
+            {/* Delete Modal */}
             {showDeleteModal && deletingCertificate && (
                 <div className="modal-overlay" onClick={handleDeleteCancel}>
                     <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -1161,16 +1243,10 @@ const Admin_Certificates = () => {
                         </div>
 
                         <div className="modal-actions">
-                            <button
-                                className="modal-btn cancel-btn"
-                                onClick={handleDeleteCancel}
-                            >
+                            <button className="modal-btn cancel-btn" onClick={handleDeleteCancel}>
                                 Cancel
                             </button>
-                            <button
-                                className="modal-btn confirm-btn"
-                                onClick={handleDeleteConfirm}
-                            >
+                            <button className="modal-btn confirm-btn" onClick={handleDeleteConfirm}>
                                 Yes, Delete
                             </button>
                         </div>
@@ -1184,61 +1260,24 @@ const Admin_Certificates = () => {
                     100% { transform: rotate(360deg); }
                 }
                 @keyframes slideIn {
-                    from {
-                        transform: translateX(100%);
-                        opacity: 0;
-                    }
-                    to {
-                        transform: translateX(0);
-                        opacity: 1;
-                    }
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
                 }
-                .status-badge.status-issued {
-                    background: #d4edda;
-                    color: #155724;
-                }
-                .status-badge.status-active {
-                    background: #d4edda;
-                    color: #155724;
-                }
-                .status-badge.status-pending {
-                    background: #fff3cd;
-                    color: #856404;
-                }
-                .status-badge.status-revoked {
-                    background: #f8d7da;
-                    color: #721c24;
-                }
-                .status-badge.status-expired {
-                    background: #f8d7da;
-                    color: #721c24;
-                }
+                .status-badge.status-issued { background: #d4edda; color: #155724; }
+                .status-badge.status-active { background: #d4edda; color: #155724; }
+                .status-badge.status-pending { background: #fff3cd; color: #856404; }
+                .status-badge.status-revoked { background: #f8d7da; color: #721c24; }
+                .status-badge.status-expired { background: #f8d7da; color: #721c24; }
                 .action-btn {
-                    background: none;
-                    border: none;
-                    cursor: pointer;
-                    padding: 5px 8px;
-                    border-radius: 4px;
-                    transition: all 0.2s;
+                    background: none; border: none; cursor: pointer;
+                    padding: 5px 8px; border-radius: 4px; transition: all 0.2s;
                 }
-                .action-btn.view-btn {
-                    color: #17a2b8;
-                }
-                .action-btn.view-btn:hover {
-                    background: #e2f0f2;
-                }
-                .action-btn.edit-btn {
-                    color: #ffc107;
-                }
-                .action-btn.edit-btn:hover {
-                    background: #fff3cd;
-                }
-                .action-btn.delete-btn {
-                    color: #dc3545;
-                }
-                .action-btn.delete-btn:hover {
-                    background: #f8d7da;
-                }
+                .action-btn.view-btn { color: #17a2b8; }
+                .action-btn.view-btn:hover { background: #e2f0f2; }
+                .action-btn.edit-btn { color: #ffc107; }
+                .action-btn.edit-btn:hover { background: #fff3cd; }
+                .action-btn.delete-btn { color: #dc3545; }
+                .action-btn.delete-btn:hover { background: #f8d7da; }
             `}</style>
         </div>
     );

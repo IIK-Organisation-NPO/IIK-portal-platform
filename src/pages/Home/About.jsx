@@ -16,7 +16,7 @@ const About = () => {
             <span>Learner Certificate Portal</span>
           </div>
           <nav className="header-nav">
-            <Link to="/Homepage">Home</Link>
+            <Link to="/">Home</Link>
             <a
               href="https://www.iik.co.za/contact-us"
               target="_blank"
@@ -25,7 +25,7 @@ const About = () => {
               Contact
             </a>
             <Link to="/about">About</Link>
-            <Link to="/blog">Blog</Link>
+            <Link to="/BlogPage">Blog</Link>
             <div className="nav-actions">
               <Link to="/login" className="btn-login">Login</Link>
               <Link to="/signup" className="btn-signup">Sign Up</Link>

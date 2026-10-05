@@ -1,10 +1,25 @@
-import React, { useState, useEffect } from 'react';
+// src/pages/Learner_Screens/Learner_DashBoard.jsx
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Learner_Header from '../../components/Learner/Learner_Header';
 import Learner_SideBar from '../../components/Learner/Learner_SideBar';
 import '../../styles/Learner/Learner_DashBoard.css';
-import api from '../../services/api';
+import { API, API_BASE } from '../../config/api';
+
+const formatStartDate = (rawDate) => {
+  if (!rawDate) return 'Not set';
+  const d = new Date(rawDate);
+  if (isNaN(d.getTime())) return String(rawDate);
+  return d.toLocaleDateString('en-US', {
+    month: 'short',
+    day: '2-digit',
+    year: 'numeric'
+  });
+};
 
 const Learner_DashBoard = () => {
+  const navigate = useNavigate();
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [learnerData, setLearnerData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -23,205 +38,243 @@ const Learner_DashBoard = () => {
     setIsMobileMenuOpen(false);
   };
 
-  // ============================================
-  // ✅ FETCH LEARNER DATA AND PROGRAMMES
-  // ============================================
-  useEffect(() => {
-    const fetchLearnerData = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          setError('No authentication token found');
-          setLoading(false);
-          return;
-        }
-
-        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-        
-        // Fetch learner profile
-        const profileResponse = await fetch(`${API_URL}/api/learner/profile`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (profileResponse.ok) {
-          const data = await profileResponse.json();
-          setLearnerData(data.data);
-          localStorage.setItem('user', JSON.stringify(data.data));
-        } else {
-          setError('Failed to fetch learner profile');
-        }
-
-        // Fetch programmes
-        const programmesResponse = await fetch(`${API_URL}/api/learner/programmes`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (programmesResponse.ok) {
-          const data = await programmesResponse.json();
-          if (data.success) {
-            const mappedProgrammes = data.data.map(p => ({
-              id: p.Programme_id,
-              title: p.Programme_name,
-              desc: p.Programme_description || 'Learn essential skills in this programme.',
-              duration: '8 weeks',
-              icon: getProgrammeIcon(p.Programme_name)
-            }));
-            setProgrammes(mappedProgrammes);
-          }
-        } else {
-          // Fallback programmes
-          setProgrammes([
-            { id: 1, title: 'Digital Literacy', desc: 'Master essential computer skills, internet navigation, email management, and online safety.', duration: '8 weeks', icon: 'fa-laptop' },
-            { id: 2, title: 'Microsoft 365', desc: 'Learn Word, Excel, PowerPoint, Outlook and Teams for high-grade professional productivity.', duration: '12 weeks', icon: 'fa-microsoft' },
-            { id: 3, title: 'Digital Marketing', desc: 'Social media marketing, SEO, content strategy, email campaigns, and campaign analytics.', duration: '10 weeks', icon: 'fa-chart-line' },
-          ]);
-        }
-        
-        setLoading(false);
-      } catch (err) {
-        console.error('API fetch error:', err);
-        setError('Connection error');
-        setLoading(false);
-      }
-    };
-
-    fetchLearnerData();
-  }, []);
-
-  // ============================================
-  // ✅ HELPER: Get icon based on programme name
-  // ============================================
-  const getProgrammeIcon = (name) => {
-    const icons = {
-      'Digital Literacy': 'fa-laptop',
-      'Microsoft 365': 'fa-microsoft',
-      'Digital Marketing': 'fa-chart-line'
-    };
-    return icons[name] || 'fa-graduation-cap';
+  const getProgrammeIcon = (name = '') => {
+    const n = name.toLowerCase();
+    if (n.includes('digital literacy')) return 'fa-laptop';
+    if (n.includes('microsoft')) return 'fa-microsoft';
+    if (n.includes('digital marketing')) return 'fa-chart-line';
+    if (n.includes('web')) return 'fa-code';
+    if (n.includes('data')) return 'fa-database';
+    if (n.includes('excel')) return 'fa-file-excel';
+    if (n.includes('cyber')) return 'fa-shield-alt';
+    if (n.includes('cloud')) return 'fa-cloud';
+    if (n.includes('social media')) return 'fa-hashtag';
+    return 'fa-graduation-cap';
   };
 
-  // ============================================
-  // ✅ HANDLE "I'M INTERESTED" BUTTON
-  // ============================================
-  const handleInterest = async (programmeId) => {
+  const fetchArchivedProgrammes = useCallback(async () => {
+    try {
+      const stored = (() => {
+        try {
+          return JSON.parse(localStorage.getItem('user') || '{}');
+        } catch {
+          return {};
+        }
+      })();
+
+      const centreId =
+        stored.centreId ??
+        stored.digital_center_id ??
+        stored.centre_id ??
+        null;
+
+      if (!centreId) return [];
+
+      const res = await fetch(
+        `${API_BASE}/api/centres/${centreId}/programmes`
+      );
+
+      if (!res.ok) return [];
+
+      const data = await res.json();
+      const rows = Array.isArray(data?.data) ? data.data : [];
+
+      return rows
+        .filter((row) => row.centreStatus === 'Archived')
+        .map((row) => ({
+          id: row.id,
+          name: row.name,
+          description: row.description,
+          duration: row.duration,
+          Programme_status: 'Archived'
+        }));
+    } catch (err) {
+      console.error('Fetch archived programmes error:', err);
+      return [];
+    }
+  }, []);
+
+  const fetchLearnerData = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
-      
       if (!token) {
-        setErrorMessage('Please login first to express interest.');
-        setShowError(true);
-        setTimeout(() => setShowError(false), 5000);
+        setError('No authentication token found');
+        setLoading(false);
         return;
       }
 
-      const btn = document.querySelector(`[data-programme="${programmeId}"]`);
-      if (btn) {
-        btn.textContent = 'Submitting...';
-        btn.disabled = true;
-      }
-
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      
-      console.log('📤 Sending interest for programmeId:', programmeId);
-      
-      const response = await fetch(`${API_URL}/api/learner/interest`, {
-        method: 'POST',
+      const profileResponse = await fetch(API.learner.profile, {
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ 
-          programmeId: programmeId
-        })
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
 
-      const data = await response.json();
-      console.log('📥 Response:', data);
-
-      if (response.ok && data.success) {
-        setSuccessMessage(data.message);
-        setShowSuccess(true);
-        setTimeout(() => setShowSuccess(false), 5000);
-        
-        if (btn) {
-          btn.textContent = ' Interested';
-          btn.style.background = 'black';
-          btn.style.color = 'white';
-          btn.style.border = 'none';
-          btn.disabled = true;
-        }
+      let profile = null;
+      if (profileResponse.ok) {
+        const data = await profileResponse.json();
+        profile = data.data;
+        setLearnerData(profile);
+        localStorage.setItem('user', JSON.stringify(profile));
       } else {
-        setErrorMessage(data.message || 'Failed to express interest. Please try again.');
-        setShowError(true);
-        setTimeout(() => setShowError(false), 5000);
-        
-        if (btn) {
-          btn.textContent = "I'm Interested";
-          btn.disabled = false;
+        setError('Failed to fetch learner profile');
+        setLoading(false);
+        return;
+      }
+
+      const programmesResponse = await fetch(API.learner.programmes, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      let programmeRows = [];
+
+      if (programmesResponse.ok) {
+        const data = await programmesResponse.json();
+        if (data.success && Array.isArray(data.data)) {
+          programmeRows = data.data;
         }
       }
-    } catch (error) {
-      console.error('Error expressing interest:', error);
-      setErrorMessage('Network error. Please check your connection.');
-      setShowError(true);
-      setTimeout(() => setShowError(false), 5000);
-      
-      const btn = document.querySelector(`[data-programme="${programmeId}"]`);
-      if (btn) {
-        btn.textContent = "I'm Interested";
-        btn.disabled = false;
+
+      // Fallback to the shared endpoint if the learner one returned nothing.
+      if (programmeRows.length === 0) {
+        try {
+          const sharedRes = await fetch(`${API_BASE}/api/programmes`);
+          if (sharedRes.ok) {
+            const sharedData = await sharedRes.json();
+            if (sharedData.success && Array.isArray(sharedData.programmes)) {
+              programmeRows = sharedData.programmes;
+            }
+          }
+        } catch {
+          // swallow — no programmes available
+        }
       }
+
+      const enrolled = Array.isArray(profile?.enrolledProgrammes)
+        ? profile.enrolledProgrammes.map((row) => ({
+            id: row.id ?? row.programmeId,
+            name: row.name,
+            description: row.description,
+            duration: row.duration,
+            Programme_status: 'Enrolled'
+          }))
+        : [];
+
+      const archived = await fetchArchivedProgrammes();
+
+      const existingIds = new Set(
+        programmeRows
+          .map((p) => p.id ?? p.Programme_id)
+          .filter((id) => id != null)
+      );
+      const extras = [...enrolled, ...archived].filter(
+        (p) => p.id != null && !existingIds.has(p.id)
+      );
+      const mergedRows = [...programmeRows, ...extras];
+
+      const visible = mergedRows
+        .map((p) => {
+          const rawStatus = p.status ?? p.Programme_status ?? 'Draft';
+          const startDateRaw =
+            p.startDateRaw ?? p.startDate ?? p.Start_date ?? null;
+
+          const title =
+            p.title ?? p.name ?? p.Programme_name ?? 'Untitled Programme';
+
+          return {
+            id: p.id ?? p.Programme_id,
+            title,
+            desc:
+              p.desc ??
+              p.description ??
+              p.Programme_description ??
+              'Learn essential skills in this programme.',
+            duration: p.duration ?? p.Duration ?? '8 weeks',
+            status: rawStatus,
+            startDateRaw,
+            startDate: formatStartDate(startDateRaw),
+            icon: getProgrammeIcon(title)
+          };
+        })
+        .filter(
+          (p) =>
+            p.status === 'Active' ||
+            p.status === 'Upcoming' ||
+            p.status === 'Archived' ||
+            p.status === 'Enrolled'
+        );
+
+      setProgrammes(visible);
+      setLoading(false);
+    } catch (err) {
+      console.error('API fetch error:', err);
+      setError('Connection error');
+      setLoading(false);
     }
+  }, [fetchArchivedProgrammes]);
+
+  useEffect(() => {
+    fetchLearnerData();
+  }, [fetchLearnerData]);
+
+  const handleInterest = (programme) => {
+    navigate('/locate-center', {
+      state: {
+        programmeId: programme.id,
+        programmeTitle: programme.title
+      }
+    });
   };
 
-  // ============================================
-  // ✅ GET LEARNER STATS
-  // ============================================
   const getUserName = () => {
     if (!learnerData) return 'Learner';
-    return learnerData.fullName || 
-           learnerData.name || 
-           `${learnerData.firstName || ''} ${learnerData.lastName || ''}`.trim() || 
-           learnerData.email?.split('@')[0] || 
-           'Learner';
+    return (
+      learnerData.fullName ||
+      learnerData.name ||
+      `${learnerData.firstName || ''} ${learnerData.lastName || ''}`.trim() ||
+      learnerData.email?.split('@')[0] ||
+      'Learner'
+    );
   };
 
   const getEnrolledCount = () => {
     if (!learnerData) return 0;
-    return learnerData.totalEnrolled || 
-           learnerData.enrolledProgrammes?.length || 
-           0;
+    return (
+      learnerData.totalEnrolled ||
+      learnerData.enrolledProgrammes?.length ||
+      0
+    );
   };
 
   const getCompletedCount = () => {
     if (!learnerData) return 0;
-    return learnerData.totalCompleted || 
-           learnerData.completedProgrammes?.length || 
-           0;
+    return learnerData.totalCompleted || learnerData.completedProgrammes?.length || 0;
   };
 
   const getCertificatesCount = () => {
     if (!learnerData) return 0;
-    return learnerData.totalCertificates || 
-           learnerData.certificates?.length || 
-           0;
+    return learnerData.totalCertificates || learnerData.certificates?.length || 0;
   };
 
   const userName = getUserName();
 
-  // Loading state
   if (loading) {
     return (
       <div className="dashboard-layout">
-        <Learner_Header userName="Loading..." onMenuToggle={toggleMobileMenu} isMobileMenuOpen={isMobileMenuOpen} />
+        <Learner_Header
+          userName="Loading..."
+          onMenuToggle={toggleMobileMenu}
+          isMobileMenuOpen={isMobileMenuOpen}
+        />
         <div className="dashboard-body">
-          <Learner_SideBar active="dashboard" isMobileOpen={isMobileMenuOpen} onClose={closeMobileMenu} />
+          <Learner_SideBar
+            active="dashboard"
+            isMobileOpen={isMobileMenuOpen}
+            onClose={closeMobileMenu}
+          />
           <main className="learner-dashboard">
             <div className="loading-spinner">Loading your dashboard...</div>
           </main>
@@ -230,84 +283,98 @@ const Learner_DashBoard = () => {
     );
   }
 
-  // Error state
   if (error) {
     return (
       <div className="dashboard-layout">
-        <Learner_Header userName="Error" onMenuToggle={toggleMobileMenu} isMobileMenuOpen={isMobileMenuOpen} />
+        <Learner_Header
+          userName="Error"
+          onMenuToggle={toggleMobileMenu}
+          isMobileMenuOpen={isMobileMenuOpen}
+        />
         <div className="dashboard-body">
-          <Learner_SideBar active="dashboard" isMobileOpen={isMobileMenuOpen} onClose={closeMobileMenu} />
+          <Learner_SideBar
+            active="dashboard"
+            isMobileOpen={isMobileMenuOpen}
+            onClose={closeMobileMenu}
+          />
           <main className="learner-dashboard">
-            <div className="error-message">Unable to load profile data. Please try again later.</div>
+            <div className="error-message">
+              Unable to load profile data. Please try again later.
+            </div>
           </main>
         </div>
       </div>
     );
   }
 
-  // ✅ Check if user has enrolled programmes
   const enrolledCount = getEnrolledCount();
 
   return (
     <div className="dashboard-layout">
-      {/* Header */}
-      <Learner_Header 
+      <Learner_Header
         userName={userName}
         onMenuToggle={toggleMobileMenu}
         isMobileMenuOpen={isMobileMenuOpen}
       />
-      
+
       <div className="dashboard-body">
-        {/* Sidebar */}
-        <Learner_SideBar 
-          active="dashboard" 
+        <Learner_SideBar
+          active="dashboard"
           isMobileOpen={isMobileMenuOpen}
           onClose={closeMobileMenu}
         />
-        
+
         <main className="learner-dashboard">
-          {/* Success Message */}
           {showSuccess && (
-            <div className="success-toast" style={{
-              position: 'fixed',
-              top: '80px',
-              right: '20px',
-              backgroundColor: '#d4edda',
-              color: '#155724',
-              padding: '15px 25px',
-              borderRadius: '8px',
-              border: '1px solid #c3e6cb',
-              zIndex: 9999,
-              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-              animation: 'slideIn 0.3s ease-out'
-            }}>
-               {successMessage}
+            <div
+              className="success-toast"
+              style={{
+                position: 'fixed',
+                top: '80px',
+                right: '20px',
+                backgroundColor: '#d4edda',
+                color: '#155724',
+                padding: '15px 25px',
+                borderRadius: '8px',
+                border: '1px solid #c3e6cb',
+                zIndex: 9999,
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                animation: 'slideIn 0.3s ease-out'
+              }}
+            >
+              {successMessage}
             </div>
           )}
 
-          {/* Error Message */}
           {showError && (
-            <div className="error-toast" style={{
-              position: 'fixed',
-              top: '80px',
-              right: '20px',
-              backgroundColor: '#f8d7da',
-              color: '#721c24',
-              padding: '15px 25px',
-              borderRadius: '8px',
-              border: '1px solid #f5c6cb',
-              zIndex: 9999,
-              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-              animation: 'slideIn 0.3s ease-out'
-            }}>
-               {errorMessage}
+            <div
+              className="error-toast"
+              style={{
+                position: 'fixed',
+                top: '80px',
+                right: '20px',
+                backgroundColor: '#f8d7da',
+                color: '#721c24',
+                padding: '15px 25px',
+                borderRadius: '8px',
+                border: '1px solid #f5c6cb',
+                zIndex: 9999,
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                animation: 'slideIn 0.3s ease-out'
+              }}
+            >
+              {errorMessage}
             </div>
           )}
 
-          {/* Welcome Section */}
           <div className="dashboard-welcome">
-            <h1>Welcome back, <span>{userName}</span></h1>
-            <p>Here is your learning summary and available programmes for enrollment.</p>
+            <h1>
+              Welcome back, <span>{userName}</span>
+            </h1>
+            <p>
+              Here is your learning summary and available programmes for
+              enrollment.
+            </p>
           </div>
 
           {/* Stats Grid */}
@@ -330,31 +397,34 @@ const Learner_DashBoard = () => {
           <section className="programmes-section">
             <h2>Our Programmes</h2>
             <div className="programmes-grid">
-              {programmes.map((prog) => (
-                <div className="programme-card" key={prog.id}>
-                  <div className="programme-icon">
-                    <i className={`fas ${prog.icon}`}></i>
+              {programmes.length === 0 ? (
+                <p className="no-programmes">No programmes available yet.</p>
+              ) : (
+                programmes.map((prog) => (
+                  <div className="programme-card" key={prog.id}>
+                    <div className="programme-icon">
+                      <i className={`fas ${prog.icon}`}></i>
+                    </div>
+                    <h3>{prog.title}</h3>
+                    <p className="programme-desc">{prog.desc}</p>
+                    <div className="programme-duration">
+                      <i className="far fa-clock"></i> Duration: {prog.duration}
+                    </div>
+                    <button
+                      className="btn-interest"
+                      data-programme={prog.id}
+                      onClick={() => handleInterest(prog)}
+                    >
+                      I'm Interested
+                    </button>
                   </div>
-                  <h3>{prog.title}</h3>
-                  <p className="programme-desc">{prog.desc}</p>
-                  <div className="programme-duration">
-                    <i className="far fa-clock"></i> Duration: {prog.duration}
-                  </div>
-                  <button 
-                    className="btn-interest"
-                    data-programme={prog.id}
-                    onClick={() => handleInterest(prog.id)}
-                  >
-                    I'm Interested
-                  </button>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </section>
         </main>
       </div>
 
-      {/* Add animation styles */}
       <style>{`
         @keyframes slideIn {
           from {
@@ -366,16 +436,17 @@ const Learner_DashBoard = () => {
             opacity: 1;
           }
         }
-        .btn-interest:disabled {
-          opacity: 0.7;
-          cursor: not-allowed;
-        }
         .btn-interest {
           transition: all 0.3s ease;
         }
-        .btn-interest:hover:not(:disabled) {
+        .btn-interest:hover {
           transform: translateY(-2px);
           box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+        }
+        .no-programmes {
+          color: #64748b;
+          font-size: 0.95rem;
+          padding: 1rem 0;
         }
       `}</style>
     </div>

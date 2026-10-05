@@ -294,6 +294,23 @@
   border-color: #222222;
 }
 
+/* Disabled "I'm Interested" — Upcoming programme, start date not yet reached */
+.programme-card .btn-interest:disabled {
+  background: #4b5563;
+  border-color: #4b5563;
+  color: #ffffff;
+  opacity: 1;
+  cursor: not-allowed;
+}
+
+.programme-card .btn-interest:disabled:hover {
+  background: #4b5563;
+  border-color: #4b5563;
+  color: #ffffff;
+  transform: none;
+  box-shadow: none;
+}
+
 /* ===== Programme Details Modal ===== */
 .programme-modal-overlay {
   position: fixed;
@@ -304,13 +321,17 @@
   justify-content: center;
   padding: 1.5rem;
   background: rgba(15, 23, 42, 0.55);
+  overflow-x: hidden;
 }
 
 .programme-modal {
   position: relative;
   width: min(560px, 100%);
+  max-width: 640px;
   max-height: calc(100vh - 3rem);
-  overflow-y: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   background: #ffffff;
   border: 1px solid #e2e8f0;
   box-shadow: 0 20px 50px rgba(15, 23, 42, 0.2);
@@ -344,10 +365,16 @@
   color: #94a3b8;
   font-size: 0.85rem;
   font-family: 'Geist', sans-serif;
+  flex-shrink: 0;
 }
 
 .programme-modal-content {
   padding: 1.5rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-height: 60vh;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .programme-modal-content h2 {
@@ -355,6 +382,8 @@
   color: #0f172a;
   font-size: 1.35rem;
   font-family: 'Geist', sans-serif;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .programme-modal-content p {
@@ -363,6 +392,8 @@
   font-size: 0.95rem;
   line-height: 1.7;
   font-family: 'Geist', sans-serif;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .programme-modal-content .duration {

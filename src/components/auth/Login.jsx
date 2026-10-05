@@ -1,20 +1,21 @@
 // src/components/auth/Login.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { 
-  FaEnvelope, 
-  FaLock, 
-  FaEye, 
-  FaEyeSlash, 
-  FaGoogle, 
-  FaSpinner, 
+import {
+  FaEnvelope,
+  FaLock,
+  FaEye,
+  FaEyeSlash,
+  FaGoogle,
+  FaSpinner,
   FaExclamationCircle,
-  FaSync 
+  FaSync
 } from 'react-icons/fa';
 import Footer from '../common/Footer';
 import Input from '../common/Input';
 import '../../styles/components/auth.css';
 import logo from '../../assets/images/small Mki.png';
+import { API } from '../../config/api';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -28,7 +29,7 @@ const Login = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [errorType, setErrorType] = useState('');
   const [lockTimeLeft, setLockTimeLeft] = useState(0);
-  
+
   // ===== CAPTCHA STATES =====
   const [captcha, setCaptcha] = useState('');
   const [captchaImage, setCaptchaImage] = useState('');
@@ -36,14 +37,12 @@ const Login = () => {
   const [captchaLoading, setCaptchaLoading] = useState(false);
   const captchaInputRef = useRef(null);
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-
   // ============================================
-  // ✅ ROLE-BASED REDIRECT FUNCTION
+  // ROLE-BASED REDIRECT FUNCTION
   // ============================================
   const redirectBasedOnRole = (role, roleId) => {
-    console.log('🔍 Redirecting based on role:', { role, roleId });
-    
+    console.log('Redirecting based on role:', { role, roleId });
+
     if (roleId === 3 || role === 'Super Admin') {
       return '/admin-dashboard';
     } else if (roleId === 1 || role === 'ADMIN') {
@@ -54,14 +53,14 @@ const Login = () => {
   };
 
   // ============================================
-  // ✅ FETCH CAPTCHA
+  // FETCH CAPTCHA
   // ============================================
   const fetchCaptcha = async () => {
     try {
       setCaptchaLoading(true);
       setCaptchaError('');
-      
-      const response = await fetch(`${API_URL}/api/auth/captcha`, {
+
+      const response = await fetch(API.auth.captcha, {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -80,7 +79,7 @@ const Login = () => {
         captchaInputRef.current.value = '';
       }
     } catch (error) {
-      console.error('❌ Failed to fetch CAPTCHA:', error);
+      console.error('Failed to fetch CAPTCHA:', error);
       setCaptchaError('Failed to load CAPTCHA. Please refresh.');
     } finally {
       setCaptchaLoading(false);
@@ -88,14 +87,14 @@ const Login = () => {
   };
 
   // ============================================
-  // ✅ REFRESH CAPTCHA
+  // REFRESH CAPTCHA
   // ============================================
   const refreshCaptcha = async () => {
     try {
       setCaptchaLoading(true);
       setCaptchaError('');
-      
-      const response = await fetch(`${API_URL}/api/auth/captcha/refresh`, {
+
+      const response = await fetch(API.auth.captchaRefresh, {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -118,7 +117,7 @@ const Login = () => {
         throw new Error(data.message || 'Failed to refresh CAPTCHA');
       }
     } catch (error) {
-      console.error('❌ Failed to refresh CAPTCHA:', error);
+      console.error('Failed to refresh CAPTCHA:', error);
       setCaptchaError('Failed to refresh CAPTCHA. Please try again.');
     } finally {
       setCaptchaLoading(false);
@@ -153,14 +152,14 @@ const Login = () => {
           return prev - 1;
         });
       }, 60000);
-      
+
       return () => clearInterval(timer);
     }
   }, [lockTimeLeft, errorType]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!email || !password) {
       setError('Please enter both email and password');
       setErrorType('invalid');
@@ -169,7 +168,7 @@ const Login = () => {
 
     if (!captcha) {
       setError('Please enter the CAPTCHA code');
-      setErrorType('invalid');
+      setErrorType('captcha');
       return;
     }
 
@@ -180,10 +179,10 @@ const Login = () => {
     setLockTimeLeft(0);
 
     try {
-      console.log('📤 Sending login request to:', `${API_URL}/api/auth/login-with-captcha`);
-      console.log('📤 Email:', email.trim().toLowerCase());
-      
-      const response = await fetch(`${API_URL}/api/auth/login-with-captcha`, {
+      console.log('Sending login request to:', API.auth.loginWithCaptcha);
+      console.log('Email:', email.trim().toLowerCase());
+
+      const response = await fetch(API.auth.loginWithCaptcha, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -197,73 +196,84 @@ const Login = () => {
       });
 
       const data = await response.json();
-      console.log('📥 Login response status:', response.status);
-      console.log('📥 Login response data:', data);
+      console.log('Login response status:', response.status);
+      console.log('Login response data:', data);
 
       if (response.ok && data.success) {
-        console.log('🔍 Full response data:', JSON.stringify(data, null, 2));
-        
-        const token = data.data?.accessToken || 
-                     data.data?.token || 
-                     data.token || 
-                     data.data?.access_token;
-        
+        console.log('Full response data:', JSON.stringify(data, null, 2));
+
+        const token =
+          data.data?.accessToken ||
+          data.data?.token ||
+          data.data?.access_token ||
+          data.token ||
+          data.accessToken;
+
         const user = data.data?.user || data.user;
-        
-        console.log('🔑 Token found:', token ? '✅ Yes' : '❌ No');
-        console.log('👤 User found:', user ? '✅ Yes' : '❌ No');
-        
-        if (token && user) {
-          localStorage.setItem('token', token);
-          localStorage.setItem('user', JSON.stringify(user));
-          localStorage.setItem('userRole', user.role || 'USER');
-          localStorage.setItem('userRoleId', String(user.roleId || 2));
-          
-          if (rememberMe) {
-            localStorage.setItem('rememberMe', 'true');
-          } else {
-            localStorage.removeItem('rememberMe');
-          }
 
-          console.log('🔑 Stored token:', localStorage.getItem('token') ? '✅ Yes' : '❌ No');
-          console.log('👤 Stored user:', localStorage.getItem('user') ? '✅ Yes' : '❌ No');
+        console.log('Token found:', token ? 'Yes' : 'No');
+        console.log('User found:', user ? 'Yes' : 'No');
 
-          const redirectPath = redirectBasedOnRole(user.role, user.roleId);
-          console.log(`🔄 Redirecting to: ${redirectPath}`);
-          
-          setSuccessMessage(`Login Successfully, ${user.name}! `);
-          setLoading(false);
-          
-          setTimeout(() => {
-            navigate(redirectPath);
-          }, 1500);
-        } else {
-          console.error('❌ Missing token or user in response:', data);
-          setError('Login successful but missing token or user data. Please contact support.');
+        const isInvalidToken =
+          !token ||
+          typeof token !== 'string' ||
+          token === 'undefined' ||
+          token === 'null' ||
+          token.length < 20;
+
+        if (isInvalidToken || !user) {
+          console.error('Backend did not return a valid token/user. Response:', data);
+          setError('Login succeeded but the server did not return a valid session. Please contact support.');
           setErrorType('error');
           setLoading(false);
           refreshCaptcha();
+          return;
         }
-        
+
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(user));
+        localStorage.setItem('userRole', user.role || 'USER');
+        localStorage.setItem('userRoleId', String(user.roleId || 2));
+        localStorage.setItem('userType', user.userType || (user.roleId === 1 || user.roleId === 3 ? 'admin' : 'user'));
+
+        if (rememberMe) {
+          localStorage.setItem('rememberMe', 'true');
+        } else {
+          localStorage.removeItem('rememberMe');
+        }
+
+        console.log('Stored token (first 30 chars):', token.slice(0, 30));
+        console.log('Stored user:', user);
+
+        const redirectPath = redirectBasedOnRole(user.role, user.roleId);
+        console.log(`Redirecting to: ${redirectPath}`);
+
+        setSuccessMessage(`Login Successfully, ${user.name}! `);
+        setLoading(false);
+
+        setTimeout(() => {
+          navigate(redirectPath);
+        }, 1500);
+
       } else if (response.status === 400 && data.message?.toLowerCase().includes('captcha')) {
         setError(data.message || 'Invalid CAPTCHA. Please try again.');
         setErrorType('captcha');
         setLoading(false);
         refreshCaptcha();
-        
+
       } else if (response.status === 403 && data.requiresVerification) {
         setError('Please verify your email first. Check your email for the verification link.');
         setErrorType('unverified');
         setLoading(false);
         refreshCaptcha();
-        
+
       } else if (response.status === 403 && data.locked) {
         const timeLeft = data.timeLeft || 15;
         setLockTimeLeft(timeLeft);
         setError(data.error || `Your account is locked. Please try again in ${timeLeft} minutes.`);
         setErrorType('locked');
         setLoading(false);
-        
+
       } else {
         let errorMessage = data.error || data.message || 'Invalid email or password. Please try again.';
         if (data.remainingAttempts !== undefined && data.remainingAttempts > 0) {
@@ -275,7 +285,7 @@ const Login = () => {
         refreshCaptcha();
       }
     } catch (error) {
-      console.error('❌ Login error:', error);
+      console.error('Login error:', error);
       if (error.message === 'Failed to fetch') {
         setError('Cannot connect to server. Please make sure the backend is running.');
         setErrorType('connection');
@@ -290,12 +300,15 @@ const Login = () => {
 
   // ============ GOOGLE LOGIN ============
   const handleGoogleLogin = () => {
-    window.location.href = `${API_URL}/api/auth/google`;
+    window.location.href = API.auth.googleAuth;
   };
+
+  const isCaptchaError = Boolean(
+    (error && errorType === 'captcha') || captchaError
+  );
 
   return (
     <div className="login-page">
-      {/* Header */}
       <header className="login-header">
         <div className="header-container">
           <div className="header-logo">
@@ -303,7 +316,7 @@ const Login = () => {
             <span>Learner Certificate Portal</span>
           </div>
           <nav className="header-nav">
-            <Link to="/Homepage">Home</Link> 
+            <Link to="/">Home</Link>
             <a
               href="https://www.iik.co.za/contact-us"
               target="_blank"
@@ -312,12 +325,11 @@ const Login = () => {
               Contact
             </a>
             <Link to="/about">About</Link>
-            <Link to="/blog">Blog</Link>
+            <Link to="/BlogPage">Blog</Link>
           </nav>
         </div>
       </header>
 
-      {/* Login Form */}
       <div className="auth-container">
         <div className="auth-card">
           <div className="logo">
@@ -328,30 +340,28 @@ const Login = () => {
           <h2>Welcome Back</h2>
           <p className="subtitle">Enter your credentials to access your portal dashboard</p>
 
-          {/* Success Message */}
           {successMessage && (
             <div className="success-message">
               <span>{successMessage}</span>
             </div>
           )}
 
-          {/* Error Messages */}
           {error && errorType === 'captcha' && (
-            <div className="server-error captcha-error">
+            <div className="server-error captcha-error login-error">
               <FaExclamationCircle />
               <span>{error}</span>
             </div>
           )}
 
           {error && errorType === 'invalid' && (
-            <div className="server-error">
+            <div className="server-error login-error">
               <FaExclamationCircle />
               <span>{error}</span>
             </div>
           )}
 
           {error && errorType === 'unverified' && (
-            <div className="verification-error">
+            <div className="verification-error login-error">
               <FaExclamationCircle />
               <span>
                 {error}
@@ -364,14 +374,14 @@ const Login = () => {
           )}
 
           {error && errorType === 'locked' && (
-            <div className="locked-error">
+            <div className="locked-error login-error">
               <FaExclamationCircle />
               <span>
                 {error}
                 <br />
                 {lockTimeLeft > 0 && (
                   <span className="lock-timer">
-                    ⏰ {lockTimeLeft} minute{lockTimeLeft > 1 ? 's' : ''} remaining
+                    {lockTimeLeft} minute{lockTimeLeft > 1 ? 's' : ''} remaining
                   </span>
                 )}
                 <Link to="/forgot-password" className="resend-link">
@@ -382,14 +392,14 @@ const Login = () => {
           )}
 
           {error && errorType === 'connection' && (
-            <div className="server-error">
+            <div className="server-error login-error">
               <FaExclamationCircle />
               <span>{error}</span>
             </div>
           )}
 
           {error && !errorType && (
-            <div className="server-error">
+            <div className="server-error login-error">
               <FaExclamationCircle />
               <span>{error}</span>
             </div>
@@ -441,14 +451,29 @@ const Login = () => {
               </div>
             </div>
 
-            {/* ===== CAPTCHA SECTION - Using CSS Classes ===== */}
+            
+
+            <div className="form-options">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  disabled={loading || errorType === 'locked'}
+                />
+                Remember me
+              </label>
+              <Link to="/forgot-password">Forgot password?</Link>
+            </div>
+
+            {/* CAPTCHA SECTION */}
             <div className="form-group captcha-group">
               <label className="captcha-label">
                 <span className="captcha-label-dot"></span>
                 Human Verification
               </label>
-              <div className="captcha-container">
-                <div 
+              <div className={`captcha-container ${isCaptchaError ? 'input-error' : ''}`}>
+                <div
                   className="captcha-image-wrapper"
                   dangerouslySetInnerHTML={{ __html: captchaImage }}
                 />
@@ -472,27 +497,14 @@ const Login = () => {
                   setErrorType('');
                 }}
                 placeholder="Enter the code above"
-                className={`captcha-input ${captchaError ? 'captcha-input-error' : ''}`}
+                className={`captcha-input ${isCaptchaError ? 'captcha-input-error input-error' : ''}`}
                 disabled={loading || errorType === 'locked'}
                 autoComplete="off"
                 maxLength="6"
               />
               {captchaError && (
-                <span className="captcha-error-text">{captchaError}</span>
+                <span className="captcha-error-text login-error-text">{captchaError}</span>
               )}
-            </div>
-
-            <div className="form-options">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  disabled={loading || errorType === 'locked'}
-                />
-                Remember me
-              </label>
-              <Link to="/forgot-password">Forgot password?</Link>
             </div>
 
             <button type="submit" className="btn-primary" disabled={loading || errorType === 'locked'}>
@@ -515,12 +527,12 @@ const Login = () => {
             <hr />
           </div>
 
-          <button 
-            className="btn-google" 
+          <button
+            className="btn-google"
             onClick={handleGoogleLogin}
             disabled={loading || errorType === 'locked'}
           >
-            <FaGoogle size={20} /> 
+            <FaGoogle size={20} />
             {loading ? 'Loading...' : 'Continue with Google'}
           </button>
 
@@ -530,7 +542,6 @@ const Login = () => {
         </div>
       </div>
 
-      {/* Footer */}
       <Footer />
 
       {/* Spinning animation for refresh icon */}

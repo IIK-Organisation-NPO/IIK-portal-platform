@@ -16,7 +16,7 @@
 
 .admin-bulkupload-content {
     flex: 1;
-    background: #f7f7f7;
+    background: #fffdfd;
     padding: 32px 40px 48px;
     overflow-y: auto;
 }
@@ -41,9 +41,9 @@
 
 /* ---- Filter Section ---- */
 .filter-section {
-    background: #ffffff;
+    background: #fffdfd;
     border-radius: 16px;
-    border: 1px solid #eaeaea;
+
     padding: 20px 24px;
     margin-bottom: 28px;
 }
@@ -74,7 +74,7 @@
     border: 1.5px solid #e0e0e0;
     border-radius: 8px;
     font-size: 14px;
-    background: #fafafa;
+    background: #fffdfd;
     transition: border-color 0.2s;
     font-family: inherit;
 }
@@ -112,7 +112,7 @@
 
 /* ---- Bulk Upload Section ---- */
 .bulk-upload-section {
-    background: #ffffff;
+    background: #fafafa;
     border-radius: 16px;
     border: 1px solid #eaeaea;
     padding: 24px 28px;
@@ -126,12 +126,6 @@
     margin: 0 0 4px;
 }
 
-.bulk-upload-section>p {
-    font-size: 14px;
-    color: #777777;
-    margin: 0 0 16px;
-}
-
 .bulk-file-upload-area {
     border: 2px dashed #d0d0d0;
     border-radius: 14px;
@@ -139,16 +133,20 @@
     text-align: center;
     cursor: pointer;
     transition: border-color 0.2s, background 0.2s;
-    background: #fafafa;
+    background: #fffdfd;
 }
 
 .bulk-file-upload-area:hover {
     border-color: #000000;
 }
 
-.bulk-file-upload-area i.fa-cloud-upload-alt {
-    font-size: 40px;
-    color: #cccccc;
+.bulk-file-upload-area .upload-doc-icon {
+    font-size: 38px;
+    color: #888888;
+    margin: 0 auto 12px;
+    display: block;
+    text-align: center;
+    line-height: 1;
 }
 
 .bulk-file-upload-area p {
@@ -200,10 +198,93 @@
     font-size: 18px;
 }
 
+/* ---- Bulk Upload Footer ---- */
+.bulk-upload-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 16px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
 .supported-formats {
-    margin-top: 12px;
     font-size: 13px;
     color: #999999;
+    margin: 0;
+}
+
+/* ---- Issue Date (label inside the input) ---- */
+.issue-date-wrapper {
+    position: relative;
+    display: inline-block;
+    width: 165px;
+}
+
+.issue-date-input {
+    width: 100%;
+    padding: 9px 32px 9px 12px;
+    border: 1.5px solid #d0d5dd;
+    border-radius: 8px;
+    font-size: 13px;
+    background: #ffffff;
+    color: #1a1a1a;
+    transition: border-color 0.2s;
+    font-family: inherit;
+    box-sizing: border-box;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+.issue-date-input:focus {
+    outline: none;
+    border-color: #000000;
+}
+
+/* Hide native date placeholder text when empty */
+.issue-date-input:not(.has-value)::-webkit-datetime-edit {
+    color: transparent;
+}
+
+/* Show native date placeholder when focused so user can type */
+.issue-date-input:not(.has-value):focus::-webkit-datetime-edit {
+    color: #1a1a1a;
+}
+
+/* Custom "Issue date" placeholder */
+.issue-date-placeholder {
+    position: absolute;
+    top: 50%;
+    left: 12px;
+    transform: translateY(-50%);
+    font-size: 13px;
+    color: #888888;
+    pointer-events: none;
+    font-family: inherit;
+}
+
+/* Hide the custom placeholder when the input is focused */
+.issue-date-wrapper .issue-date-input:focus~.issue-date-placeholder {
+    display: none;
+}
+
+/* Calendar icon on the right */
+.issue-date-input::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.7;
+    position: absolute;
+    right: 8px;
+}
+
+.issue-date-input::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+}
+
+/* Firefox fallback */
+.issue-date-input::-moz-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.7;
 }
 
 /* ---- Recipient Preview ---- */
@@ -232,6 +313,13 @@
     margin: 0;
 }
 
+.preview-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
 .preview-actions {
     display: flex;
     align-items: center;
@@ -240,50 +328,44 @@
 }
 
 .selected-count {
-    background: #000000;
-    color: #ffffff;
+    background: #f0f0f0;
+    color: #333333;
     padding: 4px 14px;
     border-radius: 20px;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
 }
 
 .btn-select-all {
     padding: 6px 16px;
-    background: #e3f5e9;
-    color: #0a6b3b;
-    border: none;
-    border-radius: 20px;
-    font-weight: 600;
+    background: #ffffff;
+    color: #333333;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 8px;
+    font-weight: 500;
     font-size: 13px;
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    transition: background 0.2s;
+    transition: all 0.2s;
 }
 
 .btn-select-all:hover {
-    background: #c8e6d9;
+    border-color: #000000;
 }
 
 .btn-deselect-all {
     padding: 6px 16px;
-    background: #fde8e8;
-    color: #b33c3c;
-    border: none;
-    border-radius: 20px;
-    font-weight: 600;
+    background: #ffffff;
+    color: #333333;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 8px;
+    font-weight: 500;
     font-size: 13px;
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    transition: background 0.2s;
+    transition: all 0.2s;
 }
 
 .btn-deselect-all:hover {
-    background: #f5d0d0;
+    border-color: #000000;
 }
 
 .table-responsive {
@@ -340,11 +422,6 @@
     color: #555555;
 }
 
-.cert-number {
-    font-weight: 500;
-    color: #1a1a1a;
-}
-
 .status-badge {
     display: inline-block;
     padding: 3px 12px;
@@ -358,16 +435,6 @@
 .status-completed {
     background: #e3f5e9;
     color: #0a6b3b;
-}
-
-.status-in-progress {
-    background: #fff3e0;
-    color: #b85c00;
-}
-
-.status-pending {
-    background: #fde8e8;
-    color: #b33c3c;
 }
 
 /* ---- Bulk Actions ---- */
@@ -385,44 +452,22 @@
     flex-wrap: wrap;
 }
 
-.btn-back {
-    padding: 10px 24px;
-    background: #ffffff;
-    color: #333333;
-    border: 1.5px solid #e0e0e0;
-    border-radius: 40px;
-    font-weight: 600;
-    font-size: 14px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    transition: all 0.2s;
-}
-
-.btn-back:hover {
-    border-color: #000000;
-    color: #000000;
-}
-
+.btn-back,
 .btn-preview {
     padding: 10px 24px;
     background: #ffffff;
     color: #333333;
     border: 1.5px solid #e0e0e0;
-    border-radius: 40px;
-    font-weight: 600;
+    border-radius: 8px;
+    font-weight: 500;
     font-size: 14px;
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 8px;
     transition: all 0.2s;
 }
 
+.btn-back:hover,
 .btn-preview:hover {
     border-color: #000000;
-    color: #000000;
 }
 
 .btn-issue-bulk {
@@ -430,13 +475,10 @@
     background: #000000;
     color: #ffffff;
     border: none;
-    border-radius: 40px;
+    border-radius: 8px;
     font-weight: 600;
     font-size: 14px;
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 8px;
     transition: background 0.2s;
 }
 
@@ -444,31 +486,15 @@
     background: #2a2a2a;
 }
 
-/* ============================================================
-   MODALS - Added for Preview & Confirmation
-   ============================================================ */
+/* ---- Modals ---- */
 .modal-overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    inset: 0;
     background: rgba(0, 0, 0, 0.5);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 9999;
-    animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-
-    to {
-        opacity: 1;
-    }
 }
 
 .modal-content {
@@ -478,19 +504,6 @@
     max-width: 600px;
     width: 90%;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-    animation: slideUp 0.3s ease;
-}
-
-@keyframes slideUp {
-    from {
-        transform: translateY(20px);
-        opacity: 0;
-    }
-
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
 }
 
 .modal-content h2 {
@@ -498,6 +511,15 @@
     font-weight: 700;
     color: #000;
     margin: 0 0 8px 0;
+}
+
+.modal-content.confirmation-modal {
+    max-width: 460px;
+}
+
+.confirmation-question {
+    font-weight: 600;
+    color: #1a1a1a;
 }
 
 .modal-content p {
@@ -513,30 +535,6 @@
     margin-bottom: 24px;
 }
 
-.modal-details table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 14px;
-}
-
-.modal-details thead th {
-    font-weight: 600;
-    color: #333;
-    padding: 6px 8px;
-    border-bottom: 1px solid #eaeaea;
-    text-align: left;
-}
-
-.modal-details tbody td {
-    padding: 6px 8px;
-    border-bottom: 1px solid #f0f0f0;
-    color: #1a1a1a;
-}
-
-.modal-details tbody tr:last-child td {
-    border-bottom: none;
-}
-
 .modal-actions {
     display: flex;
     justify-content: flex-end;
@@ -550,15 +548,7 @@
     font-size: 15px;
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.2s, transform 0.1s;
-}
-
-.modal-btn:hover {
-    transform: scale(1.02);
-}
-
-.modal-btn:active {
-    transform: scale(0.98);
+    transition: background 0.2s;
 }
 
 .modal-btn.cancel-btn {
@@ -579,7 +569,6 @@
     background: #2a2a2a;
 }
 
-/* ---- Table Checkbox Column ---- */
 .recipient-table th:first-child,
 .recipient-table td:first-child {
     width: 40px;
@@ -602,10 +591,6 @@
         min-width: auto;
     }
 
-    .filter-group.filter-actions {
-        flex: 1;
-    }
-
     .btn-apply-filters {
         width: 100%;
         justify-content: center;
@@ -620,7 +605,6 @@
 
     .admin-bulkupload-content {
         padding: 20px 16px 32px;
-        min-height: calc(100vh - 64px);
     }
 
     .bulkupload-page-header h1 {
@@ -635,17 +619,13 @@
         padding: 28px 16px;
     }
 
-    .bulk-file-upload-area i.fa-cloud-upload-alt {
+    .bulk-file-upload-area .upload-doc-icon {
         font-size: 32px;
     }
 
     .preview-header {
         flex-direction: column;
         align-items: stretch;
-    }
-
-    .preview-actions {
-        justify-content: flex-start;
     }
 
     .bulk-actions {
@@ -690,30 +670,20 @@
         font-size: 13px;
     }
 
-    .bulk-file-upload-area p {
-        font-size: 14px;
-    }
-
-    .bulk-file-upload-area .upload-hint {
-        font-size: 12px;
-    }
-
     .bulk-upload-section {
         padding: 14px 12px;
     }
 
-    .preview-actions {
-        gap: 8px;
+    .bulk-upload-footer {
+        flex-direction: column;
+        align-items: flex-start;
     }
 
-    .selected-count {
-        font-size: 12px;
-        padding: 3px 10px;
+    .issue-date-wrapper {
+        width: 100%;
     }
 
-    .btn-select-all,
-    .btn-deselect-all {
-        font-size: 12px;
-        padding: 4px 12px;
+    .issue-date-input {
+        width: 100%;
     }
 }

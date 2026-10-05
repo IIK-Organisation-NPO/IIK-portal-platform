@@ -22,9 +22,9 @@ const Homepage = () => {
             <span style={{ fontSize: '1.25rem', fontWeight: '600' }}>Learner Certificate Portal</span>
           </div>
           <nav>
-            <Link to="/learner/home">Home</Link>
+            <Link to="/">Home</Link>
             <Link to="/contact">Contact</Link>
-            <Link to="/blog">Blog</Link>
+            <Link to="/BlogPage">Blog</Link>
             <div className="nav-actions">
               <Link to="/login" className="btn-outline">Login</Link>
               <Link to="/signup" className="btn-secondary">Sign Up</Link>

@@ -14,7 +14,8 @@ class User {
             id_number,
             password,
             terms_accepted,
-            role_id = 2
+            role_id = 2,
+            physicalAddress   // <-- NEW
         } = userData;
 
         const salt = await bcrypt.genSalt(10);
@@ -30,8 +31,9 @@ class User {
                 phone_number,
                 gender_id,
                 terms_accepted,
-                role_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                role_id,
+                Physical_address
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
 
         const [result] = await pool.execute(query, [
@@ -43,7 +45,8 @@ class User {
             phone_number || null,
             gender_id || null,
             terms_accepted ? 1 : 0,
-            role_id
+            role_id,
+            physicalAddress || null   // <-- NEW: '' becomes NULL
         ]);
 
         return {
@@ -53,7 +56,8 @@ class User {
             email,
             phone_number,
             gender_id,
-            id_number
+            id_number,
+            physicalAddress: physicalAddress || null   // <-- NEW
         };
     }
 
@@ -101,12 +105,24 @@ class User {
         const fields = [];
         const values = [];
 
-        const allowedFields = ['name', 'surname', 'phone_number', 'gender_id'];
-        
-        for (const field of allowedFields) {
-            if (updateData[field] !== undefined) {
-                fields.push(`${field} = ?`);
-                values.push(updateData[field]);
+        // 'physicalAddress' maps to the DB column 'Physical_address'
+        const fieldMap = {
+            name: 'name',
+            surname: 'surname',
+            phone_number: 'phone_number',
+            gender_id: 'gender_id',
+            physicalAddress: 'Physical_address'   // <-- NEW
+        };
+
+        for (const [key, column] of Object.entries(fieldMap)) {
+            if (updateData[key] !== undefined) {
+                fields.push(`${column} = ?`);
+                // Store empty string as NULL for the nullable address column
+                values.push(
+                    key === 'physicalAddress'
+                        ? (updateData[key] || null)
+                        : updateData[key]
+                );
             }
         }
 
@@ -114,7 +130,6 @@ class User {
 
         values.push(userId);
         const query = `UPDATE user SET ${fields.join(', ')} WHERE User_id = ?`;
-        
         const [result] = await pool.execute(query, values);
         return result.affectedRows > 0;
     }
@@ -123,7 +138,6 @@ class User {
     static async updatePassword(userId, newPassword) {
         const salt = await bcrypt.genSalt(10);
         const password_hash = await bcrypt.hash(newPassword, salt);
-        
         const query = 'UPDATE user SET password_hash = ? WHERE User_id = ?';
         const [result] = await pool.execute(query, [password_hash, userId]);
         return result.affectedRows > 0;
@@ -151,6 +165,7 @@ class User {
                 u.email,
                 u.id_number,
                 u.phone_number,
+                u.Physical_address,     -- <-- NEW
                 u.terms_accepted,
                 u.email_verify,
                 u.register_at,
@@ -177,6 +192,7 @@ class User {
                 u.email,
                 u.id_number,
                 u.phone_number,
+                u.Physical_address,     -- <-- NEW
                 u.email_verify,
                 u.register_at,
                 g.gender_description,
@@ -208,6 +224,7 @@ class User {
                 u.email,
                 u.id_number,
                 u.phone_number,
+                u.Physical_address,     -- <-- NEW
                 u.email_verify,
                 u.register_at,
                 g.gender_description,
@@ -243,6 +260,7 @@ class User {
                 u.email,
                 u.id_number,
                 u.phone_number,
+                u.Physical_address,     -- <-- NEW
                 u.email_verify,
                 u.register_at,
                 g.gender_description,
@@ -279,13 +297,11 @@ class User {
 
     // ===== UPDATE LAST LOGIN =====
     static async updateLastLogin(userId) {
-        //  Add last_login column if it doesn't exist
         try {
             const query = 'UPDATE user SET last_login_at = NOW() WHERE User_id = ?';
             await pool.execute(query, [userId]);
             return true;
         } catch (error) {
-            // If column doesn't exist, just log
             console.log(` User ${userId} logged in (last_login tracking not available)`);
             return true;
         }

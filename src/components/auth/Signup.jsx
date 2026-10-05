@@ -15,11 +15,13 @@ import {
   FaExclamationCircle,
   FaArrowLeft,
   FaCheckCircle,
-  FaShieldAlt // ✅ ADDED: For security badge
+  FaShieldAlt,
+  FaMapMarkerAlt
 } from 'react-icons/fa';
 import Footer from '../common/Footer';
 import '../../styles/components/auth.css';
 import logo from '../../assets/images/small Mki.png';
+import { API, GOOGLE_CLIENT_ID } from '../../config/api';
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -30,6 +32,7 @@ const Signup = () => {
     phone_number: '',
     gender_id: '',
     id_number: '',
+    physicalAddress: '',
     password: '',
     confirmPassword: ''
   });
@@ -46,15 +49,10 @@ const Signup = () => {
   const [genders, setGenders] = useState([]);
   const [passwordFocused, setPasswordFocused] = useState(false);
 
-  // ===== SECURITY FEATURE 1: CAPTCHA TRACKING =====
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [showCaptcha, setShowCaptcha] = useState(false);
   const [captchaToken, setCaptchaToken] = useState('');
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-  const GOOGLE_CLIENT_ID = '993718508487-6pfj9lrar0rvjkuum65s1m1jb1oeq6rf.apps.googleusercontent.com';
-
-  // Password requirements
   const passwordRequirements = [
     { id: 'length', label: 'At least 8 characters', test: (pwd) => pwd.length >= 8 },
     { id: 'lowercase', label: 'At least one lowercase letter', test: (pwd) => /[a-z]/.test(pwd) },
@@ -63,21 +61,18 @@ const Signup = () => {
     { id: 'special', label: 'At least one special character (@$!%*?&)', test: (pwd) => /[@$!%*?&]/.test(pwd) }
   ];
 
-  // Check if all password requirements are met
   const allRequirementsMet = passwordRequirements.every(req => req.test(formData.password));
 
-  // ===== SECURITY FEATURE 2: SHOW CAPTCHA AFTER 3 FAILED ATTEMPTS =====
   useEffect(() => {
     if (failedAttempts >= 3) {
       setShowCaptcha(true);
     }
   }, [failedAttempts]);
 
-  // Fetch genders from database
   useEffect(() => {
     const fetchGenders = async () => {
       try {
-        const response = await fetch(`${API_URL}/api/auth/genders`);
+        const response = await fetch(API.auth.genders);
         const data = await response.json();
         if (data.success) {
           setGenders(data.data);
@@ -93,11 +88,8 @@ const Signup = () => {
       }
     };
     fetchGenders();
-  }, [API_URL]);
+  }, []);
 
-  // ===== VALIDATION FUNCTIONS =====
-  
-  // ===== SECURITY FEATURE 3: ENHANCED EMAIL VALIDATION WITH DISPOSABLE EMAIL BLOCKING =====
   const validateEmail = (email) => {
     if (!email.trim()) {
       return { valid: false, message: 'Email address is required' };
@@ -105,8 +97,6 @@ const Signup = () => {
     if (!/\S+@\S+\.\S+/.test(email)) {
       return { valid: false, message: 'Please enter a valid email address' };
     }
-    
-    // ✅ SECURITY: Block disposable/temporary email domains
     const disposableDomains = [
       'tempmail.com', '10minutemail.com', 'guerrillamail.com',
       'mailinator.com', 'throwawaymail.com', 'temp-mail.org',
@@ -117,7 +107,6 @@ const Signup = () => {
     if (disposableDomains.includes(domain)) {
       return { valid: false, message: 'Please use a permanent email address' };
     }
-    
     return { valid: true, message: 'Valid email address' };
   };
 
@@ -161,32 +150,31 @@ const Signup = () => {
 
   const validatePhone = (phone) => {
     if (!phone) return { valid: false, message: 'Phone number is required' };
-    
+
     let cleaned = phone.replace(/[\s\-\(\)]/g, '');
-    
+
     const localPattern = /^0\d{9}$/;
     const intlWithPlusPattern = /^\+\d{11}$/;
     const intlWithoutPlusPattern = /^27\d{9}$/;
-    
-    if (localPattern.test(cleaned) || 
-        intlWithPlusPattern.test(cleaned) || 
+
+    if (localPattern.test(cleaned) ||
+        intlWithPlusPattern.test(cleaned) ||
         intlWithoutPlusPattern.test(cleaned)) {
       return { valid: true, message: 'Valid phone number' };
     }
-    
+
     const digitsOnly = cleaned.replace(/\D/g, '');
-    if ((digitsOnly.length === 10 || digitsOnly.length === 11) && 
+    if ((digitsOnly.length === 10 || digitsOnly.length === 11) &&
         (digitsOnly.startsWith('0') || digitsOnly.startsWith('27'))) {
       return { valid: true, message: 'Valid phone number' };
     }
-    
+
     if (digitsOnly.length > 0 && digitsOnly.length < 10) {
       return { valid: false, message: 'Phone number is too short (minimum 10 digits)' };
     }
     if (digitsOnly.length > 11) {
       return { valid: false, message: 'Phone number is too long (maximum 11 digits)' };
     }
-    
     return { valid: false, message: 'Please enter a valid South African phone number (e.g., 0821234567 or +27821234567)' };
   };
 
@@ -244,7 +232,6 @@ const Signup = () => {
     return { valid: true, message: 'Strong password' };
   };
 
-  // Load Google OAuth library
   useEffect(() => {
     const loadGoogleLibrary = () => {
       if (!window.google) {
@@ -253,7 +240,7 @@ const Signup = () => {
         script.async = true;
         script.defer = true;
         script.onload = () => {
-          console.log('✅ Google OAuth library loaded');
+          console.log('Google OAuth library loaded');
           renderGoogleButton();
         };
         document.head.appendChild(script);
@@ -266,6 +253,10 @@ const Signup = () => {
 
   const renderGoogleButton = () => {
     try {
+      if (!GOOGLE_CLIENT_ID) {
+        console.error('GOOGLE_CLIENT_ID is not configured');
+        return;
+      }
       if (window.google && window.google.accounts && !isGoogleInitialized) {
         window.google.accounts.id.initialize({
           client_id: GOOGLE_CLIENT_ID,
@@ -283,7 +274,7 @@ const Signup = () => {
             logo_alignment: 'left'
           }
         );
-        console.log('✅ Google Sign-In button rendered');
+        console.log('Google Sign-In button rendered');
       }
     } catch (error) {
       console.error('Error rendering Google button:', error);
@@ -292,9 +283,9 @@ const Signup = () => {
 
   const handlePhoneChange = (e) => {
     const { name, value } = e.target;
-    
+
     let cleaned = value.replace(/[\s\-\(\)]/g, '');
-    
+
     if (cleaned.startsWith('+27')) {
       let afterCode = cleaned.substring(3);
       let digitsOnly = afterCode.replace(/\D/g, '');
@@ -302,7 +293,7 @@ const Signup = () => {
         return;
       }
       cleaned = '+27' + digitsOnly;
-    } 
+    }
     else if (cleaned.startsWith('27')) {
       let afterCode = cleaned.substring(2);
       let digitsOnly = afterCode.replace(/\D/g, '');
@@ -323,12 +314,10 @@ const Signup = () => {
         return;
       }
     }
-    
     setFormData(prev => ({
       ...prev,
       [name]: cleaned
     }));
-    
     if (errors.phone_number) {
       setErrors(prev => ({
         ...prev,
@@ -345,7 +334,6 @@ const Signup = () => {
       ...prev,
       phone_number: true
     }));
-    
     const phone = formData.phone_number;
     if (!phone) {
       setErrors(prev => ({
@@ -354,9 +342,9 @@ const Signup = () => {
       }));
       return;
     }
-    
+
     let cleaned = phone.replace(/[\s\-\(\)]/g, '');
-    
+
     if (cleaned.startsWith('+27')) {
       let afterCode = cleaned.substring(3);
       let digitsOnly = afterCode.replace(/\D/g, '');
@@ -367,7 +355,7 @@ const Signup = () => {
         }));
         return;
       }
-    } 
+    }
     else if (cleaned.startsWith('27')) {
       let afterCode = cleaned.substring(2);
       let digitsOnly = afterCode.replace(/\D/g, '');
@@ -378,7 +366,7 @@ const Signup = () => {
         }));
         return;
       }
-    } 
+    }
     else if (cleaned.startsWith('0')) {
       let digitsOnly = cleaned.replace(/\D/g, '');
       if (digitsOnly.length !== 10) {
@@ -388,7 +376,7 @@ const Signup = () => {
         }));
         return;
       }
-    } 
+    }
     else {
       setErrors(prev => ({
         ...prev,
@@ -396,7 +384,6 @@ const Signup = () => {
       }));
       return;
     }
-    
     setErrors(prev => ({
       ...prev,
       phone_number: ''
@@ -405,12 +392,10 @@ const Signup = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
     if (name === 'phone_number') {
       handlePhoneChange(e);
       return;
     }
-    
     setFormData(prev => ({
       ...prev,
       [name]: value,
@@ -435,12 +420,10 @@ const Signup = () => {
     if (name === 'password') {
       setPasswordFocused(false);
     }
-    
     if (name === 'phone_number') {
       handlePhoneBlur(e);
       return;
     }
-    
     validateField(name, value);
   };
 
@@ -545,22 +528,25 @@ const Signup = () => {
         newErrors[field] = result.message;
       }
     });
+
     if (!terms_accepted) {
-      newErrors.terms = 'You must agree to the Terms of Service';
+      newErrors.terms = 'You must agree to the Terms of Service and Privacy Policy to continue.';
       isValid = false;
+      setTouched(prev => ({ ...prev, terms: true }));
     }
-    
-    // ===== SECURITY FEATURE 4: CHECK CAPTCHA IF SHOWN =====
+
     if (showCaptcha && !captchaToken) {
       newErrors.captcha = 'Please complete the CAPTCHA verification';
       isValid = false;
+      setTouched(prev => ({ ...prev, captcha: true }));
     }
-    
+
     setErrors(prev => ({
       ...prev,
       ...newErrors
     }));
-    return isValid;
+
+    return { isValid, errors: newErrors };
   };
 
   const handleSubmit = async (e) => {
@@ -568,18 +554,25 @@ const Signup = () => {
     if (loading) return;
     setServerError('');
     setConnectionStatus('');
-    if (!validateForm()) {
-      const firstError = Object.keys(errors).find(key => errors[key]);
-      if (firstError) {
-        const element = document.getElementById(firstError);
+
+    const { isValid, errors: freshErrors } = validateForm();
+
+    if (!isValid) {
+      const firstErrorKey = Object.keys(freshErrors).find(key => freshErrors[key]);
+      if (firstErrorKey) {
+        const element = document.getElementById(firstErrorKey);
         if (element) {
           element.focus();
+          if (typeof element.scrollIntoView === 'function') {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
         }
       }
       return;
     }
+
     setLoading(true);
-    setConnectionStatus('⏳ Creating your account...');
+    setConnectionStatus('Creating your account...');
     try {
       const signupData = {
         name: formData.name.trim(),
@@ -588,13 +581,14 @@ const Signup = () => {
         phone_number: formData.phone_number.trim(),
         gender_id: parseInt(formData.gender_id),
         id_number: formData.id_number.trim(),
+        physicalAddress: formData.physicalAddress.trim() || null,
         password: formData.password,
         confirmPassword: formData.confirmPassword,
         terms_accepted: terms_accepted,
-        captchaToken: captchaToken // ===== SECURITY FEATURE 5: SEND CAPTCHA TOKEN =====
+        captchaToken: captchaToken
       };
-      console.log('📤 Sending signup data:', signupData);
-      const response = await fetch(`${API_URL}/api/auth/signup`, {
+      console.log('Sending signup data:', signupData);
+      const response = await fetch(API.auth.signup, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -602,23 +596,23 @@ const Signup = () => {
         body: JSON.stringify(signupData)
       });
       const data = await response.json();
-      console.log('📥 Signup response:', data);
+      console.log('Signup response:', data);
       if (response.ok && data.success) {
-        setConnectionStatus('✅ Account created! Redirecting to verification...');
+        setConnectionStatus('Account created! Redirecting to verification...');
         setLoading(false);
         if (data.data?.token) {
           localStorage.setItem('token', data.data.token);
         }
         if (data.data?.requiresVerification) {
           setTimeout(() => {
-            navigate('/verify-email', { 
-              state: { 
+            navigate('/verify-email', {
+              state: {
                 email: formData.email,
                 fullName: `${formData.name} ${formData.surname}`,
                 userId: data.data?.userId,
                 verificationSent: data.data?.verificationSent || true,
                 isGoogleUser: false
-              } 
+              }
             });
           }, 1500);
         } else {
@@ -627,9 +621,8 @@ const Signup = () => {
           }, 1500);
         }
       } else {
-        // ===== SECURITY FEATURE 6: TRACK FAILED ATTEMPTS FOR CAPTCHA =====
         setFailedAttempts(prev => prev + 1);
-        
+
         if (data.errors && Array.isArray(data.errors)) {
           const fieldErrors = {};
           data.errors.forEach(err => {
@@ -647,17 +640,16 @@ const Signup = () => {
           setServerError(data.message || data.error || 'Signup failed. Please try again.');
         }
         setLoading(false);
-        setConnectionStatus('❌ Failed');
+        setConnectionStatus('Failed');
       }
     } catch (error) {
-      console.error('❌ Signup error:', error);
-      setConnectionStatus(`❌ Error: ${error.message}`);
-      // ===== SECURITY FEATURE 7: INCREMENT FAILED ATTEMPTS ON NETWORK ERROR =====
+      console.error('Signup error:', error);
+      setConnectionStatus(`Error: ${error.message}`);
       setFailedAttempts(prev => prev + 1);
-      
+
       if (error.message === 'Failed to fetch') {
         setServerError(
-          '❌ Cannot connect to server!\n\n' +
+          'Cannot connect to server!\n\n' +
           'Please make sure:\n' +
           '1. Backend is running: cd backend && npm run dev\n' +
           '2. Backend is on port 5000'
@@ -673,8 +665,8 @@ const Signup = () => {
     try {
       setGoogleLoading(true);
       const googleToken = response.credential;
-      console.log('✅ Google credential received');
-      const apiResponse = await fetch(`${API_URL}/api/auth/google-auth`, {
+      console.log('Google credential received');
+      const apiResponse = await fetch(API.auth.googleAuth, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -682,9 +674,9 @@ const Signup = () => {
         body: JSON.stringify({ googleToken })
       });
       const data = await apiResponse.json();
-      console.log('📥 Google auth response:', data);
+      console.log('Google auth response:', data);
       if (apiResponse.status === 409) {
-        setServerError('⚠️ ' + (data.error || 'This email is already registered. Please login instead.'));
+        setServerError(' ' + (data.error || 'This email is already registered. Please login instead.'));
         setGoogleLoading(false);
         setTimeout(() => {
           navigate('/login', {
@@ -697,16 +689,16 @@ const Signup = () => {
       }
       if (apiResponse.ok && data.success) {
         if (data.data?.requiresVerification) {
-          console.log('📧 Redirecting to email verification');
-          navigate('/verify-email', { 
-            state: { 
+          console.log('Redirecting to email verification');
+          navigate('/verify-email', {
+            state: {
               email: data.data.email,
               fullName: data.data.fullName || `${data.data.name || ''} ${data.data.surname || ''}`,
               isGoogleUser: true,
               userId: data.data.userId,
               alreadyExists: data.data.alreadyExists || false,
               verificationSent: true
-            } 
+            }
           });
           setGoogleLoading(false);
         } else {
@@ -738,7 +730,7 @@ const Signup = () => {
             <span>Learner Certificate Portal</span>
           </div>
           <nav className="header-nav">
-            <Link to="/Homepage">Home</Link>
+            <Link to="/">Home</Link>
             <a
               href="https://www.iik.co.za/contact-us"
               target="_blank"
@@ -747,7 +739,7 @@ const Signup = () => {
               Contact
             </a>
             <Link to="/about">About</Link>
-            <Link to="/blog">Blog</Link>
+            <Link to="/BlogPage">Blog</Link>
           </nav>
         </div>
       </header>
@@ -773,7 +765,6 @@ const Signup = () => {
             </div>
           )}
 
-          {/* ===== SECURITY FEATURE 9: CAPTCHA NOTICE ===== */}
           {showCaptcha && (
             <div className="captcha-notice" style={{
               display: 'flex',
@@ -793,7 +784,6 @@ const Signup = () => {
           )}
 
           <form className="auth-form signup-form" onSubmit={handleSubmit} noValidate>
-            {/* Name and Surname */}
             <div className="form-row">
               <div className="form-group">
                 <label htmlFor="name">Name <span className="required">*</span></label>
@@ -927,6 +917,28 @@ const Signup = () => {
               </div>
             </div>
 
+            <div className="form-row">
+              <div className="form-group full-width">
+                <label htmlFor="physicalAddress">Physical Address</label>
+                <div className="input-wrapper">
+                  <FaMapMarkerAlt className="input-icon" />
+                  <input
+                    type="text"
+                    id="physicalAddress"
+                    name="physicalAddress"
+                    value={formData.physicalAddress}
+                    onChange={handleChange}
+                    placeholder="e.g. 12 Rosebank Road, Johannesburg, 2196"
+                    className={errors.physicalAddress ? "error" : ""}
+                    disabled={loading}
+                  />
+                </div>
+                {errors.physicalAddress && (
+                  <span className="error-text">{errors.physicalAddress}</span>
+                )}
+              </div>
+            </div>
+
             {/* Password with Requirements */}
             <div className="form-row">
               <div className="form-group">
@@ -956,8 +968,6 @@ const Signup = () => {
                   </button>
                 </div>
                 {hasError('password') && <span className="error-text">{errors.password}</span>}
-                
-                {/* Password Requirements - Show only when focused and not all met */}
                 {passwordFocused && !allRequirementsMet && formData.password && (
                   <div className="password-requirements">
                     <p className="requirements-title">Password must contain:</p>
@@ -1003,7 +1013,7 @@ const Signup = () => {
                 </div>
                 {hasError('confirmPassword') && <span className="error-text">{errors.confirmPassword}</span>}
                 {formData.confirmPassword && formData.password === formData.confirmPassword && !hasError('confirmPassword') && (
-                  <span className="valid-text">✓ Passwords match</span>
+                  <span className="valid-text">Passwords match</span>
                 )}
               </div>
             </div>
@@ -1014,6 +1024,7 @@ const Signup = () => {
                 <label className={`checkbox-label ${hasError('terms') ? 'error' : ''}`}>
                   <input
                     type="checkbox"
+                    id="terms"
                     checked={terms_accepted}
                     onChange={(e) => {
                       setTermsAccepted(e.target.checked);
@@ -1026,20 +1037,20 @@ const Signup = () => {
                     }}
                     disabled={loading}
                   />
-                  <span>I agree to the <Link to="/terms" target="_blank">Terms of Service</Link> and <Link to="/privacy" target="_blank">Privacy Policy</Link> (POPIA compliant).</span>
+                  <span>
+                     I agree to the <Link to="/terms_and_conditions">Terms and conditions</Link>{" "}
+                    (POPIA compliant).
+                  </span>
                 </label>
                 {hasError('terms') && <span className="error-text">{errors.terms}</span>}
               </div>
             </div>
 
-            {/* ===== SECURITY FEATURE 10: CAPTCHA FIELD ===== */}
             {showCaptcha && (
               <div className="form-row">
                 <div className="form-group full-width">
                   <label>Security Verification <span className="required">*</span></label>
                   <div className="captcha-container" style={{ padding: '10px 0' }}>
-                    {/* This is where you'd add your CAPTCHA component */}
-                    {/* For now, it's a placeholder */}
                     <div style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -1078,10 +1089,10 @@ const Signup = () => {
             <hr />
           </div>
 
-          <div 
-            id="google-signin-button" 
-            style={{ 
-              display: 'flex', 
+          <div
+            id="google-signin-button"
+            style={{
+              display: 'flex',
               justifyContent: 'center',
               marginBottom: '15px',
               width: '100%',
