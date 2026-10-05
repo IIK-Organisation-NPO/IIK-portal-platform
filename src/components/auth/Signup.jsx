@@ -1042,7 +1042,10 @@ const Signup = () => {
                     }}
                     disabled={loading}
                   />
-                  <span>I agree to the <Link to="/terms" target="_blank">Terms of Service</Link> and <Link to="/privacy" target="_blank">Privacy Policy</Link> (POPIA compliant).</span>
+                  <span>
+                     I agree to the <Link to="/terms_and_conditions">Terms and conditions</Link>{" "}
+                    (POPIA compliant).
+                  </span>
                 </label>
                 {hasError('terms') && <span className="error-text">{errors.terms}</span>}
               </div>

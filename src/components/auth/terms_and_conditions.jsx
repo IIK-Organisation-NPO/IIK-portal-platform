@@ -102,7 +102,7 @@ const TermsAndConditions = () => {
           <nav
             className={`terms-header-nav ${menuOpen ? "mobile-open" : ""}`}
           >
-            <Link to="/Homepage" onClick={closeMenu}>
+            <Link to="/" onClick={closeMenu}>
               Home
             </Link>
             <a
@@ -113,10 +113,10 @@ const TermsAndConditions = () => {
             >
               Contact
             </a>
-            <Link to="/about" onClick={closeMenu}>
+            <Link to="/About" onClick={closeMenu}>
               About
             </Link>
-            <Link to="/blog" onClick={closeMenu}>
+            <Link to="/BlogPage" onClick={closeMenu}>
               Blog
             </Link>
           </nav>

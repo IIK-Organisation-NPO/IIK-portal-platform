@@ -138,7 +138,7 @@ const Homepage = () => {
               Loading programmes...
             </div>
           ) : displayedProgrammes.length === 0 ? (
-            <div style={{ padding: "2rem 0", color: "#64748b" }}>
+            <div style={{ padding: "2rem 0", color: "#64748b", textAlign:"center"}}>
               No programmes available right now. Please check back soon.
             </div>
           ) : (

@@ -53,6 +53,7 @@ const AppRoutes = () => {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/about" element={<About />} />
         <Route path="/BlogPage" element={<BlogPage />} />
+        <Route path="/terms_and_conditions" element={<TermsAndConditions />} />
 
         {/* ============================================ */}
         {/* LEARNER ROUTES (learner only)                 */}
