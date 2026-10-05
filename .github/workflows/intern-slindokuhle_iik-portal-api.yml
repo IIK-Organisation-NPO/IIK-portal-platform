@@ -13,30 +13,32 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-
+      contents: read #This is required for actions/checkout
+    
+    # Target the backend directory for all run steps in this job
     defaults:
       run:
-        working-directory: ./Backend
+        working-directory: ./Backend  # Replace 'backend' with your exact subfolder name if different
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Node.js version
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v3
         with:
-          node-version: '20.x'
+          node-version: '22.x'
 
-      - name: Install dependencies and build Vite app
+      - name: npm install, build, and test
         run: |
           npm install
-          npm run build
+          npm run build --if-present
+          npm run test --if-present
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: node-app
-          path: ./Backend/dist  # Uploads the compiled Vite build folder
+          path: ./backend  # Only packages the backend folder to deploy to Azure
 
   deploy:
     runs-on: ubuntu-latest
