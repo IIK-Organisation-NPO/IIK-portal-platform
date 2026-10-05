@@ -14,6 +14,8 @@ const staffRoutes = require('./routes/staffRoutes');
 const blogRoutes = require('./routes/BlogRoutes');
 const navigationRoutes = require('./routes/navigationRoutes');
 const { startWeeklySummaryJob } = require('./weeklySummary/weeklySummary');
+const session = require('express-session');
+const MySQLStore = require('express-mysql-session')(session);
 const app = express();
 app.set('trust proxy', 1);
 
@@ -24,9 +26,13 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS ||
     .map((s) => s.trim())
     .filter(Boolean);
 
+const sessionStore = new MySQLStore({}, pool);
+
 // ===== SESSION CONFIGURATION =====
 app.use(session({
+    key: 'sessionId',
     secret: process.env.SESSION_SECRET || 'your-super-secret-key-change-this-in-production',
+    store: sessionStore,
     resave: false,
     saveUninitialized: false,
     cookie: {
@@ -34,8 +40,7 @@ app.use(session({
         httpOnly: true,
         maxAge: 1000 * 60 * 60 * 24,
         sameSite: 'lax'
-    },
-    name: 'sessionId'
+    }
 }));
 
 // ===== CORS CONFIGURATION (must come BEFORE routes) =====
