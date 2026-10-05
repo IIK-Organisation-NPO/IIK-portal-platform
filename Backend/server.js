@@ -27,7 +27,16 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS ||
     .filter(Boolean);
 
 // ===== MYSQL SESSION STORE INITIALIZATION =====
-const sessionStore = new MySQLStore({}, pool);
+const sessionStore = new MySQLStore({
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT || 3306,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD || process.env.DB_PASS,
+    database: process.env.DB_NAME,
+    ssl: {
+        rejectUnauthorized: false // Enforces encrypted connection (SSL) required by Azure MySQL
+    }
+}, pool);
 
 // ===== SESSION CONFIGURATION =====
 app.use(session({
