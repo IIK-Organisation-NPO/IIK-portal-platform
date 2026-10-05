@@ -88,19 +88,27 @@ app.use((req, res, next) => {
 });
 
 // ===== RATE LIMITING =====
-const rateLimit = require('express-rate-limit');
+const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 
 // Helper function to extract IP without port for Azure proxy compatibility
 const getClientIp = (req) => {
-    const ip = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
-    return ip.split(':')[0].trim();
+    const rawIp = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+
+    // Strip port for IPv4 if present (contains both '.' and ':')
+    let cleanIp = rawIp;
+    if (rawIp.includes('.') && rawIp.includes(':')) {
+        cleanIp = rawIp.split(':')[0];
+    }
+
+    // Pass cleaned IP through ipKeyGenerator for proper IPv6 handling
+    return ipKeyGenerator(cleanIp.trim());
 };
 
 const globalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 100000,
     keyGenerator: getClientIp,
-    validate: { xForwardedForHeader: false },
+    validate: { xForwardedForHeader: false, default: false },
     message: {
         success: false,
         error: 'Too many requests from this IP, please try again later.'
@@ -113,7 +121,7 @@ const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 10000,
     keyGenerator: getClientIp,
-    validate: { xForwardedForHeader: false },
+    validate: { xForwardedForHeader: false, default: false },
     message: {
         success: false,
         error: 'Too many authentication attempts, please try again later.'
