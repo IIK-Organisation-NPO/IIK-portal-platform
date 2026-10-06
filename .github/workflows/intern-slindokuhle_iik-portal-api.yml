@@ -6,37 +6,34 @@ name: Build and deploy Node.js app to Azure Web App - iik-portal-api
 on:
   push:
     branches:
-      - intern-Slindokuhle
+      - main
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-
-    defaults:
-      run:
-        working-directory: ./Backend
+      contents: read #This is required for actions/checkout
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Node.js version
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v3
         with:
-          node-version: '20.x'
+          node-version: '22.x'
 
-      - name: Install dependencies
+      - name: npm install, build, and test
         run: |
           npm install
-          
+          npm run build --if-present
+          npm run test --if-present
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: node-app
-          path: ./Backend
+          path: .
 
   deploy:
     runs-on: ubuntu-latest
@@ -55,4 +52,4 @@ jobs:
           app-name: 'iik-portal-api'
           slot-name: 'Production'
           package: .
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_3EE15FEE945B4684B2130B37FB6D6928 }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_FB5B6325C35340CCB9315B00189BC188 }}
