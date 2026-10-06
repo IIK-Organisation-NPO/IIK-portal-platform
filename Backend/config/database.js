@@ -7,16 +7,18 @@ dotenv.config();
 const pool = mysql.createPool({
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'user_management_db', 
+    password: process.env.DB_PASSWORD || process.env.DB_PASS || '',
+    database: process.env.DB_NAME || 'user_management_db',
     port: process.env.DB_PORT || 3306,
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
     enableKeepAlive: true,
     keepAliveInitialDelay: 0,
-    connectTimeout: 60000,     
-    
+    connectTimeout: 60000,
+    ssl: {
+        rejectUnauthorized: false
+    }
 });
 
 // Test connection with better error handling
@@ -79,11 +81,11 @@ const deleteAndGetCount = async (query, params = []) => {
     return result.affectedRows;
 };
 
-module.exports = { 
-    pool, 
-    testConnection, 
-    executeQuery, 
-    getOne, 
+module.exports = {
+    pool,
+    testConnection,
+    executeQuery,
+    getOne,
     getMany,
     insertAndGetId,
     updateAndGetCount,

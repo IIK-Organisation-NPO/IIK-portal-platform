@@ -1,12 +1,5 @@
 // src/config/api.js
-const RAW_BASE = import.meta.env.VITE_API_URL;
-
-if (!RAW_BASE) {
-  throw new Error(
-    '[api.js] VITE_API_URL is not set. Create a .env.local file in the project root with:\n' +
-    'VITE_API_URL=http://localhost:5000'
-  );
-}
+const RAW_BASE = import.meta.env.VITE_API_URL || 'https://iik-portal-api-cmf0ckafbfcgdnbn.southafricanorth-01.azurewebsites.net';
 
 export const API_BASE = RAW_BASE.replace(/\/+$/, '');
 
@@ -43,7 +36,6 @@ export const API = {
     digitalCenters:  url('/api/admin/staff/digital-centers'),
     status:  (id) => url(`/api/staff/${id}/status`),
     remove:  (id) => url(`/api/staff/${id}`),
-    
   },
   admin: {
     stats:            url('/api/admin/stats'),
@@ -102,10 +94,10 @@ export const apiFetch = async (endpoint, options = {}) => {
   return res;
 };
 
-export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
 if (!GOOGLE_CLIENT_ID) {
-  console.error('[api.js] VITE_GOOGLE_CLIENT_ID is not set.');
+  console.warn('[api.js] VITE_GOOGLE_CLIENT_ID is not set.');
 }
 
 export default API_BASE;

@@ -206,7 +206,6 @@ const EMAIL_STYLES = `
 `;
 
 class EmailService {
-
     constructor() {
         console.log('Initialising email service (Microsoft Graph)...');
 
@@ -222,6 +221,13 @@ class EmailService {
 
         console.log('Microsoft Graph mailer ready.');
         console.log(`Sending emails from: ${process.env.MAIL_FROM}`);
+    }
+
+    async sendMail(mailOptions) {
+        if (!this.transporter) {
+            throw new Error('Email transporter is not configured. Check EMAIL_USER and EMAIL_PASS environment variables.');
+        }
+        return this.transporter.sendMail(mailOptions);
     }
 
     // ============================================
@@ -411,7 +417,7 @@ class EmailService {
                                 </div>
 
                                 <div class="btn-wrap">
-                                    <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard" class="btn">Go to Dashboard</a>
+                                    <a href="${this.frontendUrl}/dashboard" class="btn">Go to Dashboard</a>
                                 </div>
 
                                 <p style="color: #6e6e6e; font-size: 13px; margin-top: 12px;">
@@ -600,10 +606,10 @@ class EmailService {
 
         const formattedStart = startDate
             ? new Date(startDate).toLocaleDateString('en-US', {
-                  month: 'long',
-                  day: 'numeric',
-                  year: 'numeric',
-              })
+                month: 'long',
+                day: 'numeric',
+                year: 'numeric',
+            })
             : 'To be announced';
 
         try {
@@ -655,11 +661,11 @@ class EmailService {
                                 </div>
 
                                 <div class="btn-wrap">
-                                    <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/learner-programmes" class="btn">View Programme</a>
+                                    <a href="${this.frontendUrl}/learner-programmes" class="btn">View Programme</a>
                                 </div>
 
                                 <p style="color: #6e6e6e; font-size: 13px; margin-top: 12px;">
-                                    You're receiving this because you opted in to new programme notifications.
+                                    You'receiving this because you opted in to new programme notifications.
                                     You can turn this off anytime in your Settings.
                                 </p>
                             </div>
@@ -784,7 +790,7 @@ class EmailService {
                                 </div>
 
                                 <div class="btn-wrap">
-                                    <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/admin/learners" class="btn">View in Admin Portal</a>
+                                    <a href="${this.frontendUrl}/admin/learners" class="btn">View in Admin Portal</a>
                                 </div>
 
                                 <p style="color: #6e6e6e; font-size: 13px; margin-top: 12px;">
@@ -925,7 +931,7 @@ class EmailService {
                                 </div>
 
                                 <div class="btn-wrap">
-                                    <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/admin-certificates" class="btn">Issue Certificate</a>
+                                    <a href="${this.frontendUrl}/admin-certificates" class="btn">Issue Certificate</a>
                                 </div>
 
                                 <p style="color: #6e6e6e; font-size: 13px; margin-top: 12px;">
@@ -1019,10 +1025,10 @@ class EmailService {
         const fmt = (d) =>
             d
                 ? new Date(d).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
-                  })
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                })
                 : '';
 
         const periodLabel = `${fmt(periodStart)} - ${fmt(periodEnd)}`;
@@ -1089,7 +1095,7 @@ class EmailService {
                                 </div>
 
                                 <div class="btn-wrap">
-                                    <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/admin-analytics" class="btn">View Full Analytics</a>
+                                    <a href="${this.frontendUrl}/admin-analytics" class="btn">View Full Analytics</a>
                                 </div>
 
                                 <p style="color: #6e6e6e; font-size: 13px; margin-top: 12px;">
@@ -1149,7 +1155,6 @@ class EmailService {
                     continue;
                 }
 
-                const { isEmptyWeek } = require('../services/weeklySummaryService');
                 if (isEmptyWeek(summary)) {
                     console.log(
                         `Skipped admin ${admin.Admin_ID}: no activity this week ` +
@@ -1198,15 +1203,15 @@ class EmailService {
 
         const formattedDate = issueDate
             ? new Date(issueDate).toLocaleDateString('en-US', {
-                  month: 'long',
-                  day: 'numeric',
-                  year: 'numeric',
-              })
+                month: 'long',
+                day: 'numeric',
+                year: 'numeric',
+            })
             : new Date().toLocaleDateString('en-US', {
-                  month: 'long',
-                  day: 'numeric',
-                  year: 'numeric',
-              });
+                month: 'long',
+                day: 'numeric',
+                year: 'numeric',
+            });
 
         try {
             const htmlContent = `
@@ -1248,7 +1253,7 @@ class EmailService {
                                 </div>
 
                                 <div class="btn-wrap">
-                                    <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/learner-certificates" class="btn">View My Certificate</a>
+                                    <a href="${this.frontendUrl}/learner-certificates" class="btn">View My Certificate</a>
                                 </div>
 
                                 <p style="color: #6e6e6e; font-size: 13px; margin-top: 12px;">
@@ -1288,7 +1293,7 @@ class EmailService {
     async sendVerificationEmail(email, fullName, verificationToken) {
         console.log(`Sending verification email to: ${email}`);
 
-        const verificationLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email/${verificationToken}`;
+        const verificationLink = `${this.frontendUrl}/verify-email/${verificationToken}`;
 
         try {
             const htmlContent = `

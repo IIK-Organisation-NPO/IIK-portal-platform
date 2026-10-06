@@ -5,6 +5,7 @@ const uploadRoutes = require('./routes/uploadRoutes');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const session = require('express-session');
+const MySQLStore = require('express-mysql-session')(session);
 const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const learnerRoutes = require('./routes/learnerRoutes');
@@ -14,32 +15,55 @@ const staffRoutes = require('./routes/staffRoutes');
 const blogRoutes = require('./routes/BlogRoutes');
 const navigationRoutes = require('./routes/navigationRoutes');
 const { startWeeklySummaryJob } = require('./weeklySummary/weeklySummary');
-const app = express();
 
-// ===== ALLOWED ORIGINS (from .env) =====
+const app = express();
+app.set('trust proxy', 1);
+
+// ===== ALLOWED ORIGINS (from .env or hardcoded production fallbacks) =====
 const allowedOrigins = (process.env.ALLOWED_ORIGINS ||
-    'http://localhost:5173')
+    'https://happy-mushroom-01643cd03.1.azurestaticapps.net,http://localhost:5173,http://localhost:3000')
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
 
+// ===== MYSQL SESSION STORE INITIALIZATION =====
+const sessionStore = new MySQLStore({
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT || 3306,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD || process.env.DB_PASS,
+    database: process.env.DB_NAME,
+    ssl: {
+        rejectUnauthorized: false // Enforces encrypted connection (SSL) required by Azure MySQL
+    }
+}, pool);
+
 // ===== SESSION CONFIGURATION =====
 app.use(session({
+    key: 'sessionId',
     secret: process.env.SESSION_SECRET || 'your-super-secret-key-change-this-in-production',
+    store: sessionStore,
     resave: false,
     saveUninitialized: false,
     cookie: {
         secure: process.env.NODE_ENV === 'production',
         httpOnly: true,
         maxAge: 1000 * 60 * 60 * 24,
-        sameSite: 'lax'
-    },
-    name: 'sessionId'
+        // MUST be 'none' for cross-domain static app setups in production
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+    }
 }));
 
 // ===== CORS CONFIGURATION (must come BEFORE routes) =====
 app.use(cors({
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+        // Allow requests with no origin (e.g. mobile apps, Postman) or listed allowed origins
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(null, true); // Fallback to accept incoming cross-origin requests
+        }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: [
@@ -81,11 +105,27 @@ app.use((req, res, next) => {
 });
 
 // ===== RATE LIMITING =====
-const rateLimit = require('express-rate-limit');
+const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
+
+// Helper function to extract IP without port for Azure proxy compatibility
+const getClientIp = (req) => {
+    const rawIp = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+
+    // Strip port for IPv4 if present (contains both '.' and ':')
+    let cleanIp = rawIp;
+    if (rawIp.includes('.') && rawIp.includes(':')) {
+        cleanIp = rawIp.split(':')[0];
+    }
+
+    // Pass cleaned IP through ipKeyGenerator for proper IPv6 handling
+    return ipKeyGenerator(cleanIp.trim());
+};
 
 const globalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 100000,
+    keyGenerator: getClientIp,
+    validate: { xForwardedForHeader: false, default: false },
     message: {
         success: false,
         error: 'Too many requests from this IP, please try again later.'
@@ -97,6 +137,8 @@ const globalLimiter = rateLimit({
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 10000,
+    keyGenerator: getClientIp,
+    validate: { xForwardedForHeader: false, default: false },
     message: {
         success: false,
         error: 'Too many authentication attempts, please try again later.'
