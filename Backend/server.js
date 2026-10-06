@@ -5,6 +5,7 @@ const uploadRoutes = require('./routes/uploadRoutes');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const session = require('express-session');
+const MySQLStore = require('express-mysql-session')(session);
 const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const learnerRoutes = require('./routes/learnerRoutes');
@@ -14,7 +15,9 @@ const staffRoutes = require('./routes/staffRoutes');
 const blogRoutes = require('./routes/BlogRoutes');
 const navigationRoutes = require('./routes/navigationRoutes');
 const { startWeeklySummaryJob } = require('./weeklySummary/weeklySummary');
+
 const app = express();
+app.set('trust proxy', 1);
 
 // ===== ALLOWED ORIGINS (from .env) =====
 const allowedOrigins = (process.env.ALLOWED_ORIGINS ||
@@ -23,9 +26,23 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS ||
     .map((s) => s.trim())
     .filter(Boolean);
 
+// ===== MYSQL SESSION STORE INITIALIZATION =====
+const sessionStore = new MySQLStore({
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT || 3306,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD || process.env.DB_PASS,
+    database: process.env.DB_NAME,
+    ssl: {
+        rejectUnauthorized: false // Enforces encrypted connection (SSL) required by Azure MySQL
+    }
+}, pool);
+
 // ===== SESSION CONFIGURATION =====
 app.use(session({
+    key: 'sessionId',
     secret: process.env.SESSION_SECRET || 'your-super-secret-key-change-this-in-production',
+    store: sessionStore,
     resave: false,
     saveUninitialized: false,
     cookie: {
@@ -33,8 +50,7 @@ app.use(session({
         httpOnly: true,
         maxAge: 1000 * 60 * 60 * 24,
         sameSite: 'lax'
-    },
-    name: 'sessionId'
+    }
 }));
 
 // ===== CORS CONFIGURATION (must come BEFORE routes) =====
@@ -81,11 +97,27 @@ app.use((req, res, next) => {
 });
 
 // ===== RATE LIMITING =====
-const rateLimit = require('express-rate-limit');
+const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
+
+// Helper function to extract IP without port for Azure proxy compatibility
+const getClientIp = (req) => {
+    const rawIp = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+
+    // Strip port for IPv4 if present (contains both '.' and ':')
+    let cleanIp = rawIp;
+    if (rawIp.includes('.') && rawIp.includes(':')) {
+        cleanIp = rawIp.split(':')[0];
+    }
+
+    // Pass cleaned IP through ipKeyGenerator for proper IPv6 handling
+    return ipKeyGenerator(cleanIp.trim());
+};
 
 const globalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 100000,
+    keyGenerator: getClientIp,
+    validate: { xForwardedForHeader: false, default: false },
     message: {
         success: false,
         error: 'Too many requests from this IP, please try again later.'
@@ -97,6 +129,8 @@ const globalLimiter = rateLimit({
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 10000,
+    keyGenerator: getClientIp,
+    validate: { xForwardedForHeader: false, default: false },
     message: {
         success: false,
         error: 'Too many authentication attempts, please try again later.'
