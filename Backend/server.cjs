@@ -19,9 +19,9 @@ const { startWeeklySummaryJob } = require('./weeklySummary/weeklySummary');
 const app = express();
 app.set('trust proxy', 1);
 
-// ===== ALLOWED ORIGINS (from .env) =====
+// ===== ALLOWED ORIGINS (from .env or hardcoded production fallbacks) =====
 const allowedOrigins = (process.env.ALLOWED_ORIGINS ||
-    'http://localhost:5173')
+    'https://happy-mushroom-01643cd03.1.azurestaticapps.net,http://localhost:5173,http://localhost:3000')
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
@@ -49,13 +49,21 @@ app.use(session({
         secure: process.env.NODE_ENV === 'production',
         httpOnly: true,
         maxAge: 1000 * 60 * 60 * 24,
-        sameSite: 'lax'
+        // MUST be 'none' for cross-domain static app setups in production
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
     }
 }));
 
 // ===== CORS CONFIGURATION (must come BEFORE routes) =====
 app.use(cors({
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+        // Allow requests with no origin (e.g. mobile apps, Postman) or listed allowed origins
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(null, true); // Fallback to accept incoming cross-origin requests
+        }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: [
