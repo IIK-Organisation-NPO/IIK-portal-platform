@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "description": "IIK Learner Portal Backend - User Management System",
   "type": "commonjs",
-  "main": "server.js",
+  "main": "server.cjs",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js",
+    "start": "node server.cjs",
+    "dev": "nodemon server.cjs",
     "test": "echo \"No test specified\"",
     "lint": "echo \"No linting configured\"",
     "db:test": "node -e \"require('./config/database').testConnection().then(r => console.log('DB Test:', r))\""
