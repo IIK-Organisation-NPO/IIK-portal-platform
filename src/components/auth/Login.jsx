@@ -381,11 +381,11 @@ const Login = () => {
                 <br />
                 {lockTimeLeft > 0 && (
                   <span className="lock-timer">
-                    {lockTimeLeft} minute{lockTimeLeft > 1 ? 's' : ''} remaining
+                    {lockTimeLeft} minute{lockTimeLeft > 1 ? 's' : ''} remaining -
                   </span>
                 )}
-                <Link to="/forgot-password" className="resend-link">
-                  Reset your password
+                <Link to=" /forgot-password" className="resend-link">
+                    Reset your password
                 </Link>
               </span>
             </div>

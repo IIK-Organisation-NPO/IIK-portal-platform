@@ -1,6 +1,6 @@
 // backend/services/emailService.js
-const nodemailer = require('nodemailer');
 const dotenv = require('dotenv');
+const { sendMail: graphSendMail } = require('../utils/graphMailer');
 
 dotenv.config();
 
@@ -208,39 +208,20 @@ const EMAIL_STYLES = `
 class EmailService {
 
     constructor() {
-        console.log('Initializing email service...');
+        console.log('Initialising email service (Microsoft Graph)...');
 
-        if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-            console.error('Email credentials not set in .env');
+        const required = ['TENANT_ID', 'CLIENT_ID', 'CLIENT_SECRET', 'MAIL_FROM'];
+        const missing = required.filter((k) => !process.env[k]);
+
+        if (missing.length > 0) {
+            console.error(
+                'Email credentials not set in .env — missing: ' + missing.join(', ')
+            );
             return;
         }
 
-        this.transporter = nodemailer.createTransport({
-            host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-            port: parseInt(process.env.EMAIL_PORT) || 587,
-            secure: process.env.EMAIL_SECURE === 'true',
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS
-            },
-            tls: {
-                rejectUnauthorized: false
-            }
-        });
-
-        this.verifyConnection();
-    }
-
-    async verifyConnection() {
-        try {
-            await this.transporter.verify();
-            console.log('Email service configured successfully!');
-            console.log(`Sending emails from: ${process.env.EMAIL_USER}`);
-            return true;
-        } catch (error) {
-            console.error('Email configuration error:', error.message);
-            return false;
-        }
+        console.log('Microsoft Graph mailer ready.');
+        console.log(`Sending emails from: ${process.env.MAIL_FROM}`);
     }
 
     // ============================================
@@ -298,17 +279,15 @@ class EmailService {
                 </html>
             `;
 
-            const mailOptions = {
-                from: process.env.EMAIL_FROM || `"IIK Portal" <${process.env.EMAIL_USER}>`,
+            await graphSendMail({
                 to: email,
                 subject: 'Your OTP Code - IIK Learner Portal',
                 html: htmlContent,
                 text: `Hello ${fullName},\n\nYour OTP verification code is: ${otpCode}\n\nThis code expires in 10 minutes.\n\nIf you did not create this account, please ignore this email.\n\nIIK Learner Certificate Portal`
-            };
+            });
 
-            const info = await this.transporter.sendMail(mailOptions);
             console.log('OTP email sent to:', email);
-            return { success: true, messageId: info.messageId };
+            return { success: true };
         } catch (error) {
             console.error('Failed to send OTP email:', error.message);
             throw error;
@@ -367,17 +346,15 @@ class EmailService {
                 </html>
             `;
 
-            const mailOptions = {
-                from: process.env.EMAIL_FROM || `"IIK Portal" <${process.env.EMAIL_USER}>`,
+            await graphSendMail({
                 to: email,
                 subject: 'Password Reset OTP - IIK Learner Portal',
                 html: htmlContent,
                 text: `Hello ${fullName},\n\nYour password reset OTP code is: ${otpCode}\n\nThis code expires in 15 minutes.\n\nIf you did not request this, please ignore this email.\n\nIIK Learner Certificate Portal`
-            };
+            });
 
-            const info = await this.transporter.sendMail(mailOptions);
             console.log('Password reset OTP email sent to:', email);
-            return { success: true, messageId: info.messageId };
+            return { success: true };
         } catch (error) {
             console.error('Failed to send password reset OTP:', error.message);
             throw error;
@@ -452,17 +429,15 @@ class EmailService {
                 </html>
             `;
 
-            const mailOptions = {
-                from: process.env.EMAIL_FROM || `"IIK Portal" <${process.env.EMAIL_USER}>`,
+            await graphSendMail({
                 to: email,
                 subject: 'Welcome to IIK Learner Portal',
                 html: htmlContent,
                 text: `Hello ${fullName},\n\nWelcome to IIK Learner Portal! Your account has been successfully created and verified.\n\nYou can now:\n- Access your learning materials and certificates\n- Track your progress\n- Update your profile\n\nVisit: ${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard\n\nIIK Learner Certificate Portal`
-            };
+            });
 
-            const info = await this.transporter.sendMail(mailOptions);
             console.log('Welcome email sent to:', email);
-            return { success: true, messageId: info.messageId };
+            return { success: true };
         } catch (error) {
             console.error('Failed to send welcome email:', error.message);
             throw error;
@@ -505,14 +480,7 @@ class EmailService {
                                         <span class="k">Email</span>
                                         <span class="v">${email}</span>
                                     </div>
-                                    <div class="row">
-                                        <span class="k">IP Address</span>
-                                        <span class="v">${ipAddress || 'Unknown'}</span>
-                                    </div>
-                                    <div class="row">
-                                        <span class="k">Device</span>
-                                        <span class="v">${userAgent || 'Unknown'}</span>
-                                    </div>
+                                
                                     <div class="row">
                                         <span class="k">Lock Duration</span>
                                         <span class="v">${lockDuration} minute${lockDuration > 1 ? 's' : ''}</span>
@@ -545,17 +513,15 @@ class EmailService {
                 </html>
             `;
 
-            const mailOptions = {
-                from: process.env.EMAIL_FROM || `"IIK Portal" <${process.env.EMAIL_USER}>`,
+            await graphSendMail({
                 to: email,
                 subject: `Account Locked - IIK Learner Portal (${lockoutDescription})`,
                 html: htmlContent,
                 text: `Hello ${fullName},\n\nYour IIK Learner Portal account has been temporarily locked due to ${attempts} failed login attempts.\n\nLockout: ${lockoutDescription}\nLock Duration: ${lockDuration} minutes\nIP Address: ${ipAddress || 'Unknown'}\n\nPlease wait ${lockDuration} minutes and try again.\n\nIf this wasn't you, please contact support immediately.\n\nIIK Learner Certificate Portal`
-            };
+            });
 
-            const info = await this.transporter.sendMail(mailOptions);
             console.log('Lock notification email sent to:', email);
-            return { success: true, messageId: info.messageId };
+            return { success: true };
         } catch (error) {
             console.error('Failed to send lock notification email:', error.message);
             throw error;
@@ -604,17 +570,15 @@ class EmailService {
                 </html>
             `;
 
-            const mailOptions = {
-                from: process.env.EMAIL_FROM || `"IIK Portal" <${process.env.EMAIL_USER}>`,
+            await graphSendMail({
                 to: email,
                 subject: subject,
                 html: htmlContent,
                 text: `Dear ${fullName},\n\n${message}\n\nBest regards,\nIIK Learner Certificate Portal Team`
-            };
+            });
 
-            const info = await this.transporter.sendMail(mailOptions);
             console.log('Bulk email sent to:', email);
-            return { success: true, messageId: info.messageId };
+            return { success: true };
         } catch (error) {
             console.error('Failed to send bulk email:', error.message);
             throw error;
@@ -710,17 +674,15 @@ class EmailService {
                 </html>
             `;
 
-            const mailOptions = {
-                from: process.env.EMAIL_FROM || `"IIK Portal" <${process.env.EMAIL_USER}>`,
+            await graphSendMail({
                 to: email,
                 subject: `New Programme Available: ${name}`,
                 html: htmlContent,
                 text: `Hello ${fullName},\n\nA new programme is now available on the IIK Learner Portal.\n\nProgramme: ${name}\n${description ? `Description: ${description}\n` : ''}${duration ? `Duration: ${duration}\n` : ''}Starts: ${formattedStart}\n\nView it here: ${process.env.FRONTEND_URL || 'http://localhost:5173'}/learner-programmes\n\nYou're receiving this because you opted in to new programme notifications.\n\nIIK Learner Certificate Portal`
-            };
+            });
 
-            const info = await this.transporter.sendMail(mailOptions);
             console.log('New programme notification sent to:', email);
-            return { success: true, messageId: info.messageId };
+            return { success: true };
         } catch (error) {
             console.error('Failed to send new programme notification:', error.message);
             throw error;
@@ -744,11 +706,7 @@ class EmailService {
             const fullName = `${learner.name || ''} ${learner.surname || ''}`.trim() || 'Learner';
 
             try {
-                await this.sendNewProgrammeNotification(
-                    learner.email,
-                    fullName,
-                    programme
-                );
+                await this.sendNewProgrammeNotification(learner.email, fullName, programme);
                 results.sent.push(learner.email);
             } catch (err) {
                 console.error(`Failed to send to ${learner.email}:`, err.message);
@@ -845,17 +803,15 @@ class EmailService {
                 </html>
             `;
 
-            const mailOptions = {
-                from: process.env.EMAIL_FROM || `"IIK Portal" <${process.env.EMAIL_USER}>`,
+            await graphSendMail({
                 to: email,
                 subject: `New Learner Registered: ${fullName}`,
                 html: htmlContent,
                 text: `Hello ${adminName},\n\nA new learner has just registered on the IIK Learner Portal.\n\nName: ${fullName}\nEmail: ${learnerEmail}\nRegistered: ${formattedDate}\n\nView them in the admin portal: ${process.env.FRONTEND_URL || 'http://localhost:5173'}/admin/learners\n\nIIK Learner Certificate Portal`
-            };
+            });
 
-            const info = await this.transporter.sendMail(mailOptions);
             console.log('New-learner notification sent to admin:', email);
-            return { success: true, messageId: info.messageId };
+            return { success: true };
         } catch (error) {
             console.error('Failed to send new-learner notification:', error.message);
             throw error;
@@ -988,17 +944,15 @@ class EmailService {
                 </html>
             `;
 
-            const mailOptions = {
-                from: process.env.EMAIL_FROM || `"IIK Portal" <${process.env.EMAIL_USER}>`,
+            await graphSendMail({
                 to: adminEmail,
                 subject: `Ready for certificate: ${learnerName} - ${programmeName}`,
                 html: htmlContent,
                 text: `Hello ${adminName},\n\nA learner at your centre has completed a programme and is ready for their certificate.\n\nLearner: ${learnerName}\nProgramme: ${programmeName}\nCentre: ${centreName}\nCompleted: ${formattedDate}\nMarked by: ${markedByName}\n\nIssue their certificate here: ${process.env.FRONTEND_URL || 'http://localhost:5173'}/admin-certificates\n\nIIK Learner Certificate Portal`
-            };
+            });
 
-            const info = await this.transporter.sendMail(mailOptions);
             console.log('Learner-completed notification sent to admin:', adminEmail);
-            return { success: true, messageId: info.messageId };
+            return { success: true };
         } catch (error) {
             console.error('Failed to send learner-completed notification:', error.message);
             throw error;
@@ -1154,17 +1108,15 @@ class EmailService {
                 </html>
             `;
 
-            const mailOptions = {
-                from: process.env.EMAIL_FROM || `"IIK Portal" <${process.env.EMAIL_USER}>`,
+            await graphSendMail({
                 to: adminEmail,
                 subject: `Weekly summary - ${scopeLabel} (${periodLabel})`,
                 html: htmlContent,
                 text: `Hello ${adminName},\n\nWeekly summary - ${scopeLabel}\n${periodLabel}\n\nThis week:\n${isGlobal ? `- New learner registrations: ${newRegistrations}\n` : ''}- New interests: ${newInterests}\n- New enrolments: ${newEnrolments}\n- Completions: ${completions}\n- Certificates issued: ${certificatesIssued}\n\nRunning totals:\n- Active learners: ${totalActiveLearners}\n${isGlobal ? `- Total centres: ${totalCentres}\n` : ''}\nView analytics: ${process.env.FRONTEND_URL || 'http://localhost:5173'}/admin-analytics\n\nIIK Learner Certificate Portal`
-            };
+            });
 
-            const info = await this.transporter.sendMail(mailOptions);
             console.log('Weekly summary sent to:', adminEmail);
-            return { success: true, messageId: info.messageId };
+            return { success: true };
         } catch (error) {
             console.error('Failed to send weekly summary:', error.message);
             throw error;
@@ -1315,17 +1267,15 @@ class EmailService {
                 </html>
             `;
 
-            const mailOptions = {
-                from: process.env.EMAIL_FROM || `"IIK Portal" <${process.env.EMAIL_USER}>`,
+            await graphSendMail({
                 to: email,
                 subject: `Certificate Issued: ${programmeName}`,
                 html: htmlContent,
                 text: `Congratulations ${fullName}!\n\nYour certificate for "${programmeName}" has been issued.\n\nCertificate #: ${certificateNumber}\nIssued: ${formattedDate}\n\nView it here: ${process.env.FRONTEND_URL || 'http://localhost:5173'}/learner-certificates\n\nIIK Learner Certificate Portal`
-            };
+            });
 
-            const info = await this.transporter.sendMail(mailOptions);
             console.log('Certificate issued notification sent to:', email);
-            return { success: true, messageId: info.messageId };
+            return { success: true };
         } catch (error) {
             console.error('Failed to send certificate issued notification:', error.message);
             throw error;
@@ -1394,17 +1344,15 @@ class EmailService {
                 </html>
             `;
 
-            const mailOptions = {
-                from: process.env.EMAIL_FROM || `"IIK Portal" <${process.env.EMAIL_USER}>`,
+            await graphSendMail({
                 to: email,
                 subject: 'Verify Your Email - IIK Learner Portal',
                 html: htmlContent,
                 text: `Hello ${fullName},\n\nThank you for creating an account with IIK Learner Portal. Please verify your email by clicking this link:\n\n${verificationLink}\n\nThis link expires in 24 hours.\n\nIf you did not create an account, please ignore this email.\n\nIIK Learner Certificate Portal`
-            };
+            });
 
-            const info = await this.transporter.sendMail(mailOptions);
             console.log('Verification email sent to:', email);
-            return { success: true, messageId: info.messageId };
+            return { success: true };
         } catch (error) {
             console.error('Failed to send verification email:', error.message);
             throw error;
@@ -1455,17 +1403,15 @@ class EmailService {
                 </html>
             `;
 
-            const mailOptions = {
-                from: process.env.EMAIL_FROM || `"IIK Portal" <${process.env.EMAIL_USER}>`,
+            await graphSendMail({
                 to: email,
                 subject: 'Password Changed Successfully - IIK Portal',
                 html: htmlContent,
                 text: `Hello ${fullName},\n\nYour password has been successfully changed.\n\nIf you didn't make this change, please contact support immediately.\n\nIIK Learner Certificate Portal`
-            };
+            });
 
-            const info = await this.transporter.sendMail(mailOptions);
             console.log('Password change confirmation sent to:', email);
-            return { success: true, messageId: info.messageId };
+            return { success: true };
         } catch (error) {
             console.error('Failed to send password change confirmation:', error.message);
             throw error;
@@ -1523,18 +1469,16 @@ class EmailService {
                 </html>
             `;
 
-            const mailOptions = {
-                from: process.env.EMAIL_FROM || `"IIK Portal" <${process.env.EMAIL_USER}>`,
-                to: process.env.EMAIL_USER,
+            await graphSendMail({
+                to: process.env.MAIL_FROM,
                 replyTo: email,
                 subject: `Contact Form: ${subject}`,
                 html: htmlContent,
                 text: `Name: ${name}\nEmail: ${email}\nSubject: ${subject}\n\nMessage:\n${message}`
-            };
+            });
 
-            const info = await this.transporter.sendMail(mailOptions);
             console.log('Contact form email sent');
-            return { success: true, messageId: info.messageId };
+            return { success: true };
         } catch (error) {
             console.error('Failed to send contact form email:', error.message);
             throw error;
