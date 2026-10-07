@@ -2,6 +2,14 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
+// TODO: replace with the official IIK social media page URLs
+const socialLinks = [
+  { label: 'Facebook', href: 'https://web.facebook.com/profile.php?id=61580379807189', icon: 'fa-facebook-f' },
+  { label: 'LinkedIn', href: 'https://www.linkedin.com/company/iik-organisation-npo', icon: 'fa-linkedin-in' },
+  { label: 'Instagram', href: 'https://www.instagram.com/iik_organisation/', icon: 'fa-instagram' },
+  { label: 'YouTube', href: 'http://www.youtube.com/@IIKOrganisation', icon: 'fa-youtube' },
+];
+
 const Footer = () => {
   return (
     <footer className="learner-footer">
@@ -28,8 +36,14 @@ const Footer = () => {
 
         </div>
         <div className="footer-bottom">
-          <span>© 2025 IIK Learner Certificate Portal. All rights reserved.</span>
-          <span className="badge">South African QA Accredited Platform</span>
+          <span>© {new Date().getFullYear()} IIK Organisation NPO (318-977) | PBO Number : 930086625 | All Rights Reserved.</span>
+          <div className="footer-social">
+            {socialLinks.map(({ label, href, icon }) => (
+              <a key={label} href={href} target="_blank" rel="noopener noreferrer" aria-label={label}>
+                <i className={`fab ${icon}`}></i>
+              </a>
+            ))}
+          </div>
         </div>
       </div>
     </footer>
