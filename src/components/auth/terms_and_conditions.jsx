@@ -432,9 +432,7 @@ const TermsAndConditions = () => {
               <div className="declaration-list">
                 {declarationItems.map((item, index) => (
                   <div key={index} className="declaration-item">
-                    <span className="declaration-bullet" aria-hidden="true">
-                      ✓
-                    </span>
+                    <span className="declaration-bullet" aria-hidden="true"></span>
                     <span>{item}</span>
                   </div>
                 ))}

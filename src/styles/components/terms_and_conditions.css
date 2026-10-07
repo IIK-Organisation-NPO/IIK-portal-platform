@@ -15,7 +15,6 @@
    ========================================================= */
 .terms-header-bar {
   background-color: #ffffff;
-  border-bottom: 2px solid #000000;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -269,7 +268,9 @@
   height: 20px;
   flex-shrink: 0;
   margin-top: 0.1rem;
-  background-color: #000000;
+  box-sizing: border-box;
+  border: 2px solid #000000;
+  background-color: #ffffff;
   color: #ffffff;
   font-size: 0.75rem;
   font-weight: 700;
