@@ -9,11 +9,13 @@ import {
   FaGoogle,
   FaSpinner,
   FaExclamationCircle,
-  FaSync
+  FaSync,
+  FaBars
 } from 'react-icons/fa';
 import Footer from '../common/Footer';
 import Input from '../common/Input';
 import '../../styles/components/auth.css';
+import '../../styles/components/mobile-nav.css';
 import logo from '../../assets/images/small Mki.png';
 import { API } from '../../config/api';
 
@@ -29,6 +31,7 @@ const Login = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [errorType, setErrorType] = useState('');
   const [lockTimeLeft, setLockTimeLeft] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   // ===== CAPTCHA STATES =====
   const [captcha, setCaptcha] = useState('');
@@ -309,13 +312,22 @@ const Login = () => {
 
   return (
     <div className="login-page">
-      <header className="login-header">
+      <header className="login-header site-header">
         <div className="header-container">
           <div className="header-logo">
             <img src={logo} alt="IIK Portal Logo" />
             <span>Learner Certificate Portal</span>
           </div>
-          <nav className="header-nav">
+          <button
+            type="button"
+            className="site-menu-toggle"
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label="Toggle navigation menu"
+            aria-expanded={menuOpen}
+          >
+            <FaBars size={22} />
+          </button>
+          <nav className={`header-nav ${menuOpen ? 'mobile-open' : ''}`}>
             <a href="https://www.iik.co.za/Home">Home</a>
             
             <Link to="/about">About</Link>

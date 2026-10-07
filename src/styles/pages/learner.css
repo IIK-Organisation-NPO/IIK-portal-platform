@@ -410,16 +410,32 @@
   border-top: 1px solid rgba(255,255,255,0.1);
   padding-top: 1.5rem;
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   align-items: center;
+  text-align: center;
   font-size: 0.85rem;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 1rem;
 }
 
-.learner-footer .footer-bottom .badge {
-  background-color: rgba(255,255,255,0.1);
-  padding: 0.25rem 1rem;
-  border-radius: 20px;
-  font-weight: 500;
+.learner-footer .footer-bottom .footer-social {
+  display: flex;
+  justify-content: center;
+  gap: 1.75rem;
+  font-size: 1.25rem;
+}
+
+.learner-footer .footer-bottom .footer-social a {
+  color: inherit;
+  transition: color 0.2s ease;
+}
+
+.learner-footer .footer-bottom .footer-social a:hover {
+  color: var(--color-white);
+}
+
+@media (max-width: 768px) {
+  .learner-footer .footer-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
 }

@@ -1,22 +1,35 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { FaBars } from 'react-icons/fa';
 import logo from "../../assets/images/small Mki.png";
 import missionImage from "../../assets/images/download.jfif";
 import Footer from "../../components/common/Footer";
 import "../../styles/pages/About.css";
+import "../../styles/components/mobile-nav.css";
 
 const About = () => {
+  const [menuOpen, setMenuOpen] = useState(false);
+
   return (
     <div className="about-page">
       {/* Header */}
-      <header className="home-header">
+      <header className="home-header site-header">
         <div className="header-container">
           <div className="header-logo">
             <img src={logo} alt="IIK Portal Logo" />
             <span>Learner Certificate Portal</span>
           </div>
-          <nav className="header-nav">
-            <a href="https://www.iik.co.za/Home" onClick={closeMenu}>
+          <button
+            type="button"
+            className="site-menu-toggle"
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label="Toggle navigation menu"
+            aria-expanded={menuOpen}
+          >
+            <FaBars size={22} />
+          </button>
+          <nav className={`header-nav ${menuOpen ? 'mobile-open' : ''}`}>
+            <a href="https://www.iik.co.za/Home">
               Home
             </a>
             

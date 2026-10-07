@@ -1,0 +1,72 @@
+/* Mobile menu for the Login, Signup, About and Blog headers */
+.site-menu-toggle {
+  display: none;
+  background: transparent;
+  border: none;
+  color: #000000;
+  padding: 0.35rem;
+  margin-left: auto;
+}
+
+@media (max-width: 768px) {
+  header.site-header .header-container {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0;
+    padding: 0 1rem;
+  }
+
+  header.site-header .header-logo {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  header.site-header .header-logo span {
+    font-size: 1rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  header.site-header .site-menu-toggle {
+    display: flex;
+  }
+
+  header.site-header .header-nav {
+    display: none;
+    width: 100%;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-top: 0.85rem;
+    padding-top: 0.85rem;
+    border-top: 1px solid #e0e0e0;
+  }
+
+  header.site-header .header-nav.mobile-open {
+    display: flex;
+  }
+
+  header.site-header .header-nav a {
+    font-size: 0.95rem;
+    padding: 0.35rem 0;
+    width: 100%;
+  }
+
+  header.site-header .nav-actions {
+    width: 100%;
+    margin-left: 0;
+    gap: 0.75rem;
+  }
+
+  header.site-header .nav-actions .btn-login,
+  header.site-header .nav-actions .btn-signup {
+    flex: 1;
+    width: auto;
+    text-align: center;
+    font-size: 0.9rem;
+    padding: 0.6rem 1rem;
+    border: 1px solid #000000;
+  }
+}

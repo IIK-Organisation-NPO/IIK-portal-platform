@@ -16,10 +16,12 @@ import {
   FaArrowLeft,
   FaCheckCircle,
   FaShieldAlt,
-  FaMapMarkerAlt
+  FaMapMarkerAlt,
+  FaBars
 } from 'react-icons/fa';
 import Footer from '../common/Footer';
 import '../../styles/components/auth.css';
+import '../../styles/components/mobile-nav.css';
 import logo from '../../assets/images/small Mki.png';
 import { API, GOOGLE_CLIENT_ID } from '../../config/api';
 
@@ -48,6 +50,7 @@ const Signup = () => {
   const [isGoogleInitialized, setIsGoogleInitialized] = useState(false);
   const [genders, setGenders] = useState([]);
   const [passwordFocused, setPasswordFocused] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [showCaptcha, setShowCaptcha] = useState(false);
@@ -723,13 +726,22 @@ const Signup = () => {
 
   return (
     <div className="signup-page">
-      <header className="auth-header">
+      <header className="auth-header site-header">
         <div className="header-container">
           <div className="header-logo">
             <img src={logo} alt="IIK Portal Logo" />
             <span>Learner Certificate Portal</span>
           </div>
-          <nav className="header-nav">
+          <button
+            type="button"
+            className="site-menu-toggle"
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label="Toggle navigation menu"
+            aria-expanded={menuOpen}
+          >
+            <FaBars size={22} />
+          </button>
+          <nav className={`header-nav ${menuOpen ? 'mobile-open' : ''}`}>
             <a href="https://www.iik.co.za/Home">Home</a>
             
             <Link to="/about">About</Link>
