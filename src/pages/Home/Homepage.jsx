@@ -71,14 +71,8 @@ const Homepage = () => {
             <span>Learner Certificate Portal</span>
           </div>
           <nav className="header-nav">
-            <Link to="/">Home</Link>
-            <a
-              href="https://www.iik.co.za/contact-us"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Contact
-            </a>
+            <a href="https://www.iik.co.za">Home</a>
+            
             <Link to="/BlogPage">Blog</Link>
             <Link to="/about">About</Link>
             <div className="nav-actions">

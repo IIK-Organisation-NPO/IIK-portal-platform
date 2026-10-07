@@ -22,8 +22,7 @@ const Homepage = () => {
             <span style={{ fontSize: '1.25rem', fontWeight: '600' }}>Learner Certificate Portal</span>
           </div>
           <nav>
-            <Link to="/">Home</Link>
-            <Link to="/contact">Contact</Link>
+            <a href="https://www.iik.co.za/Home">Home</a>
             <Link to="/BlogPage">Blog</Link>
             <div className="nav-actions">
               <Link to="/login" className="btn-outline">Login</Link>

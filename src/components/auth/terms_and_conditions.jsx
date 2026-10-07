@@ -102,17 +102,10 @@ const TermsAndConditions = () => {
           <nav
             className={`terms-header-nav ${menuOpen ? "mobile-open" : ""}`}
           >
-            <Link to="/" onClick={closeMenu}>
+            <a href="https://www.iik.co.za/Home" onClick={closeMenu}>
               Home
-            </Link>
-            <a
-              href="https://www.iik.co.za/contact-us"
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={closeMenu}
-            >
-              Contact
             </a>
+            
             <Link to="/About" onClick={closeMenu}>
               About
             </Link>

@@ -16,14 +16,10 @@ const About = () => {
             <span>Learner Certificate Portal</span>
           </div>
           <nav className="header-nav">
-            <Link to="/">Home</Link>
-            <a
-              href="https://www.iik.co.za/contact-us"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Contact
+            <a href="https://www.iik.co.za/Home" onClick={closeMenu}>
+              Home
             </a>
+            
             <Link to="/about">About</Link>
             <Link to="/BlogPage">Blog</Link>
             <div className="nav-actions">

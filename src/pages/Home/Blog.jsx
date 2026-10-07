@@ -144,8 +144,7 @@ const BlogPage = () => {
             <span>Learner Certificate Portal</span>
           </div>
           <nav className="header-nav">
-            <Link to="/">Home</Link>
-            <a href="https://www.iik.co.za/contact-us" target="_blank" rel="noopener noreferrer">Contact</a>
+            <a href="https://www.iik.co.za/Home">Home</a>
             <Link to="/about">About</Link>
             <Link to="/BlogPage" className="active">Blog</Link>
             <div className="nav-actions">
