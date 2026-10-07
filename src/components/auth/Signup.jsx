@@ -790,7 +790,7 @@ const Signup = () => {
                     value={formData.name}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    placeholder="e.g. Sarah"
+                    placeholder="Enter your first name"
                     className={hasError('name') ? 'error' : ''}
                     disabled={loading}
                     autoFocus
@@ -810,7 +810,7 @@ const Signup = () => {
                     value={formData.surname}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    placeholder="e.g. Krumac"
+                    placeholder="Enter your surname"
                     className={hasError('surname') ? 'error' : ''}
                     disabled={loading}
                   />
@@ -832,7 +832,7 @@ const Signup = () => {
                     value={formData.email}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    placeholder="e.g. sarah@example.com"
+                    placeholder="Enter your email"
                     className={hasError('email') ? 'error' : ''}
                     disabled={loading}
                   />
@@ -851,7 +851,7 @@ const Signup = () => {
                     value={formData.phone_number}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    placeholder="e.g. 0821234567 or +27821234567"
+                    placeholder="Enter your phone number"
                     className={hasError('phone_number') ? 'error' : ''}
                     disabled={loading}
                     maxLength={13}
@@ -901,7 +901,7 @@ const Signup = () => {
                     value={formData.id_number}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    placeholder="13-digit South African ID (e.g. 9001015800080)"
+                    placeholder="13-digit South African ID"
                     className={hasError('id_number') ? 'error' : ''}
                     disabled={loading}
                     maxLength="13"

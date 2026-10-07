@@ -410,7 +410,7 @@ const Login = () => {
                 setError('');
                 setErrorType('');
               }}
-              placeholder="your@email.com"
+              placeholder="Enter your email"
               icon={FaEnvelope}
               required
               disabled={loading || errorType === 'locked'}
@@ -515,12 +515,16 @@ const Login = () => {
             </button>
           </form>
 
+          {/*
           <div className="auth-divider">
             <hr />
             <span>or continue with</span>
             <hr />
           </div>
+          */}
 
+          {/* Google login will be implemented later - it does not currently work for now */}
+          {/* 
           <button
             className="btn-google"
             onClick={handleGoogleLogin}
@@ -528,7 +532,7 @@ const Login = () => {
           >
             <FaGoogle size={20} />
             {loading ? 'Loading...' : 'Continue with Google'}
-          </button>
+          </button> */}
 
           <p className="auth-footer-text">
             Don't have an account? <Link to="/signup">Sign Up</Link>
