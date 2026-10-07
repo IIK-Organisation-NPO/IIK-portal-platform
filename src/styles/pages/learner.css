@@ -371,8 +371,8 @@
 
 /* Footer */
 .learner-footer {
-  background-color: var(--color-primary);
-  color: rgba(255,255,255,0.8);
+  background-color: #E5E7EB;
+  color: #000000;
   padding: 2.5rem 0 1.5rem;
 }
 
@@ -390,7 +390,7 @@
 }
 
 .learner-footer h4 {
-  color: var(--color-white);
+  color: #000000;
   font-weight: 600;
   margin-bottom: 0.75rem;
 }
@@ -403,11 +403,11 @@
 }
 
 .learner-footer .footer-links a:hover {
-  color: var(--color-white);
+  color: var(--color-text-secondary);
 }
 
 .learner-footer .footer-bottom {
-  border-top: 1px solid rgba(255,255,255,0.1);
+  border-top: 1px solid rgba(0,0,0,0.1);
   padding-top: 1.5rem;
   display: flex;
   flex-direction: column;
@@ -430,7 +430,7 @@
 }
 
 .learner-footer .footer-bottom .footer-social a:hover {
-  color: var(--color-white);
+  color: var(--color-text-secondary);
 }
 
 @media (max-width: 768px) {
