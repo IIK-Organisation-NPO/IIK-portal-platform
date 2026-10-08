@@ -157,7 +157,6 @@ const BlogPage = () => {
           </button>
           <nav className={`header-nav ${menuOpen ? 'mobile-open' : ''}`}>
             <a href="https://www.iik.co.za/Home">Home</a>
-            <Link to="/about">About</Link>
             <Link to="/BlogPage" className="active">Blog</Link>
             <div className="nav-actions">
               <Link to="/login" className="btn-login">Login</Link>

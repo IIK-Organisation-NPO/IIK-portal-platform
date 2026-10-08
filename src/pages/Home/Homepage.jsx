@@ -74,7 +74,6 @@ const Homepage = () => {
             <a href="https://www.iik.co.za">Home</a>
             
             <Link to="/BlogPage">Blog</Link>
-            <Link to="/about">About</Link>
             <div className="nav-actions">
               <Link to="/login" className="btn-login">
                 Login

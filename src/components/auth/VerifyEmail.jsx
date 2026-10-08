@@ -233,9 +233,6 @@ const VerifyEmail = () => {
           </div>
           <nav className="header-nav">
             <Link to="/Login">Login</Link>
-            <a href="https://www.iik.co.za/contact-us" target="_blank" rel="noopener noreferrer">
-              Contact
-            </a>
             <Link to="/blog">Blog</Link>
           </nav>
         </div>

@@ -106,9 +106,6 @@ const TermsAndConditions = () => {
               Home
             </a>
             
-            <Link to="/About" onClick={closeMenu}>
-              About
-            </Link>
             <Link to="/BlogPage" onClick={closeMenu}>
               Blog
             </Link>

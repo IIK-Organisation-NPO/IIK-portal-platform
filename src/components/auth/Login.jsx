@@ -330,7 +330,6 @@ const Login = () => {
           <nav className={`header-nav ${menuOpen ? 'mobile-open' : ''}`}>
             <a href="https://www.iik.co.za/Home">Home</a>
             
-            <Link to="/about">About</Link>
             <Link to="/BlogPage">Blog</Link>
           </nav>
         </div>

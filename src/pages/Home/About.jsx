@@ -33,7 +33,6 @@ const About = () => {
               Home
             </a>
             
-            <Link to="/about">About</Link>
             <Link to="/BlogPage">Blog</Link>
             <div className="nav-actions">
               <Link to="/login" className="btn-login">Login</Link>
