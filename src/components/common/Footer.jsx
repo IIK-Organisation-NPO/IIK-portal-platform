@@ -1,6 +1,5 @@
 // src/components/common/Footer.jsx
 import React from 'react';
-import { Link } from 'react-router-dom';
 
 // TODO: replace with the official IIK social media page URLs
 const socialLinks = [
@@ -14,21 +13,6 @@ const Footer = () => {
   return (
     <footer className="learner-footer">
       <div className="container" style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1.5rem' }}>
-        <div className="footer-grid">
-          <div>
-            <h4>LEGAL</h4>
-            <div className="footer-links">
-              <Link to="/terms_and_conditions">Terms and Conditions</Link>
-            </div>
-          </div>
-          <div>
-            <h4>CONTACT INFO</h4>
-            <div className="footer-links">
-              <a href="https://www.iik.co.za/contact-us">Get In Touch</a>
-            </div>
-          </div>
-
-        </div>
         <div className="footer-bottom">
           <span>© {new Date().getFullYear()} IIK Organisation NPO (318-977) | PBO Number : 930086625 | All Rights Reserved.</span>
           <div className="footer-social">
@@ -38,6 +22,9 @@ const Footer = () => {
               </a>
             ))}
           </div>
+          <div className="footer-links">
+              <a href="https://www.iik.co.za/contact-us">Get In Touch</a>
+            </div>
         </div>
       </div>
     </footer>
