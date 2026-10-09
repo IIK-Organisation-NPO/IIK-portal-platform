@@ -83,11 +83,6 @@ const Admin_AccountSettings = () => {
   const [prefsSaving, setPrefsSaving] = useState(false);
 
   // ============================================================
-  // TWO-FACTOR AUTHENTICATION STATE
-  // ============================================================
-  const [is2FAEnabled, setIs2FAEnabled] = useState(false);
-
-  // ============================================================
   // UI STATE
   // ============================================================
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -451,16 +446,6 @@ const Admin_AccountSettings = () => {
   // ============================================================
   // TOGGLE HANDLERS
   // ============================================================
-  const toggle2FA = () => {
-    const newState = !is2FAEnabled;
-    setIs2FAEnabled(newState);
-    showToast(
-      newState
-        ? 'Two-Factor Authentication (2FA) has been enabled.'
-        : 'Two-Factor Authentication (2FA) has been turned off.'
-    );
-  };
-
   const toggleAutoBackup = () => {
     const newState = !isAutoBackupEnabled;
     setIsAutoBackupEnabled(newState);
@@ -731,19 +716,6 @@ const Admin_AccountSettings = () => {
               >
                 {passwordSaving ? 'Updating...' : 'Update Password'}
               </button>
-            </div>
-
-            <div className="two-factor-section">
-              <div className="two-factor-header">
-                <span className="two-factor-title">Two-Factor Authentication (2FA)</span>
-                <div className="toggle-switch" onClick={toggle2FA}>
-                  <div className={`toggle-track ${is2FAEnabled ? 'active' : ''}`}>
-                    <div className={`toggle-thumb ${is2FAEnabled ? 'active' : ''}`}></div>
-                  </div>
-                  <span className="toggle-status">{is2FAEnabled ? '2FA ENABLED' : '2FA DISABLED'}</span>
-                </div>
-              </div>
-              <p className="hint">When enabled, an OTP will be required when someone tries to delete your profile</p>
             </div>
           </div>
 

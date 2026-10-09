@@ -268,28 +268,6 @@ body {
   line-height: 1.4;
 }
 
-/* Two-Factor Toggle */
-.two-factor-section {
-  margin-top: 1.5rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid #e2e8f0;
-}
-
-.two-factor-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 1rem;
-  margin-bottom: 0.5rem;
-}
-
-.two-factor-title {
-  font-weight: 500;
-  font-size: 14px;
-  color: #0F172A;
-}
-
 .toggle-switch {
   display: flex;
   align-items: center;
@@ -323,21 +301,6 @@ body {
 }
 
 .toggle-thumb.active { transform: translateX(22px); }
-
-.toggle-status {
-  font-size: 13px;
-  font-weight: 600;
-  color: #EF4444;
-  letter-spacing: 0.3px;
-}
-
-.toggle-track.active + .toggle-status { color: #16a34a; }
-
-.two-factor-section .hint {
-  font-size: 13px;
-  color: #64748b;
-  margin-top: 0.25rem;
-}
 
 /* Backup */
 .backup-auto-section { margin-bottom: 1.5rem; }
@@ -627,7 +590,6 @@ body {
   .profile-role { flex-wrap: wrap; }
 
   .security-row { flex-direction: column; gap: 1rem; }
-  .two-factor-header { flex-direction: column; align-items: flex-start; }
   .backup-auto-header { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
   .backup-detail-row { flex-direction: column; align-items: flex-start; gap: 0.25rem; }
   .backup-status { margin-left: 0; }
