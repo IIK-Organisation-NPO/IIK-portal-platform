@@ -3,12 +3,12 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
-// A connection pool 
+// A connection pool
 const pool = mysql.createPool({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || process.env.DB_PASS || '',
-    database: process.env.DB_NAME || 'iik_portal',
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD || process.env.DB_PASS,
+    database: process.env.DB_NAME,
     port: process.env.DB_PORT || 3306,
     waitForConnections: true,
     connectionLimit: 10,
@@ -25,16 +25,16 @@ const pool = mysql.createPool({
 const testConnection = async () => {
     try {
         const connection = await pool.getConnection();
-        console.log(' Database connected successfully to:', process.env.DB_NAME || 'iik_learner_portal2');
+        console.log('Database connected successfully to:', process.env.DB_NAME);
         connection.release();
         return true;
     } catch (error) {
-        console.error('   Database connection failed:');
-        console.error('   Error:', error.message);
-        console.error('   Host:', process.env.DB_HOST || 'localhost');
-        console.error('   Database:', process.env.DB_NAME || 'iik_learner_portal1');
-        console.error('   User:', process.env.DB_USER || 'root');
-        console.error('   Please check your .env file and MySQL server');
+        console.error('Database connection failed:');
+        console.error('Error:', error.message);
+        console.error('Host:', process.env.DB_HOST);
+        console.error('Database:', process.env.DB_NAME);
+        console.error('User:', process.env.DB_USER);
+        console.error('Please check your .env file and MySQL server');
         return false;
     }
 };
@@ -45,9 +45,9 @@ const executeQuery = async (query, params = []) => {
         const [rows] = await pool.execute(query, params);
         return rows;
     } catch (error) {
-        console.error('  Query execution error:', error.message);
-        console.error('   Query:', query);
-        console.error('   Params:', params);
+        console.error('Query execution error:', error.message);
+        console.error('Query:', query);
+        console.error('Params:', params);
         throw error;
     }
 };
