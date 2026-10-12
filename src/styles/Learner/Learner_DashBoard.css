@@ -143,6 +143,7 @@
   /* No border-radius - square/box-like */
 }
 
+/* ---- Button (base) ---- */
 .learner-dashboard .programmes-grid .programme-card .btn-interest {
   background: #000000;
   color: #ffffff;
@@ -151,15 +152,31 @@
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: background 0.2s;
-  /* No border-radius - square/box-like */
+  transition: background 0.2s, color 0.2s;
   border-radius: 0;
   width: 100%;
   text-align: center;
+  font-family: inherit;
 }
 
-.learner-dashboard .programmes-grid .programme-card .btn-interest:hover {
+.learner-dashboard .programmes-grid .programme-card .btn-interest:hover:not(:disabled) {
   background: #2a2a2a;
+}
+
+/* ---- Button (disabled state) ---- */
+.learner-dashboard .programmes-grid .programme-card .btn-interest:disabled,
+.learner-dashboard .programmes-grid .programme-card .btn-interest[disabled] {
+  background: #9CA3AF;      /* grey */
+  color: #ffffff;
+  opacity: 1;               /* keep text fully readable */
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.learner-dashboard .programmes-grid .programme-card .btn-interest:disabled:hover,
+.learner-dashboard .programmes-grid .programme-card .btn-interest[disabled]:hover {
+  background: #9CA3AF;      /* no hover change */
 }
 
 /* ---- Mobile Responsive ---- */
@@ -167,7 +184,7 @@
   .learner-dashboard .stats-grid {
     grid-template-columns: repeat(3, 1fr);
   }
-  
+
   .learner-dashboard .programmes-grid {
     grid-template-columns: repeat(2, 1fr);
   }
