@@ -546,7 +546,9 @@ const Login = () => {
           </button> */}
 
           <p className="auth-footer-text">
-            Don't have an account? <Link to="/signup">Sign Up</Link>
+            View <Link to="/terms_and_conditions">Terms and Conditions </Link>
+           
+          or Don't have an account? <Link to="/signup">Sign Up</Link>
           </p>
         </div>
       </div>
