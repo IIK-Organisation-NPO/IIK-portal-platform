@@ -4,6 +4,28 @@ import { Link, useNavigate } from 'react-router-dom';
 import '../../styles/Admin/Admin_Sidebar.css';
 import { navigationAPI } from '../../services/api';
 
+const CENTRE_NAV_ITEM = {
+    id: 'centres',
+    label: 'Centre Management',
+    icon: 'fa-map-marker-alt',
+    path: '/admin/centres',
+};
+
+// Centre Management sits directly below Staff Management (above Settings),
+// so it is shown to the same role that can see Staff Management.
+const withCentreManagement = (items) => {
+    if (items.some((item) => item.id === CENTRE_NAV_ITEM.id)) return items;
+
+    const staffIndex = items.findIndex((item) => item.id === 'staff');
+    if (staffIndex === -1) return items;
+
+    return [
+        ...items.slice(0, staffIndex + 1),
+        CENTRE_NAV_ITEM,
+        ...items.slice(staffIndex + 1),
+    ];
+};
+
 const Admin_Sidebar = ({ active = 'dashboard', isMobileOpen, onClose }) => {
     const navigate = useNavigate();
 
@@ -25,7 +47,7 @@ const Admin_Sidebar = ({ active = 'dashboard', isMobileOpen, onClose }) => {
                 const res = await navigationAPI.getAdminNav();
 
                 if (!cancelled && res.data?.success) {
-                    setNavItems(res.data.data || []);
+                    setNavItems(withCentreManagement(res.data.data || []));
                 }
             } catch (err) {
                 console.error('Failed to load navigation:', err);
