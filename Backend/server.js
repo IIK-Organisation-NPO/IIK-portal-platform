@@ -34,7 +34,7 @@ const sessionStore = new MySQLStore({
     password: process.env.DB_PASSWORD || process.env.DB_PASS,
     database: process.env.DB_NAME,
     ssl: {
-        rejectUnauthorized: false // Enforces encrypted connection (SSL) required by Azure MySQL
+        rejectUnauthorized: false
     }
 }, pool);
 
@@ -49,7 +49,6 @@ app.use(session({
         secure: process.env.NODE_ENV === 'production',
         httpOnly: true,
         maxAge: 1000 * 60 * 60 * 24,
-        // MUST be 'none' for cross-domain static app setups in production
         sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
     }
 }));
@@ -57,11 +56,10 @@ app.use(session({
 // ===== CORS CONFIGURATION (must come BEFORE routes) =====
 app.use(cors({
     origin: (origin, callback) => {
-        // Allow requests with no origin (e.g. mobile apps, Postman) or listed allowed origins
         if (!origin || allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
-            callback(null, true); // Fallback to accept incoming cross-origin requests
+            callback(null, true); 
         }
     },
     credentials: true,
@@ -81,8 +79,8 @@ app.use(cors({
 app.options('*', cors());
 
 // ===== MIDDLEWARE =====
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '5mb' }));
+app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 app.use(cookieParser());
 
 // ===== LOGGING MIDDLEWARE =====
@@ -107,17 +105,14 @@ app.use((req, res, next) => {
 // ===== RATE LIMITING =====
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 
-// Helper function to extract IP without port for Azure proxy compatibility
 const getClientIp = (req) => {
     const rawIp = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
 
-    // Strip port for IPv4 if present (contains both '.' and ':')
     let cleanIp = rawIp;
     if (rawIp.includes('.') && rawIp.includes(':')) {
         cleanIp = rawIp.split(':')[0];
     }
 
-    // Pass cleaned IP through ipKeyGenerator for proper IPv6 handling
     return ipKeyGenerator(cleanIp.trim());
 };
 
@@ -176,7 +171,6 @@ console.log('Blog routes registered at /api/blog');
 app.use('/api/navigation', navigationRoutes);
 console.log('Navigation routes registered at /api/navigation');
 
-// Upload routes — moved here, AFTER CORS
 app.use('/api/upload', uploadRoutes);
 console.log('Upload routes registered at /api/upload');
 
@@ -220,9 +214,24 @@ app.get('/api/session-test', (req, res) => {
 // ===== ERROR HANDLING =====
 app.use((err, req, res, next) => {
     console.error('Server Error:', err);
+
+    if (err.type === 'entity.too.large' || err.status === 413) {
+        return res.status(413).json({
+            success: false,
+            message: 'The content you sent is too large. Please use a smaller image.'
+        });
+    }
+
+    if (err.type === 'entity.parse.failed' || err.status === 400) {
+        return res.status(400).json({
+            success: false,
+            message: 'We could not read the request. Please try again.'
+        });
+    }
+
     res.status(500).json({
         success: false,
-        message: err.message || 'Internal server error'
+        message: 'Something went wrong on our end. Please try again in a moment.'
     });
 });
 
@@ -257,6 +266,5 @@ app.listen(PORT, () => {
     console.log(`   - CORS configured for credentials`);
     console.log(`   - CAPTCHA ready for human verification`);
     console.log(`   - X-Frame-Options: SAMEORIGIN (allows PDF iframes)\n`);
-    // Start background jobs
     startWeeklySummaryJob();
 });

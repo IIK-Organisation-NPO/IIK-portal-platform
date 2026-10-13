@@ -13,6 +13,8 @@ const Admin_BlogCreate = () => {
 
     const editorRef = useRef(null);
 
+    const MAX_IMAGE_MB = 5;
+
     const [formData, setFormData] = useState({
         postType: 'Blog Post',
         officialTitle: '',
@@ -36,6 +38,52 @@ const Admin_BlogCreate = () => {
     const showToast = (type, text) => {
         setToast({ type, text });
         window.setTimeout(() => setToast(null), 3500);
+    };
+
+    
+
+    const extractErrorMessage = (err, fallback) => {
+        // 1. Network failure — backend unreachable
+        if (err?.code === 'ERR_NETWORK' || err?.message === 'Network Error') {
+            return ' Please check your internet connection and try again.';
+        }
+
+        // 2. Timeout
+        if (err?.code === 'ECONNABORTED') {
+            return 'The server took too long to respond. Please try again.';
+        }
+        const data = err?.response?.data;
+        const status = err?.response?.status;
+
+        if (status === 413) {
+            return `The image is too large. Please use an image under ${MAX_IMAGE_MB} MB.`;
+        }
+
+        if (typeof data === 'string' && /too large|payloadtoo|entity too large/i.test(data)) {
+            return `The image is too large. Please use an image under ${MAX_IMAGE_MB} MB.`;
+        }
+
+        // 4. Server returned structured JSON
+        if (data && typeof data === 'object') {
+            if (typeof data.error === 'string' && data.error.trim()) return data.error;
+            if (typeof data.message === 'string' && data.message.trim()) return data.message;
+            if (Array.isArray(data.errors) && data.errors.length > 0) {
+                return data.errors
+                    .map((e) => e.message || e.msg || '')
+                    .filter(Boolean)
+                    .join(', ');
+            }
+        }
+
+        // 5. Fall back on HTTP status code
+        if (status === 400) return 'Please check your input and try again.';
+        if (status === 401) return 'Your session has expired. Please log in again.';
+        if (status === 403) return 'You do not have permission to do that.';
+        if (status === 404) return 'We could not find what you were looking for.';
+        if (status >= 500) return 'Something went wrong on our end. Please try again in a moment.';
+
+        // 6. Last resort — the caller's default message
+        return fallback;
     };
 
     const handleInputChange = (e) => {
@@ -80,6 +128,25 @@ const Admin_BlogCreate = () => {
     const handleFileUpload = (e) => {
         const file = e.target.files[0];
         if (!file) return;
+
+        // ---- Reject oversized files before the upload starts ----
+        const maxBytes = MAX_IMAGE_MB * 1024 * 1024;
+        if (file.size > maxBytes) {
+            const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+            showToast(
+                'error',
+                `The image is too large (${sizeMb} MB). Please use an image under ${MAX_IMAGE_MB} MB.`
+            );
+            e.target.value = '';
+            return;
+        }
+
+        // ---- Reject non-image files ----
+        if (!/^image\//i.test(file.type)) {
+            showToast('error', 'Please choose an image file (JPG, PNG, GIF, or WEBP).');
+            e.target.value = '';
+            return;
+        }
 
         setFormData((prev) => ({ ...prev, featuredImage: file }));
 
@@ -132,15 +199,14 @@ const Admin_BlogCreate = () => {
         return res.data?.url || null;
     };
 
-    // ---- FIXED: don't prepend API_BASE to data URLs ----
     const buildPayload = (status, imageUrl) => {
         const safeAlt = (formData.officialTitle || 'Post image').replace(/"/g, '&quot;');
 
         const src = !imageUrl
             ? ''
             : imageUrl.startsWith('data:')
-                ? imageUrl                        // data URLs are complete on their own
-                : `${API_BASE}${imageUrl}`;       // legacy /uploads paths need the host
+                ? imageUrl
+                : `${API_BASE}${imageUrl}`;
 
         const imageTag = src
             ? `<img src="${src}" alt="${safeAlt}" style="max-width:100%;height:auto;border-radius:8px;margin-bottom:16px;display:block;" />`
@@ -175,7 +241,10 @@ const Admin_BlogCreate = () => {
                 navigate('/admin/blog-management');
             }, 900);
         } catch (err) {
-            showToast('error', err.response?.data?.error || err.message || 'Failed to save draft.');
+            showToast(
+                'error',
+                extractErrorMessage(err, 'Failed to save draft. Please try again.')
+            );
         }
     };
 
@@ -198,7 +267,10 @@ const Admin_BlogCreate = () => {
                 navigate('/admin/blog-management');
             }, 900);
         } catch (err) {
-            showToast('error', err.response?.data?.error || err.message || 'Failed to publish post.');
+            showToast(
+                'error',
+                extractErrorMessage(err, 'Failed to publish post. Please try again.')
+            );
         }
     };
 

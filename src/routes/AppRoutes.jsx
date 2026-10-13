@@ -1,6 +1,6 @@
 // src/routes/AppRoutes.jsx
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
 import Homepage from '../pages/Home/Homepage';
 import Login from '../components/auth/Login';
@@ -44,7 +44,8 @@ const AppRoutes = () => {
         {/* ============================================ */}
         {/* PUBLIC ROUTES                                 */}
         {/* ============================================ */}
-        <Route path="/" element={<Homepage />} />
+        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/home" element={<Homepage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/verify-email" element={<VerifyEmail />} />

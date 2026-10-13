@@ -102,20 +102,10 @@ const TermsAndConditions = () => {
           <nav
             className={`terms-header-nav ${menuOpen ? "mobile-open" : ""}`}
           >
-            <Link to="/" onClick={closeMenu}>
+            <a href="https://www.iik.co.za/Home" onClick={closeMenu}>
               Home
-            </Link>
-            <a
-              href="https://www.iik.co.za/contact-us"
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={closeMenu}
-            >
-              Contact
             </a>
-            <Link to="/About" onClick={closeMenu}>
-              About
-            </Link>
+            
             <Link to="/BlogPage" onClick={closeMenu}>
               Blog
             </Link>
@@ -439,9 +429,7 @@ const TermsAndConditions = () => {
               <div className="declaration-list">
                 {declarationItems.map((item, index) => (
                   <div key={index} className="declaration-item">
-                    <span className="declaration-bullet" aria-hidden="true">
-                      ✓
-                    </span>
+                    <span className="declaration-bullet" aria-hidden="true"></span>
                     <span>{item}</span>
                   </div>
                 ))}

@@ -9,11 +9,13 @@ import {
   FaGoogle,
   FaSpinner,
   FaExclamationCircle,
-  FaSync
+  FaSync,
+  FaBars
 } from 'react-icons/fa';
 import Footer from '../common/Footer';
 import Input from '../common/Input';
 import '../../styles/components/auth.css';
+import '../../styles/components/mobile-nav.css';
 import logo from '../../assets/images/small Mki.png';
 import { API } from '../../config/api';
 
@@ -29,6 +31,7 @@ const Login = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [errorType, setErrorType] = useState('');
   const [lockTimeLeft, setLockTimeLeft] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   // ===== CAPTCHA STATES =====
   const [captcha, setCaptcha] = useState('');
@@ -309,22 +312,24 @@ const Login = () => {
 
   return (
     <div className="login-page">
-      <header className="login-header">
+      <header className="login-header site-header">
         <div className="header-container">
           <div className="header-logo">
             <img src={logo} alt="IIK Portal Logo" />
             <span>Learner Certificate Portal</span>
           </div>
-          <nav className="header-nav">
-            <Link to="/">Home</Link>
-            <a
-              href="https://www.iik.co.za/contact-us"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Contact
-            </a>
-            <Link to="/about">About</Link>
+          <button
+            type="button"
+            className="site-menu-toggle"
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label="Toggle navigation menu"
+            aria-expanded={menuOpen}
+          >
+            <FaBars size={22} />
+          </button>
+          <nav className={`header-nav ${menuOpen ? 'mobile-open' : ''}`}>
+            <a href="https://www.iik.co.za/Home">Home</a>
+            
             <Link to="/BlogPage">Blog</Link>
           </nav>
         </div>
@@ -416,7 +421,7 @@ const Login = () => {
                 setError('');
                 setErrorType('');
               }}
-              placeholder="your@email.com"
+              placeholder="Enter your email"
               icon={FaEnvelope}
               required
               disabled={loading || errorType === 'locked'}
@@ -521,12 +526,16 @@ const Login = () => {
             </button>
           </form>
 
+          {/*
           <div className="auth-divider">
             <hr />
             <span>or continue with</span>
             <hr />
           </div>
+          */}
 
+          {/* Google login will be implemented later - it does not currently work for now */}
+          {/* 
           <button
             className="btn-google"
             onClick={handleGoogleLogin}
@@ -534,10 +543,12 @@ const Login = () => {
           >
             <FaGoogle size={20} />
             {loading ? 'Loading...' : 'Continue with Google'}
-          </button>
+          </button> */}
 
           <p className="auth-footer-text">
-            Don't have an account? <Link to="/signup">Sign Up</Link>
+            View <Link to="/terms_and_conditions">Terms and Conditions </Link>
+           
+          or Don't have an account? <Link to="/signup">Sign Up</Link>
           </p>
         </div>
       </div>

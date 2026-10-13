@@ -1,11 +1,14 @@
 // src/pages/Learner_Screens/Learner_DashBoard.jsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Learner_Header from '../../components/Learner/Learner_Header';
 import Learner_SideBar from '../../components/Learner/Learner_SideBar';
 import '../../styles/Learner/Learner_DashBoard.css';
 import { API, API_BASE } from '../../config/api';
 
+// ---------------------------------------------------------------------------
+// Format a raw date for display. Accepts ISO strings, Date objects, or null.
+// ---------------------------------------------------------------------------
 const formatStartDate = (rawDate) => {
   if (!rawDate) return 'Not set';
   const d = new Date(rawDate);
@@ -15,6 +18,58 @@ const formatStartDate = (rawDate) => {
     day: '2-digit',
     year: 'numeric'
   });
+};
+
+// ---------------------------------------------------------------------------
+// Classify a raw start date against today (date-only).
+// Returns 'none' | 'today' | 'past' | 'future'
+// ---------------------------------------------------------------------------
+const classifyStartDate = (rawDate) => {
+  if (!rawDate) return 'none';
+  const d = new Date(rawDate);
+  if (isNaN(d.getTime())) return 'none';
+  d.setHours(0, 0, 0, 0);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (d.getTime() === today.getTime()) return 'today';
+  return d < today ? 'past' : 'future';
+};
+
+// ---------------------------------------------------------------------------
+// Normalize whatever status string comes back into one of:
+// 'Active' | 'Upcoming' | 'Archived' | 'Enrolled' | 'Draft'
+// ---------------------------------------------------------------------------
+const normalizeStatus = (raw) => {
+  if (!raw) return 'Draft';
+  const s = String(raw).trim().toLowerCase();
+  if (s === 'active') return 'Active';
+  if (s === 'upcoming') return 'Upcoming';
+  if (s === 'archived') return 'Archived';
+  if (s === 'enrolled') return 'Enrolled';
+  if (s === 'draft') return 'Draft';
+  // Fallback: capitalize first letter
+  return s.charAt(0).toUpperCase() + s.slice(1);
+};
+
+// ---------------------------------------------------------------------------
+// A programme is only actionable when:
+//   - status is Active, OR
+//   - status is Archived, OR
+//   - status is Enrolled, OR
+//   - status is Upcoming but the start date has arrived/passed
+// ---------------------------------------------------------------------------
+const isProgrammeActionable = (programme) => {
+  const status = normalizeStatus(programme.status);
+
+  if (status === 'Active') return true;
+  if (status === 'Archived') return true;
+  if (status === 'Enrolled') return true;
+  if (status !== 'Upcoming') return false;
+
+  const kind = classifyStartDate(programme.startDateRaw);
+  return kind === 'today' || kind === 'past';
 };
 
 const Learner_DashBoard = () => {
@@ -29,6 +84,9 @@ const Learner_DashBoard = () => {
   const [showError, setShowError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [programmes, setProgrammes] = useState([]);
+
+  // ---- same minute-tick the programme page uses ----
+  const [nowTick, setNowTick] = useState(Date.now());
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -51,6 +109,12 @@ const Learner_DashBoard = () => {
     if (n.includes('social media')) return 'fa-hashtag';
     return 'fa-graduation-cap';
   };
+
+  // ---- tick every 60 seconds so buttons auto-unlock at midnight ----
+  useEffect(() => {
+    const id = setInterval(() => setNowTick(Date.now()), 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
 
   const fetchArchivedProgrammes = useCallback(async () => {
     try {
@@ -86,7 +150,8 @@ const Learner_DashBoard = () => {
           name: row.name,
           description: row.description,
           duration: row.duration,
-          Programme_status: 'Archived'
+          status: 'Archived',
+          startDate: row.startDate ?? row.Start_date ?? null
         }));
     } catch (err) {
       console.error('Fetch archived programmes error:', err);
@@ -135,10 +200,11 @@ const Learner_DashBoard = () => {
         const data = await programmesResponse.json();
         if (data.success && Array.isArray(data.data)) {
           programmeRows = data.data;
+        } else if (Array.isArray(data.data)) {
+          programmeRows = data.data;
         }
       }
 
-      // Fallback to the shared endpoint if the learner one returned nothing.
       if (programmeRows.length === 0) {
         try {
           const sharedRes = await fetch(`${API_BASE}/api/programmes`);
@@ -146,10 +212,14 @@ const Learner_DashBoard = () => {
             const sharedData = await sharedRes.json();
             if (sharedData.success && Array.isArray(sharedData.programmes)) {
               programmeRows = sharedData.programmes;
+            } else if (Array.isArray(sharedData.programmes)) {
+              programmeRows = sharedData.programmes;
+            } else if (Array.isArray(sharedData)) {
+              programmeRows = sharedData;
             }
           }
         } catch {
-          // swallow — no programmes available
+          // swallow
         }
       }
 
@@ -159,7 +229,8 @@ const Learner_DashBoard = () => {
             name: row.name,
             description: row.description,
             duration: row.duration,
-            Programme_status: 'Enrolled'
+            status: 'Enrolled',
+            startDate: row.startDate ?? row.Start_date ?? null
           }))
         : [];
 
@@ -177,9 +248,18 @@ const Learner_DashBoard = () => {
 
       const visible = mergedRows
         .map((p) => {
-          const rawStatus = p.status ?? p.Programme_status ?? 'Draft';
+          const rawStatus = normalizeStatus(
+            p.status ?? p.Programme_status ?? p.centreStatus ?? 'Draft'
+          );
+
+          // ---- capture the RAW date (needed for the actionable check) ----
           const startDateRaw =
-            p.startDateRaw ?? p.startDate ?? p.Start_date ?? null;
+            p.startDateRaw ??
+            p.startDate ??
+            p.Start_date ??
+            p.StartDate ??
+            p.start_date ??
+            null;
 
           const title =
             p.title ?? p.name ?? p.Programme_name ?? 'Untitled Programme';
@@ -258,6 +338,16 @@ const Learner_DashBoard = () => {
     if (!learnerData) return 0;
     return learnerData.totalCertificates || learnerData.certificates?.length || 0;
   };
+
+  // ---- Recompute visibleProgrammes whenever time ticks ----
+  //     This is what makes the button auto-update without a page refresh.
+  const visibleProgrammes = useMemo(() => {
+    return programmes.map((p) => ({
+      ...p,
+      actionable: isProgrammeActionable(p)
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [programmes, nowTick]);
 
   const userName = getUserName();
 
@@ -397,28 +487,42 @@ const Learner_DashBoard = () => {
           <section className="programmes-section">
             <h2>Our Programmes</h2>
             <div className="programmes-grid">
-              {programmes.length === 0 ? (
+              {visibleProgrammes.length === 0 ? (
                 <p className="no-programmes">No programmes available yet.</p>
               ) : (
-                programmes.map((prog) => (
-                  <div className="programme-card" key={prog.id}>
-                    <div className="programme-icon">
-                      <i className={`fas ${prog.icon}`}></i>
+                visibleProgrammes.map((prog) => {
+                  const disabled = !prog.actionable;
+                  const buttonLabel = disabled
+                    ? `Available from ${prog.startDate}`
+                    : "I'm Interested";
+                  const isUpcoming = prog.status === 'Upcoming';
+
+                  return (
+                    <div className="programme-card" key={prog.id}>
+                      <div className="programme-icon">
+                        <i className={`fas ${prog.icon}`}></i>
+                      </div>
+                      <h3>{prog.title}</h3>
+                      <p className="programme-desc">{prog.desc}</p>
+                      <div className="programme-duration">
+                        <i className="far fa-clock"></i> Duration: {prog.duration}
+                      </div>
+                      <button
+                        className="btn-interest"
+                        data-programme={prog.id}
+                        onClick={() => prog.actionable && handleInterest(prog)}
+                        disabled={disabled}
+                        title={
+                          disabled
+                            ? `Available from ${prog.startDate}`
+                            : undefined
+                        }
+                      >
+                        {buttonLabel}
+                      </button>
                     </div>
-                    <h3>{prog.title}</h3>
-                    <p className="programme-desc">{prog.desc}</p>
-                    <div className="programme-duration">
-                      <i className="far fa-clock"></i> Duration: {prog.duration}
-                    </div>
-                    <button
-                      className="btn-interest"
-                      data-programme={prog.id}
-                      onClick={() => handleInterest(prog)}
-                    >
-                      I'm Interested
-                    </button>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </section>
@@ -439,9 +543,15 @@ const Learner_DashBoard = () => {
         .btn-interest {
           transition: all 0.3s ease;
         }
-        .btn-interest:hover {
+        .btn-interest:hover:not(:disabled) {
           transform: translateY(-2px);
           box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+        }
+        .btn-interest:disabled {
+          cursor: not-allowed;
+          transform: none;
+          box-shadow: none;
+          opacity: 0.65;
         }
         .no-programmes {
           color: #64748b;

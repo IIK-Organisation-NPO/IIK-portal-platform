@@ -16,10 +16,12 @@ import {
   FaArrowLeft,
   FaCheckCircle,
   FaShieldAlt,
-  FaMapMarkerAlt
+  FaMapMarkerAlt,
+  FaBars
 } from 'react-icons/fa';
 import Footer from '../common/Footer';
 import '../../styles/components/auth.css';
+import '../../styles/components/mobile-nav.css';
 import logo from '../../assets/images/small Mki.png';
 import { API, GOOGLE_CLIENT_ID } from '../../config/api';
 
@@ -48,6 +50,7 @@ const Signup = () => {
   const [isGoogleInitialized, setIsGoogleInitialized] = useState(false);
   const [genders, setGenders] = useState([]);
   const [passwordFocused, setPasswordFocused] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [showCaptcha, setShowCaptcha] = useState(false);
@@ -723,22 +726,24 @@ const Signup = () => {
 
   return (
     <div className="signup-page">
-      <header className="auth-header">
+      <header className="auth-header site-header">
         <div className="header-container">
           <div className="header-logo">
             <img src={logo} alt="IIK Portal Logo" />
             <span>Learner Certificate Portal</span>
           </div>
-          <nav className="header-nav">
-            <Link to="/">Home</Link>
-            <a
-              href="https://www.iik.co.za/contact-us"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Contact
-            </a>
-            <Link to="/about">About</Link>
+          <button
+            type="button"
+            className="site-menu-toggle"
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label="Toggle navigation menu"
+            aria-expanded={menuOpen}
+          >
+            <FaBars size={22} />
+          </button>
+          <nav className={`header-nav ${menuOpen ? 'mobile-open' : ''}`}>
+            <a href="https://www.iik.co.za/Home">Home</a>
+            
             <Link to="/BlogPage">Blog</Link>
           </nav>
         </div>
@@ -796,7 +801,7 @@ const Signup = () => {
                     value={formData.name}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    placeholder="e.g. Sarah"
+                    placeholder="Enter your first name"
                     className={hasError('name') ? 'error' : ''}
                     disabled={loading}
                     autoFocus
@@ -816,7 +821,7 @@ const Signup = () => {
                     value={formData.surname}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    placeholder="e.g. Krumac"
+                    placeholder="Enter your surname"
                     className={hasError('surname') ? 'error' : ''}
                     disabled={loading}
                   />
@@ -838,7 +843,7 @@ const Signup = () => {
                     value={formData.email}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    placeholder="e.g. sarah@example.com"
+                    placeholder="Enter your email"
                     className={hasError('email') ? 'error' : ''}
                     disabled={loading}
                   />
@@ -857,7 +862,7 @@ const Signup = () => {
                     value={formData.phone_number}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    placeholder="e.g. 0821234567 or +27821234567"
+                    placeholder="Enter your phone number"
                     className={hasError('phone_number') ? 'error' : ''}
                     disabled={loading}
                     maxLength={13}
@@ -907,7 +912,7 @@ const Signup = () => {
                     value={formData.id_number}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    placeholder="13-digit South African ID (e.g. 9001015800080)"
+                    placeholder="13-digit South African ID"
                     className={hasError('id_number') ? 'error' : ''}
                     disabled={loading}
                     maxLength="13"

@@ -12,15 +12,15 @@ const hasEmbeddedImage = (html) => /<img\s[^>]*src=/i.test(html || '');
 /* ================================================================
    Helper: extract the FIRST embedded image from an HTML body.
    Returns { buffer, mime } or null.
-   Handles: <img src="data:image/png;base64,...">
 ================================================================ */
 const extractFirstImage = (html) => {
   if (!html) return null;
   const match = /<img[^>]+src=["']data:(image\/[a-zA-Z0-9+.-]+);base64,([^"']+)["']/i.exec(html);
   if (!match) return null;
 
-  const mime = match[1];               // e.g. "image/png"
+  const mime = match[1];
   const base64 = match[2];
+
   try {
     return {
       mime,
@@ -107,13 +107,14 @@ router.get('/', async (req, res) => {
     res.json(posts);
   } catch (err) {
     console.error('[GET /api/blog]', err);
-    res.status(500).json({ error: 'Failed to fetch posts' });
+    res.status(500).json({
+      error: 'We could not load the blog posts right now. Please try again in a moment.'
+    });
   }
 });
 
 /* ================================================================
    GET /api/blog/:id/image  (PUBLIC)
-   Serves the stored cover image blob for a post.
 ================================================================ */
 router.get('/:id/image', async (req, res) => {
   try {
@@ -124,7 +125,7 @@ router.get('/:id/image', async (req, res) => {
     );
 
     if (!rows.length || !rows[0].cover_image_data) {
-      return res.status(404).json({ error: 'No image' });
+      return res.status(404).json({ error: 'No image for this post.' });
     }
 
     const mime = rows[0].cover_image_mime || 'image/png';
@@ -138,7 +139,9 @@ router.get('/:id/image', async (req, res) => {
     res.end(buffer);
   } catch (err) {
     console.error('[GET /api/blog/:id/image]', err);
-    res.status(500).json({ error: 'Failed to load image' });
+    res.status(500).json({
+      error: 'We could not load this image right now. Please try again in a moment.'
+    });
   }
 });
 
@@ -155,18 +158,18 @@ router.get('/:id', async (req, res) => {
        FROM BlogPosts WHERE BlogPost_id = ?`,
       [req.params.id]
     );
-    if (!rows.length) return res.status(404).json({ error: 'Not found' });
+    if (!rows.length) return res.status(404).json({ error: 'Post not found.' });
     res.json(rows[0]);
   } catch (err) {
     console.error('[GET /api/blog/:id]', err);
-    res.status(500).json({ error: 'Failed to fetch post' });
+    res.status(500).json({
+      error: 'We could not load this post right now. Please try again in a moment.'
+    });
   }
 });
 
 /* ================================================================
    PUT /api/blog/:id  (ADMIN ONLY)
-   Updates title/type/status/date, and if the incoming body contains
-   an embedded image, refreshes the cover_image_data blob too.
 ================================================================ */
 router.put('/:id', authenticate, isAdmin, async (req, res) => {
   const { title, type, status, date, articleBody } = req.body;
@@ -175,11 +178,9 @@ router.put('/:id', authenticate, isAdmin, async (req, res) => {
     const parsedDate  = date ? new Date(date) : null;
     const isPublished = status === 'Published';
 
-    // Extract image from the incoming article HTML (if provided)
     const extracted = articleBody ? extractFirstImage(articleBody) : null;
 
     if (articleBody !== undefined && extracted) {
-      // Update everything including the image blob and content
       await pool.query(
         `UPDATE BlogPosts
            SET Title             = ?,
@@ -197,7 +198,6 @@ router.put('/:id', authenticate, isAdmin, async (req, res) => {
         ]
       );
     } else if (articleBody !== undefined) {
-      // Update content but no image found — clear the blob
       await pool.query(
         `UPDATE BlogPosts
            SET Title             = ?,
@@ -211,7 +211,6 @@ router.put('/:id', authenticate, isAdmin, async (req, res) => {
         [title, type, status, isPublished ? parsedDate : null, articleBody, req.params.id]
       );
     } else {
-      // Content not sent — just update the metadata
       await pool.query(
         `UPDATE BlogPosts
            SET Title         = ?,
@@ -226,7 +225,9 @@ router.put('/:id', authenticate, isAdmin, async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error('[PUT /api/blog/:id]', err);
-    res.status(500).json({ error: 'Failed to update post' });
+    res.status(500).json({
+      error: 'We could not update this post right now. Please try again in a moment.'
+    });
   }
 });
 
@@ -239,13 +240,14 @@ router.delete('/:id', authenticate, isAdmin, async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error('[DELETE /api/blog/:id]', err);
-    res.status(500).json({ error: 'Failed to delete post' });
+    res.status(500).json({
+      error: 'We could not delete this post right now. Please try again in a moment.'
+    });
   }
 });
 
 /* ================================================================
    POST /api/blog  (ADMIN ONLY)
-   Inserts the post AND stores the extracted cover image as a blob.
 ================================================================ */
 router.post('/', authenticate, isAdmin, async (req, res) => {
   const {
@@ -257,10 +259,18 @@ router.post('/', authenticate, isAdmin, async (req, res) => {
 
   if (!adminId) {
     console.warn('[POST /api/blog] Rejected — no admin id on req.user:', req.user);
-    return res.status(401).json({ error: 'Not authenticated' });
+    return res.status(401).json({ error: 'Please log in again to continue.' });
   }
 
-  // Extract the first embedded image from the article HTML
+  // ---- Friendly input validation ----
+  if (!officialTitle || !officialTitle.trim()) {
+    return res.status(400).json({ error: 'Please enter a title for this post.' });
+  }
+
+  if (!postType) {
+    return res.status(400).json({ error: 'Please choose a post type.' });
+  }
+
   const extracted = extractFirstImage(articleBody);
 
   if (process.env.NODE_ENV !== 'production' && !hasEmbeddedImage(articleBody)) {
@@ -277,7 +287,7 @@ router.post('/', authenticate, isAdmin, async (req, res) => {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         adminId,
-        officialTitle,
+        officialTitle.trim(),
         articleBody,
         extracted ? extracted.buffer : null,
         extracted ? extracted.mime : null,
@@ -296,7 +306,22 @@ router.post('/', authenticate, isAdmin, async (req, res) => {
     });
   } catch (err) {
     console.error('[POST /api/blog]', err);
-    res.status(500).json({ error: 'Failed to create post' });
+
+    
+    if (err.code === 'ER_DATA_TOO_LONG') {
+      return res.status(400).json({
+        error: 'This post is too large to save. Try using a smaller image.'
+      });
+    }
+    if (err.code === 'ER_NET_PACKET_TOO_LARGE') {
+      return res.status(413).json({
+        error: 'This post contains too much data. Try a smaller image.'
+      });
+    }
+
+    res.status(500).json({
+      error: 'We could not publish this post right now. Please try again in a moment.'
+    });
   }
 });
 
