@@ -1232,13 +1232,13 @@ static async downloadCertificate(req, res) {
             const adminCentreId = req.user?.centreId ?? null;
             const isSuperAdmin = req.user?.roleId === 3;
 
+            
             if (!isSuperAdmin && adminCentreId && String(digital_center_id) !== String(adminCentreId)) {
                 return res.status(403).json({
                     success: false,
                     message: 'You can only manage learners in your own centre.'
                 });
             }
-
 
             
             if (status === 'Enrolled') {
@@ -1272,7 +1272,17 @@ static async downloadCertificate(req, res) {
             
             if (status === 'Enrolled') {
                 try {
-                    const enrolmentCentreId = isSuperAdmin ? null : adminCentreId;
+                    
+                    const enrolmentCentreId = digital_center_id ?? adminCentreId;
+
+                    if (!enrolmentCentreId) {
+                        return res.status(400).json({
+                            success: false,
+                            message:
+                                'Cannot determine digital center for enrolment. ' +
+                                'The interest record has no centre assigned.'
+                        });
+                    }
 
                     const [existingEnrolment] = await pool.execute(
                         `SELECT Enrolment_id FROM Enrolment
