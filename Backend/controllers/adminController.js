@@ -2404,6 +2404,464 @@ static async bulkUploadCertificates(req, res) {
             });
         }
     }
+  //====================================
+  // GET Centres Stats
+  //=====================================
+  static async getCentreStats(req, res) {
+    try {
+      const [rows] = await pool.execute(
+        `SELECT
+           (SELECT COUNT(*) FROM digital_center) AS totalCentres,
+           (SELECT COUNT(*) FROM digital_center WHERE status = 'Active') AS activeCentres,
+           (SELECT COUNT(DISTINCT User_id) FROM Enrolment) AS totalLearners`
+      );
+
+      return res.status(200).json({ success: true, data: rows[0] });
+    } catch (err) {
+      console.error('getCentreStats error:', err);
+      return res.status(500).json({ success: false, message: err.message });
+    }
+  }
+
+    // ============================================
+  // CREATE CENTRE
+  // POST /api/admin/centres
+  // Body: { center_name, address, contact_number, opening_hours, status, region, latitude?, longitude? }
+  // ============================================
+  static async createCentre(req, res) {
+    try {
+      const {
+        center_name,
+        address,
+        contact_number,
+        opening_hours = null,
+        status = 'Active',
+        region = null,
+        latitude = null,
+        longitude = null
+      } = req.body;
+
+      if (!center_name || !center_name.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Centre name is required.'
+        });
+      }
+
+      if (!address || !address.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Address is required.'
+        });
+      }
+
+      // Reject duplicate names (case-insensitive)
+      const [dupes] = await pool.execute(
+        `SELECT digital_center_id FROM digital_center
+         WHERE LOWER(TRIM(center_name)) = LOWER(TRIM(?))
+         LIMIT 1`,
+        [center_name]
+      );
+
+      if (dupes.length > 0) {
+        return res.status(409).json({
+          success: false,
+          message: 'A centre with this name already exists.'
+        });
+      }
+
+      const finalStatus = status || 'Active';
+
+      const [result] = await pool.execute(
+        `INSERT INTO digital_center
+           (center_name, address, latitude, longitude, contact_number,
+            opening_hours, status, region)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          center_name.trim(),
+          address.trim(),
+          latitude,
+          longitude,
+          contact_number ? String(contact_number).trim() : null,
+          opening_hours ? String(opening_hours).trim() : null,
+          finalStatus,
+          region ? String(region).trim() : null
+        ]
+      );
+
+      // ============================================
+      // Register this centre at every existing programme —
+      // ONLY when the new centre is Active.
+      // Inactive centres are not linked to any programme.
+      // ============================================
+      if (finalStatus === 'Active') {
+        try {
+          await pool.execute(
+            `INSERT IGNORE INTO Programme_Centre (Programme_id, digital_center_id, Status)
+             SELECT p.Programme_id, ?, 'Active'
+             FROM programmes p`,
+            [result.insertId]
+          );
+        } catch (linkErr) {
+          // Non-fatal — the centre exists, but linking failed.
+          console.error('createCentre: failed to link centre to programmes:', linkErr.message);
+        }
+      } else {
+        console.log(
+          `createCentre: centre ${result.insertId} created as ${finalStatus} — skipping Programme_Centre links.`
+        );
+      }
+
+      return res.status(201).json({
+        success: true,
+        message: 'Centre created successfully.',
+        data: {
+          digital_center_id: result.insertId,
+          center_name: center_name.trim(),
+          address: address.trim(),
+          latitude,
+          longitude,
+          contact_number: contact_number || null,
+          opening_hours: opening_hours || null,
+          status: finalStatus,
+          region: region || null
+        }
+      });
+    } catch (err) {
+      console.error('createCentre error:', err);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to create centre: ' + err.message
+      });
+    }
+  }
+
+  // ============================================
+  // UPDATE CENTRE
+  // PUT /api/admin/centres/:id
+  // Body: any subset of { center_name, address, contact_number,
+  //                       opening_hours, status, region, latitude, longitude }
+  // ============================================
+  static async updateCentre(req, res) {
+    try {
+      const { id } = req.params;
+
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          message: 'Centre ID is required.'
+        });
+      }
+
+      // Confirm the centre exists — pull its current status so we can
+      // detect Active ⇄ Inactive transitions.
+      const [existing] = await pool.execute(
+        `SELECT digital_center_id, status FROM digital_center
+         WHERE digital_center_id = ? LIMIT 1`,
+        [id]
+      );
+
+      if (existing.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'Centre not found.'
+        });
+      }
+
+      const previousStatus = existing[0].status;
+
+      // Only update fields that were actually sent
+      const fields = [];
+      const values = [];
+
+      // --- center_name ---
+      if (req.body.center_name !== undefined) {
+        if (!String(req.body.center_name).trim()) {
+          return res.status(400).json({
+            success: false,
+            message: 'Centre name cannot be empty.'
+          });
+        }
+
+        const [dupes] = await pool.execute(
+          `SELECT digital_center_id FROM digital_center
+           WHERE LOWER(TRIM(center_name)) = LOWER(TRIM(?))
+             AND digital_center_id != ?
+           LIMIT 1`,
+          [req.body.center_name, id]
+        );
+
+        if (dupes.length > 0) {
+          return res.status(409).json({
+            success: false,
+            message: 'Another centre already uses this name.'
+          });
+        }
+
+        fields.push('center_name = ?');
+        values.push(String(req.body.center_name).trim());
+      }
+
+      // --- address ---
+      if (req.body.address !== undefined) {
+        fields.push('address = ?');
+        values.push(String(req.body.address).trim());
+      }
+
+      // --- contact_number ---
+      if (req.body.contact_number !== undefined) {
+        fields.push('contact_number = ?');
+        values.push(
+          req.body.contact_number
+            ? String(req.body.contact_number).trim()
+            : null
+        );
+      }
+
+      // --- opening_hours ---
+      if (req.body.opening_hours !== undefined) {
+        fields.push('opening_hours = ?');
+        values.push(
+          req.body.opening_hours
+            ? String(req.body.opening_hours).trim()
+            : null
+        );
+      }
+
+      // --- status ---
+      if (req.body.status !== undefined) {
+        const allowed = ['Active', 'Inactive'];
+        if (!allowed.includes(req.body.status)) {
+          return res.status(400).json({
+            success: false,
+            message: 'Status must be Active or Inactive.'
+          });
+        }
+        fields.push('status = ?');
+        values.push(req.body.status);
+      }
+
+      // --- region ---
+      if (req.body.region !== undefined) {
+        fields.push('region = ?');
+        values.push(
+          req.body.region
+            ? String(req.body.region).trim()
+            : null
+        );
+      }
+
+      // --- latitude ---
+      if (req.body.latitude !== undefined) {
+        fields.push('latitude = ?');
+        values.push(req.body.latitude);
+      }
+
+      // --- longitude ---
+      if (req.body.longitude !== undefined) {
+        fields.push('longitude = ?');
+        values.push(req.body.longitude);
+      }
+
+      if (fields.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'No valid fields provided to update.'
+        });
+      }
+
+      values.push(id);
+
+      await pool.execute(
+        `UPDATE digital_center SET ${fields.join(', ')}
+         WHERE digital_center_id = ?`,
+        values
+      );
+
+      const newStatus = req.body.status !== undefined ? req.body.status : previousStatus;
+
+      // ============================================
+      // Handle status transitions for Programme_Centre
+      //   Inactive → Active : create missing links
+      //   Active   → Inactive : archive existing links
+      // ============================================
+      if (previousStatus !== newStatus) {
+        try {
+          if (newStatus === 'Active') {
+            // Activate: ensure every programme has a link
+            await pool.execute(
+              `INSERT IGNORE INTO Programme_Centre (Programme_id, digital_center_id, Status)
+               SELECT p.Programme_id, ?, 'Active'
+               FROM programmes p`,
+              [id]
+            );
+            // Also reactivate any previously archived rows for this centre
+            await pool.execute(
+              `UPDATE Programme_Centre
+               SET Status = 'Active'
+               WHERE digital_center_id = ?`,
+              [id]
+            );
+          } else if (newStatus === 'Inactive') {
+            // Deactivate: archive all existing links (keeps history)
+            await pool.execute(
+              `UPDATE Programme_Centre
+               SET Status = 'Archived'
+               WHERE digital_center_id = ?`,
+              [id]
+            );
+          }
+        } catch (linkErr) {
+          // Non-fatal — the centre status was updated; log the link failure
+          console.error('updateCentre: Programme_Centre sync failed:', linkErr.message);
+        }
+      }
+
+      // Return the updated row so the frontend can refresh cleanly
+      const [updated] = await pool.execute(
+        `SELECT digital_center_id, center_name, address,
+                latitude, longitude, contact_number,
+                opening_hours, status, region
+         FROM digital_center
+         WHERE digital_center_id = ?`,
+        [id]
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: 'Centre updated successfully.',
+        data: updated[0]
+      });
+    } catch (err) {
+      console.error('updateCentre error:', err);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to update centre: ' + err.message
+      });
+    }
+  }
+
+  // ============================================
+  // DELETE CENTRE
+  // DELETE /api/admin/centres/:id
+  // ============================================
+  static async deleteCentre(req, res) {
+    try {
+      const { id } = req.params;
+
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          message: 'Centre ID is required.'
+        });
+      }
+
+      const [existing] = await pool.execute(
+        `SELECT digital_center_id FROM digital_center
+         WHERE digital_center_id = ? LIMIT 1`,
+        [id]
+      );
+
+      if (existing.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'Centre not found.'
+        });
+      }
+
+      // Safety guard — refuse to delete if learners are enrolled here
+      const [enrolments] = await pool.execute(
+        `SELECT COUNT(*) AS total FROM Enrolment
+         WHERE digital_center_id = ?`,
+        [id]
+      );
+
+      if (Number(enrolments[0]?.total) > 0) {
+        return res.status(409).json({
+          success: false,
+          message:
+            'Cannot delete this centre because it has enrolled learners. ' +
+            'Reassign them first.'
+        });
+      }
+
+      // ============================================
+      // Clean up Programme_Centre links first —
+      // the FK constraint would otherwise block the delete
+      // ============================================
+      await pool.execute(
+        `DELETE FROM Programme_Centre WHERE digital_center_id = ?`,
+        [id]
+      );
+
+      await pool.execute(
+        `DELETE FROM digital_center WHERE digital_center_id = ?`,
+        [id]
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: 'Centre deleted successfully.'
+      });
+    } catch (err) {
+      console.error('deleteCentre error:', err);
+
+      if (err.code === 'ER_ROW_IS_REFERENCED_2' || err.errno === 1451) {
+        return res.status(409).json({
+          success: false,
+          message:
+            'Cannot delete this centre because other records depend on it.'
+        });
+      }
+
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to delete centre: ' + err.message
+      });
+    }
+  }
+  // ============================================
+// PER-CENTRE ANALYTICS
+// GET /api/admin/analytics/centres
+// Returns: [{ name, count }, ...] — one row per centre
+// ============================================
+static async getCentreStats(req, res) {
+  try {
+    const [rows] = await pool.execute(
+      `SELECT
+         dc.center_name AS name,
+         COUNT(DISTINCT e.User_id) AS count
+       FROM digital_center dc
+       LEFT JOIN Enrolment e ON e.digital_center_id = dc.digital_center_id
+       GROUP BY dc.digital_center_id, dc.center_name
+       ORDER BY dc.center_name ASC`
+    );
+    return res.status(200).json({ success: true, data: rows });
+  } catch (err) {
+    console.error('getCentreStats (analytics) error:', err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+// ============================================
+// SUMMARY STATS
+// GET /api/admin/centres/stats
+// Returns: { totalCentres, activeCentres, totalLearners }
+// ============================================
+static async getCentreSummaryStats(req, res) {
+  try {
+    const [rows] = await pool.execute(
+      `SELECT
+         (SELECT COUNT(*) FROM digital_center) AS totalCentres,
+         (SELECT COUNT(*) FROM digital_center WHERE status = 'Active') AS activeCentres,
+         (SELECT COUNT(DISTINCT User_id) FROM Enrolment) AS totalLearners`
+    );
+    return res.status(200).json({ success: true, data: rows[0] });
+  } catch (err) {
+    console.error('getCentreSummaryStats error:', err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+}
 }
 
 module.exports = AdminController;

@@ -32,6 +32,7 @@ import Admin_CreateProgramme from '../pages/Admin_Screens/Admin_CreateProgramme'
 import Admin_BlogManagement from '../pages/Admin_Screens/Admin_BlogManagement';
 import AdminBlogCreate from '../pages/Admin_Screens/Admin_blogCreate';
 import AdminStaffManagement from '../pages/Admin_Screens/Admin_StaffManagement';
+import AdminCentreManagement from '../pages/Admin_Screens/Admin_CentreManagement';
 
 import RoleRoute from '../components/auth/RoleRoute';
 import NotFound from '../pages/NotFound';
@@ -219,6 +220,15 @@ const AppRoutes = () => {
             </RoleRoute>
           }
         />
+         <Route
+          path="/admin/centres"
+          element={
+            <RoleRoute allowedRoles={['superadmin']}>
+              <AdminCentreManagement />
+            </RoleRoute>
+          }
+        />
+
 
         {/* ============================================ */}
         {/* CATCH-ALL — anything not matched             */}

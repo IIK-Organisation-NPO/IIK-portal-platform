@@ -14,6 +14,7 @@ router.use(authenticate, isAdmin);
 router.get('/stats', AdminController.getStats);
 router.get('/activities', AdminController.getActivities);
 
+
 // ============================================
 // LEARNER ROUTES
 // ============================================
@@ -71,6 +72,12 @@ router.delete('/certificates/:id', AdminController.deleteCertificate);
 // Overall stats, gender split, age groups
 router.get('/analytics', AdminController.getAnalytics);
 
+// Per-centre list — feeds the "Participants by Digital Centre" chart
+router.get('/analytics/centres', AdminController.getCentreStats);
+
+// Summary object — feeds the three stat cards on Centre Management
+router.get('/centres/stats', AdminController.getCentreSummaryStats);
+
 // Learners per digital centre
 router.get('/analytics/centres', AdminController.getCentreStats);
 router.get('/analytics/programmes', AdminController.getProgrammeStats);
@@ -92,8 +99,14 @@ router.patch('/enrolments/:id/complete',AdminController.markEnrolmentComplete);
 router.post( '/weekly-summary/send-now', AdminController.sendWeeklySummaryNow);
 
 // ============================================
-// DEVELOPMENT-ONLY TEST ROUTES
+// CENTRE MANAGEMENT
+// ============================================
+router.post('/centres',        AdminController.createCentre);
+router.put('/centres/:id',     AdminController.updateCentre);
+router.delete('/centres/:id',  AdminController.deleteCentre);
 
+// ============================================
+// DEVELOPMENT-ONLY TEST ROUTES
 // ============================================
 if (process.env.NODE_ENV === 'development') {
     router.get('/test-certificate', async (req, res) => {

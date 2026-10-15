@@ -60,6 +60,10 @@ export const API = {
     bulkIssue:        url('/api/admin/bulk-certificates/issue'),
     markEnrolmentComplete:(id) => url(`/api/admin/enrolments/${id}/complete`),
     sendWeeklySummaryNow: url('/api/admin/weekly-summary/send-now'),
+    centresStats: `${API_BASE}/api/admin/centres/stats`,
+    centres: `${API_BASE}/api/admin/centres`, 
+    
+
   },
   learner: {
     profile:         url('/api/learner/profile'),
@@ -80,10 +84,11 @@ export const API = {
 export const authHeaders = (extra = {}) => {
   const token = localStorage.getItem('token');
   return {
+    'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...extra,
   };
-};
+};;
 
 export const apiFetch = async (endpoint, options = {}) => {
   const res = await fetch(endpoint, {
