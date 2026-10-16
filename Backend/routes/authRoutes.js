@@ -43,10 +43,78 @@ router.get('/genders', AuthController.getGenders);
 router.get('/roles', AuthController.getRoles);
 
 // ============================================
-// ✅ CAPTCHA ROUTES (Human Verification) - CASE SENSITIVE
+// ✅ CAPTCHA ROUTES (Stateless, no cookies)
+//
+// The answer is signed into a token rather than stored in the session.
+// This means the CAPTCHA works even when the browser blocks the
+// session cookie (incognito, third-party cookie blocking, Safari ITP).
 // ============================================
 
-// Generate CAPTCHA image
+const crypto = require('crypto');
+
+// ---- CAPTCHA token config ----
+const CAPTCHA_SECRET =
+    process.env.CAPTCHA_SECRET ||
+    process.env.JWT_SECRET ||
+    'dev-captcha-secret-change-me';
+
+const CAPTCHA_TTL_MS = 5 * 60 * 1000;   // 5 minutes
+
+// Create a signed token: <answer>|<issuedAt>|<hmac>
+const signCaptchaToken = (answer) => {
+    const issuedAt = Date.now();
+    const payload = `${answer}|${issuedAt}`;
+    const signature = crypto
+        .createHmac('sha256', CAPTCHA_SECRET)
+        .update(payload)
+        .digest('hex');
+    return Buffer.from(`${payload}|${signature}`).toString('base64url');
+};
+
+// Verify a signed token. Returns { ok, reason?, answer? }
+const verifyCaptchaToken = (token) => {
+    if (!token || typeof token !== 'string') {
+        return { ok: false, reason: 'CAPTCHA not generated. Please refresh.' };
+    }
+
+    let decoded;
+    try {
+        decoded = Buffer.from(token, 'base64url').toString('utf8');
+    } catch {
+        return { ok: false, reason: 'Invalid CAPTCHA token.' };
+    }
+
+    const parts = decoded.split('|');
+    if (parts.length !== 3) {
+        return { ok: false, reason: 'Invalid CAPTCHA token.' };
+    }
+
+    const [answer, issuedAtStr, signature] = parts;
+    const issuedAt = Number(issuedAtStr);
+
+    if (!answer || !issuedAt || isNaN(issuedAt)) {
+        return { ok: false, reason: 'Invalid CAPTCHA token.' };
+    }
+
+    // 1. Signature check — nothing was tampered with
+    const expected = crypto
+        .createHmac('sha256', CAPTCHA_SECRET)
+        .update(`${answer}|${issuedAt}`)
+        .digest('hex');
+
+    if (signature !== expected) {
+        return { ok: false, reason: 'Invalid CAPTCHA token.' };
+    }
+
+    // 2. Expiry check
+    if (Date.now() - issuedAt > CAPTCHA_TTL_MS) {
+        return { ok: false, reason: 'CAPTCHA has expired. Please refresh.' };
+    }
+
+    return { ok: true, answer };
+};
+
+// Generate CAPTCHA image — returns the SVG plus a signed token
 router.get('/captcha', (req, res) => {
     try {
         const captcha = svgCaptcha.create({
@@ -59,16 +127,18 @@ router.get('/captcha', (req, res) => {
             height: 60
         });
 
-        // Store CAPTCHA as-is (NO .toLowerCase())
-        req.session.captcha = captcha.text;
-        req.session.captchaExpiry = Date.now() + 5 * 60 * 1000; 
+        const token = signCaptchaToken(captcha.text);
 
-        console.log('🔐 CAPTCHA generated:', captcha.text);
+        console.log('🔐 CAPTCHA generated');
 
-        res.setHeader('Content-Type', 'image/svg+xml');
-        res.send(captcha.data);
+        res.json({
+            success: true,
+            data: captcha.data,         // SVG string
+            token,                      // send this back on login
+            expiresIn: CAPTCHA_TTL_MS
+        });
     } catch (error) {
-        console.error(' CAPTCHA generation error:', error);
+        console.error('CAPTCHA generation error:', error);
         res.status(500).json({ success: false, message: 'Failed to generate CAPTCHA' });
     }
 });
@@ -86,17 +156,18 @@ router.get('/captcha/refresh', (req, res) => {
             height: 60
         });
 
-        req.session.captcha = captcha.text;
-        req.session.captchaExpiry = Date.now() + 5 * 60 * 1000;
+        const token = signCaptchaToken(captcha.text);
 
-        console.log('CAPTCHA refreshed:', captcha.text);
+        console.log('🔐 CAPTCHA refreshed');
 
         res.json({
             success: true,
-            data: captcha.data
+            data: captcha.data,
+            token,
+            expiresIn: CAPTCHA_TTL_MS
         });
     } catch (error) {
-        console.error(' CAPTCHA refresh error:', error);
+        console.error('CAPTCHA refresh error:', error);
         res.status(500).json({ success: false, message: 'Failed to refresh CAPTCHA' });
     }
 });
@@ -104,7 +175,7 @@ router.get('/captcha/refresh', (req, res) => {
 // Verify CAPTCHA (standalone)
 router.post('/verify-captcha', (req, res) => {
     try {
-        const { captcha } = req.body;
+        const { captcha, captchaToken } = req.body;
 
         if (!captcha) {
             return res.status(400).json({
@@ -113,30 +184,16 @@ router.post('/verify-captcha', (req, res) => {
             });
         }
 
-        if (!req.session.captcha) {
+        const check = verifyCaptchaToken(captchaToken);
+        if (!check.ok) {
             return res.status(400).json({
                 success: false,
-                message: 'CAPTCHA not generated. Please refresh.'
+                message: check.reason
             });
         }
 
-        if (req.session.captchaExpiry && Date.now() > req.session.captchaExpiry) {
-            req.session.captcha = null;
-            req.session.captchaExpiry = null;
-            return res.status(400).json({
-                success: false,
-                message: 'CAPTCHA has expired. Please refresh.'
-            });
-        }
-
-        // ✅ CASE-SENSITIVE comparison (NO .toLowerCase())
-        const isValid = captcha === req.session.captcha;
-
-        // Clear CAPTCHA after verification (one-time use)
-        req.session.captcha = null;
-        req.session.captchaExpiry = null;
-
-        if (!isValid) {
+        // Case-sensitive comparison
+        if (String(captcha) !== String(check.answer)) {
             return res.status(400).json({
                 success: false,
                 message: 'Invalid CAPTCHA.'
@@ -147,9 +204,8 @@ router.post('/verify-captcha', (req, res) => {
             success: true,
             message: 'CAPTCHA verified successfully'
         });
-
     } catch (error) {
-        console.error(' CAPTCHA verification error:', error);
+        console.error('CAPTCHA verification error:', error);
         res.status(500).json({ success: false, message: 'Failed to verify CAPTCHA' });
     }
 });
@@ -157,9 +213,8 @@ router.post('/verify-captcha', (req, res) => {
 // Login with CAPTCHA verification
 router.post('/login-with-captcha', async (req, res) => {
     try {
-        const { email, password, captcha } = req.body;
+        const { email, password, captcha, captchaToken } = req.body;
 
-        // Validate CAPTCHA
         if (!captcha) {
             return res.status(400).json({
                 success: false,
@@ -167,42 +222,27 @@ router.post('/login-with-captcha', async (req, res) => {
             });
         }
 
-        // Check CAPTCHA in session
-        if (!req.session.captcha) {
+        const check = verifyCaptchaToken(captchaToken);
+        if (!check.ok) {
             return res.status(400).json({
                 success: false,
-                message: 'CAPTCHA not generated. Please refresh.'
+                message: check.reason
             });
         }
 
-        if (req.session.captchaExpiry && Date.now() > req.session.captchaExpiry) {
-            req.session.captcha = null;
-            req.session.captchaExpiry = null;
-            return res.status(400).json({
-                success: false,
-                message: 'CAPTCHA has expired. Please refresh.'
-            });
-        }
-
-        // ✅ CASE-SENSITIVE comparison (NO .toLowerCase())
-        const isValid = captcha === req.session.captcha;
-
-        // Clear CAPTCHA after verification
-        req.session.captcha = null;
-        req.session.captchaExpiry = null;
-
-        if (!isValid) {
+        // Case-sensitive comparison
+        if (String(captcha) !== String(check.answer)) {
             return res.status(400).json({
                 success: false,
                 message: 'Invalid CAPTCHA.'
             });
         }
 
-        // Proceed with normal login
+        // CAPTCHA passed — proceed with normal login
         await AuthController.login(req, res);
 
     } catch (error) {
-        console.error(' Login with CAPTCHA error:', error);
+        console.error('Login with CAPTCHA error:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 });

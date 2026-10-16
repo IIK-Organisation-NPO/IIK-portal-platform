@@ -36,6 +36,7 @@ const Login = () => {
   // ===== CAPTCHA STATES =====
   const [captcha, setCaptcha] = useState('');
   const [captchaImage, setCaptchaImage] = useState('');
+  const [captchaToken, setCaptchaToken] = useState('');   // ← NEW: signed token
   const [captchaError, setCaptchaError] = useState('');
   const [captchaLoading, setCaptchaLoading] = useState(false);
   const captchaInputRef = useRef(null);
@@ -67,7 +68,7 @@ const Login = () => {
         method: 'GET',
         credentials: 'include',
         headers: {
-          'Accept': 'image/svg+xml'
+          'Accept': 'application/json'
         }
       });
 
@@ -75,8 +76,13 @@ const Login = () => {
         throw new Error('Failed to load CAPTCHA');
       }
 
-      const svgText = await response.text();
-      setCaptchaImage(svgText);
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to load CAPTCHA');
+      }
+
+      setCaptchaImage(data.data);       // SVG string
+      setCaptchaToken(data.token);      // signed token for the backend
       setCaptcha('');
       if (captchaInputRef.current) {
         captchaInputRef.current.value = '';
@@ -112,6 +118,7 @@ const Login = () => {
       const data = await response.json();
       if (data.success) {
         setCaptchaImage(data.data);
+        setCaptchaToken(data.token);    // ← new token
         setCaptcha('');
         if (captchaInputRef.current) {
           captchaInputRef.current.value = '';
@@ -194,7 +201,8 @@ const Login = () => {
         body: JSON.stringify({
           email: email.trim().toLowerCase(),
           password: password,
-          captcha: captcha
+          captcha: captcha,
+          captchaToken: captchaToken     // ← send the signed token
         })
       });
 
