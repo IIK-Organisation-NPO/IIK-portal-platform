@@ -343,254 +343,263 @@ class AdminController {
         }
     }
 
- // ============================================
-    // GET LEARNERS
-    // ============================================
-    static async getLearners(req, res) {
-        try {
-            console.log('Fetching learners...');
+// ============================================
+// GET LEARNERS
+// ============================================
+static async getLearners(req, res) {
+    try {
+        console.log('Fetching learners...');
 
-            const adminCentreId = req.user?.centreId ?? null;
-            const isSuperAdmin = req.user?.roleId === 3;
-            const centreFilter = !isSuperAdmin && adminCentreId;
+        const adminCentreId = req.user?.centreId ?? null;
+        const isSuperAdmin = req.user?.roleId === 3;
+        const centreFilter = !isSuperAdmin && adminCentreId;
 
-            const params = [];
-            let extraWhere = '';
+        const params = [];
+        let extraWhere = '';
 
-            if (centreFilter) {
-                
-                params.push(adminCentreId); 
-                params.push(adminCentreId); 
-                params.push(adminCentreId); 
-                params.push(adminCentreId); 
-                params.push(adminCentreId); 
+        if (centreFilter) {
+            params.push(adminCentreId);
+            params.push(adminCentreId);
+            params.push(adminCentreId);
+            params.push(adminCentreId);
 
-                extraWhere = `
-                    AND EXISTS (
-                        SELECT 1 FROM learner_interests lx
-                        WHERE lx.user_id = u.User_id
-                          AND lx.status != 'Not Interested'
-                          AND lx.digital_center_id = ?
-                    )
-                `;
-                params.push(adminCentreId); 
-            }
-
-            const [rows] = await pool.execute(
-                `SELECT 
-                    u.User_id as id,
-                    u.name,
-                    u.surname,
-                    u.email,
-                    u.phone_number,
-                    u.email_verify as isVerified,
-                    u.register_at as joinedDate,
-                    g.gender_description as gender,
-                    r.role_type as role,
-
-                    COALESCE(
-                        (SELECT p.Programme_name
-                         FROM Enrolment e
-                         JOIN Programmes p ON e.Programme_id = p.Programme_id
-                         WHERE e.User_id = u.User_id
-                           AND e.Completion_status != 'Withdrawn'
-                           ${centreFilter ? 'AND e.digital_center_id = ?' : ''}
-                         ORDER BY e.Enrolment_date DESC
-                         LIMIT 1),
-                        (SELECT p2.Programme_name
-                         FROM learner_interests li
-                         JOIN Programmes p2 ON li.programme_id = p2.Programme_id
-                         WHERE li.user_id = u.User_id
-                           AND li.status != 'Not Interested'
-                           ${centreFilter ? 'AND li.digital_center_id = ?' : ''}
-                         ORDER BY li.interest_date DESC
-                         LIMIT 1)
-                    ) as programme_name,
-
-                    COALESCE(
-                        (SELECT MAX(e2.Enrolment_date)
-                         FROM Enrolment e2 
-                         WHERE e2.User_id = u.User_id 
-                         AND e2.Completion_status != 'Withdrawn'),
-                        (SELECT MAX(li2.interest_date)
-                         FROM learner_interests li2
-                         WHERE li2.user_id = u.User_id
-                         AND li2.status != 'Not Interested')
-                    ) as enrolment_date,
-
-                    -- -----------------------------------------------------------------
-                    -- Status derivation.
-                    --
-                    -- Priority 1: the learner has a certificate for a Completed
-                    --   enrolment at THIS admin's centre → 'Completed'.
-                    --   (For super admins, the centre filter is skipped, so the
-                    --    check is against any completion anywhere.)
-                    --
-                    -- Priority 2: learner_interests.status drives the display.
-                    --
-                    -- Priority 3 (fallback): Enrolment table, for learners with
-                    --   no live interest record.
-                    -- -----------------------------------------------------------------
-                    COALESCE(
-                        (SELECT
-                            CASE
-                                WHEN EXISTS (
-                                    SELECT 1
-                                    FROM Certificate c
-                                    INNER JOIN Enrolment e
-                                        ON e.User_id = c.User_id
-                                       AND e.Programme_id = c.Programme_id
-                                       AND e.Completion_status = 'Completed'
-                                    WHERE c.User_id = u.User_id
-                                      ${centreFilter ? 'AND e.digital_center_id = ?' : ''}
-                                ) THEN 'Completed'
-
-                                WHEN MAX(li3.status) = 'Enrolled'  THEN 'Active'
-                                WHEN MAX(li3.status) = 'Contacted' THEN 'Active'
-                                WHEN MAX(li3.status) = 'New'       THEN 'Active'
-                                ELSE 'Inactive'
-                            END
-                         FROM learner_interests li3
-                         WHERE li3.user_id = u.User_id
-                           AND li3.status != 'Not Interested'
-                           ${centreFilter ? 'AND li3.digital_center_id = ?' : ''}),
-                        (SELECT
-                            CASE
-                                WHEN MAX(e3.Completion_status) = 'Completed'   THEN 'Completed'
-                                WHEN MAX(e3.Completion_status) = 'Enrolled'    THEN 'Active'
-                                WHEN MAX(e3.Completion_status) = 'In Progress' THEN 'Active'
-                                WHEN MAX(e3.Completion_status) = 'Withdrawn'   THEN 'Inactive'
-                                WHEN MAX(e3.Completion_status) = 'Inactive'    THEN 'Inactive'
-                                ELSE MAX(e3.Completion_status)
-                            END
-                         FROM Enrolment e3
-                         WHERE e3.User_id = u.User_id
-                           ${centreFilter ? 'AND e3.digital_center_id = ?' : ''})
-                    ) as status,
-
-                    (SELECT COUNT(*) 
-                     FROM Enrolment e 
-                     WHERE e.User_id = u.User_id 
-                     AND e.Completion_status != 'Withdrawn') as enrolled_count,
-
-                    (SELECT COUNT(*) > 0 
-                     FROM learner_interests li 
-                     WHERE li.user_id = u.User_id 
-                     AND li.status != 'Not Interested') as hasInterested,
-
-                    (SELECT COUNT(*) > 0 
-                     FROM learner_interests li 
-                     WHERE li.user_id = u.User_id 
-                     AND li.status = 'Enrolled') as isEnrolled
-
-                FROM user u
-                LEFT JOIN gender g ON u.gender_id = g.gender_id
-                LEFT JOIN role r ON u.role_id = r.role_id
-                WHERE u.role_id = 2
-                ${extraWhere}
-                ORDER BY u.User_id DESC`,
-                params
-            );
-
-            res.status(200).json({
-                success: true,
-                data: rows
-            });
-
-        } catch (error) {
-            console.error('Error fetching learners:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Failed to fetch learners'
-            });
+            extraWhere = `
+                AND EXISTS (
+                    SELECT 1 FROM learner_interests lx
+                    WHERE lx.user_id = u.User_id
+                      AND lx.status != 'Not Interested'
+                      AND lx.digital_center_id = ?
+                )
+            `;
+            params.push(adminCentreId);
         }
+
+        const [rows] = await pool.execute(
+            `SELECT 
+                u.User_id as id,
+                u.name,
+                u.surname,
+                u.email,
+                u.phone_number,
+                u.email_verify as isVerified,
+                u.register_at as joinedDate,
+                g.gender_description as gender,
+                r.role_type as role,
+
+                COALESCE(
+                    (SELECT p.Programme_name
+                     FROM Enrolment e
+                     JOIN Programmes p ON e.Programme_id = p.Programme_id
+                     WHERE e.User_id = u.User_id
+                       AND e.Completion_status != 'Withdrawn'
+                       ${centreFilter ? 'AND e.digital_center_id = ?' : ''}
+                     ORDER BY e.Enrolment_date DESC
+                     LIMIT 1),
+                    (SELECT p2.Programme_name
+                     FROM learner_interests li
+                     JOIN Programmes p2 ON li.programme_id = p2.Programme_id
+                     WHERE li.user_id = u.User_id
+                       AND li.status != 'Not Interested'
+                       ${centreFilter ? 'AND li.digital_center_id = ?' : ''}
+                     ORDER BY li.interest_date DESC
+                     LIMIT 1)
+                ) as programme_name,
+
+                COALESCE(
+                    (SELECT MAX(e2.Enrolment_date)
+                     FROM Enrolment e2 
+                     WHERE e2.User_id = u.User_id 
+                     AND e2.Completion_status != 'Withdrawn'),
+                    (SELECT MAX(li2.interest_date)
+                     FROM learner_interests li2
+                     WHERE li2.user_id = u.User_id
+                     AND li2.status != 'Not Interested')
+                ) as enrolment_date,
+
+                -- -----------------------------------------------------------------
+                -- Status now comes directly from user.status.
+                --   - Set by the Update Learner endpoint (Deactivate / Activate).
+                --   - Defaults to 'Inactive' for newly registered learners with
+                --     no programme enrolment.
+                -- -----------------------------------------------------------------
+                COALESCE(u.status, 'Inactive') as status,
+
+                (SELECT COUNT(*) 
+                 FROM Enrolment e 
+                 WHERE e.User_id = u.User_id 
+                 AND e.Completion_status != 'Withdrawn') as enrolled_count,
+
+                (SELECT COUNT(*) > 0 
+                 FROM learner_interests li 
+                 WHERE li.user_id = u.User_id 
+                 AND li.status != 'Not Interested') as hasInterested,
+
+                (SELECT COUNT(*) > 0 
+                 FROM learner_interests li 
+                 WHERE li.user_id = u.User_id 
+                 AND li.status = 'Enrolled') as isEnrolled
+
+            FROM user u
+            LEFT JOIN gender g ON u.gender_id = g.gender_id
+            LEFT JOIN role r ON u.role_id = r.role_id
+            WHERE u.role_id = 2
+            ${extraWhere}
+            ORDER BY u.User_id DESC`,
+            params
+        );
+
+        res.status(200).json({
+            success: true,
+            data: rows
+        });
+
+    } catch (error) {
+        console.error('Error fetching learners:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch learners'
+        });
+    }
+}
+
+// ============================================
+// UPDATE LEARNER
+// ============================================
+static async updateLearner(req, res) {
+  try {
+    const { id } = req.params;
+    const { name, surname, email, phone, status } = req.body;
+
+    console.log('Updating learner:', { id, name, surname, email, phone, status });
+
+    // ============================================
+    // DEACTIVATE
+    // ============================================
+    if (status === 'Inactive') {
+      // 1. Flip the learner's status on the user table
+      const [userRes] = await pool.execute(
+        `UPDATE user SET status = 'Inactive'
+         WHERE User_id = ? AND role_id = 2`,
+        [id]
+      );
+
+      if (userRes.affectedRows === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'Learner not found.'
+        });
+      }
+
+      // 2. Also mark any active enrolments as Inactive, for consistency
+      const [enrolRes] = await pool.execute(
+        `UPDATE Enrolment SET Completion_status = 'Inactive'
+         WHERE User_id = ?
+           AND Completion_status NOT IN ('Inactive', 'Withdrawn')`,
+        [id]
+      );
+
+      console.log(
+        `Deactivated user ${id}. ${enrolRes.affectedRows} enrolment(s) marked inactive.`
+      );
+
+      return res.status(200).json({
+        success: true,
+        message:
+          enrolRes.affectedRows > 0
+            ? `Learner deactivated. ${enrolRes.affectedRows} enrolment(s) marked inactive.`
+            : 'Learner is now inactive.'
+      });
     }
 
     // ============================================
-    // UPDATE LEARNER
+    // ACTIVATE
     // ============================================
-    static async updateLearner(req, res) {
-        try {
-            const { id } = req.params;
-            const { name, surname, email, phone, status } = req.body;
+    if (status === 'Active') {
+      const [userRes] = await pool.execute(
+        `UPDATE user SET status = 'Active'
+         WHERE User_id = ? AND role_id = 2`,
+        [id]
+      );
 
-            console.log('Updating learner:', { id, name, surname, email, phone, status });
+      if (userRes.affectedRows === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'Learner not found.'
+        });
+      }
 
-            //  Deactivate 
-            if (status === 'Inactive') {
-                const [result] = await pool.execute(
-                    `UPDATE Enrolment
-                     SET Completion_status = 'Inactive'
-                     WHERE User_id = ? AND Completion_status = 'Active'`,
-                    [id]
-                );
+      // Bring any Inactive enrolments back to Active
+      const [enrolRes] = await pool.execute(
+        `UPDATE Enrolment SET Completion_status = 'Active'
+         WHERE User_id = ?
+           AND Completion_status = 'Inactive'`,
+        [id]
+      );
 
-                console.log(
-                    `Deactivated ${result.affectedRows} active enrolment(s) for user ${id}`
-                );
-
-                return res.status(200).json({
-                    success: true,
-                    message:
-                        result.affectedRows > 0
-                            ? `Learner deactivated. ${result.affectedRows} enrolment(s) marked inactive.`
-                            : 'Learner is now inactive.'
-                });
-            }
-
-            //  Profile update ----
-            const safeName    = (name !== undefined && name !== '') ? name : null;
-            const safeSurname = (surname !== undefined && surname !== '') ? surname : null;
-            const safeEmail   = (email !== undefined && email !== '') ? email : null;
-            const safePhone   = (phone !== undefined && phone !== '') ? phone : null;
-
-            await pool.execute(
-                `UPDATE user 
-                 SET name = ?, 
-                     surname = ?, 
-                     email = ?, 
-                     phone_number = ?
-                 WHERE User_id = ? AND role_id = 2`,
-                [safeName, safeSurname, safeEmail, safePhone, id]
-            );
-
-            return res.status(200).json({
-                success: true,
-                message: 'Learner updated successfully'
-            });
-
-        } catch (error) {
-            console.error('Error updating learner:', error);
-            return res.status(500).json({
-                success: false,
-                message: 'Failed to update learner: ' + error.message
-            });
-        }
+      return res.status(200).json({
+        success: true,
+        message:
+          enrolRes.affectedRows > 0
+            ? `Learner activated. ${enrolRes.affectedRows} enrolment(s) marked active.`
+            : 'Learner is now active.'
+      });
     }
 
-    // ===== DELETE LEARNER =====
-    static async deleteLearner(req, res) {
-        try {
-            const { id } = req.params;
+    // ============================================
+    // PROFILE UPDATE
+    // ============================================
+    const safeName    = (name !== undefined && name !== '') ? name : null;
+    const safeSurname = (surname !== undefined && surname !== '') ? surname : null;
+    const safeEmail   = (email !== undefined && email !== '') ? email : null;
+    const safePhone   = (phone !== undefined && phone !== '') ? phone : null;
 
-            await pool.execute(
-                'DELETE FROM user WHERE User_id = ? AND role_id = 2',
-                [id]
-            );
+    await pool.execute(
+      `UPDATE user 
+       SET name = ?, 
+           surname = ?, 
+           email = ?, 
+           phone_number = ?
+       WHERE User_id = ? AND role_id = 2`,
+      [safeName, safeSurname, safeEmail, safePhone, id]
+    );
 
-            res.status(200).json({
-                success: true,
-                message: 'Learner deleted successfully'
-            });
+    return res.status(200).json({
+      success: true,
+      message: 'Learner updated successfully'
+    });
 
-        } catch (error) {
-            console.error('Error deleting learner:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Failed to delete learner'
-            });
-        }
-    }
+  } catch (error) {
+    console.error('Error updating learner:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to update learner: ' + error.message
+    });
+  }
+}
+
+// ===== DELETE LEARNER =====
+static async deleteLearner(req, res) {
+  try {
+    const { id } = req.params;
+
+    await pool.execute(
+      'DELETE FROM user WHERE User_id = ? AND role_id = 2',
+      [id]
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Learner deleted successfully'
+    });
+
+  } catch (error) {
+    console.error('Error deleting learner:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete learner'
+    });
+  }
+}
 
     // ============================================
     // GET CERTIFICATES
@@ -1192,330 +1201,329 @@ static async downloadCertificate(req, res) {
 
 
 
-    // ============================================
-    // UPDATE INTERESTED LEARNER STATUS
-    // ============================================
-    static async updateInterestedLearnerStatus(req, res) {
-        try {
-            const { id } = req.params;
-            const { status } = req.body;
+// ============================================
+// UPDATE INTERESTED LEARNER STATUS
+// ============================================
+static async updateInterestedLearnerStatus(req, res) {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
 
-            console.log(`Updating interest ${id} to status: ${status}`);
+        console.log(`Updating interest ${id} to status: ${status}`);
 
-            if (!id || !status) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Interest ID and status are required'
-                });
-            }
-
-            const validStatuses = ['New', 'Contacted', 'Enrolled', 'Not Interested'];
-            if (!validStatuses.includes(status)) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Invalid status. Must be New, Contacted, Enrolled, or Not Interested'
-                });
-            }
-
-            const [existing] = await pool.execute(
-                'SELECT user_id, programme_id, digital_center_id FROM learner_interests WHERE interest_id = ?',
-                [id]
-            );
-            if (existing.length === 0) {
-                return res.status(404).json({
-                    success: false,
-                    message: 'Interest record not found'
-                });
-            }
-            const { user_id, programme_id, digital_center_id } = existing[0];
-
-            const adminCentreId = req.user?.centreId ?? null;
-            const isSuperAdmin = req.user?.roleId === 3;
-
-            
-            if (!isSuperAdmin && adminCentreId && String(digital_center_id) !== String(adminCentreId)) {
-                return res.status(403).json({
-                    success: false,
-                    message: 'You can only manage learners in your own centre.'
-                });
-            }
-
-            
-            if (status === 'Enrolled') {
-                const [activeEnrolments] = await pool.execute(
-                    `SELECT li.interest_id,
-                            li.programme_id,
-                            p.Programme_name AS programme_name,
-                            dc.center_name   AS centre_name
-                     FROM learner_interests li
-                     LEFT JOIN Programmes p ON p.Programme_id = li.programme_id
-                     LEFT JOIN Digital_Center dc ON dc.digital_center_id = li.digital_center_id
-                     WHERE li.user_id = ?
-                       AND li.status = 'Enrolled'
-                       AND li.interest_id != ?
-                     LIMIT 1`,
-                    [user_id, id]
-                );
-
-                if (activeEnrolments.length > 0) {
-                    const active = activeEnrolments[0];
-                    return res.status(409).json({
-                        success: false,
-                        message:
-                            `This learner is already enrolled in "${active.programme_name}" ` +
-                            `at ${active.centre_name}. Complete or remove that enrolment before ` +
-                            `enrolling them in another programme.`
-                    });
-                }
-            }
-
-            
-            if (status === 'Enrolled') {
-                try {
-                    
-                    const enrolmentCentreId = digital_center_id ?? adminCentreId;
-
-                    if (!enrolmentCentreId) {
-                        return res.status(400).json({
-                            success: false,
-                            message:
-                                'Cannot determine digital center for enrolment. ' +
-                                'The interest record has no centre assigned.'
-                        });
-                    }
-
-                    const [existingEnrolment] = await pool.execute(
-                        `SELECT Enrolment_id FROM Enrolment
-                         WHERE User_id = ? AND Programme_id = ?`,
-                        [user_id, programme_id]
-                    );
-
-                    if (existingEnrolment.length === 0) {
-                        await pool.execute(
-                            `INSERT INTO Enrolment
-                                (User_id, Programme_id, digital_center_id, Enrolment_date, Completion_status)
-                             VALUES (?, ?, ?, NOW(), 'Active')`,
-                            [user_id, programme_id, enrolmentCentreId]
-                        );
-                    } else {
-                        await pool.execute(
-                            `UPDATE Enrolment
-                             SET Completion_status = 'Active',
-                                 Enrolment_date = NOW(),
-                                 digital_center_id = COALESCE(?, digital_center_id)
-                             WHERE User_id = ? AND Programme_id = ?`,
-                            [enrolmentCentreId, user_id, programme_id]
-                        );
-                    }
-                } catch (enrolmentError) {
-                    console.error('Error creating enrolment:', enrolmentError);
-                    return res.status(500).json({
-                        success: false,
-                        message:
-                            'Failed to add learner to enrolment table: ' +
-                            enrolmentError.message
-                    });
-                }
-            }
-
-            const updateFields = ['status = ?'];
-            const values = [status];
-
-            if (status === 'Contacted') {
-                updateFields.push('contacted_date = NOW()');
-            }
-            if (status === 'Enrolled') {
-                updateFields.push('enrolled_date = NOW()');
-            }
-
-            values.push(id);
-
-            await pool.execute(
-                `UPDATE learner_interests
-                 SET ${updateFields.join(', ')}
-                 WHERE interest_id = ?`,
-                values
-            );
-
-            return res.status(200).json({
-                success: true,
-                message:
-                    status === 'Enrolled'
-                        ? 'Learner enrolled successfully'
-                        : `Learner status updated to ${status} successfully`
-            });
-
-        } catch (error) {
-            console.error('Error updating interest status:', error);
-            return res.status(500).json({
+        if (!id || !status) {
+            return res.status(400).json({
                 success: false,
-                message: 'Failed to update learner status: ' + error.message
+                message: 'Interest ID and status are required'
             });
         }
-    }
 
+        const validStatuses = ['New', 'Contacted', 'Enrolled', 'Not Interested'];
+        if (!validStatuses.includes(status)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid status. Must be New, Contacted, Enrolled, or Not Interested'
+            });
+        }
 
-     
-    // MARK AN ENROLMENT AS COMPLETED
-    
-    static async markEnrolmentComplete(req, res) {
-        try {
-            const { id } = req.params;
+        const [existing] = await pool.execute(
+            'SELECT user_id, programme_id, digital_center_id FROM learner_interests WHERE interest_id = ?',
+            [id]
+        );
+        if (existing.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Interest record not found'
+            });
+        }
+        const { user_id, programme_id, digital_center_id } = existing[0];
 
-            if (!id) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Enrolment ID is required.'
-                });
-            }
+        const adminCentreId = req.user?.centreId ?? null;
+        const isSuperAdmin = req.user?.roleId === 3;
 
-            const adminCentreId = req.user?.centreId ?? null;
-            const isSuperAdmin = req.user?.roleId === 3;
-            const actorAdminId = req.user?.userId ?? req.user?.Admin_ID ?? null;
-            const actorName = `${req.user?.name || ''} ${req.user?.surname || ''}`.trim() || 'Admin';
+        if (!isSuperAdmin && adminCentreId && String(digital_center_id) !== String(adminCentreId)) {
+            return res.status(403).json({
+                success: false,
+                message: 'You can only manage learners in your own centre.'
+            });
+        }
 
-            // ---- Look up the enrolment ----
-            const [enrolments] = await pool.execute(
-                `SELECT
-                    e.Enrolment_id,
-                    e.User_id,
-                    e.Programme_id,
-                    e.digital_center_id,
-                    e.Completion_status,
-                    e.Completion_date,
-                    u.name          AS learner_name,
-                    u.surname       AS learner_surname,
-                    p.Programme_name,
-                    dc.center_name
-                 FROM Enrolment e
-                 INNER JOIN user u ON u.User_id = e.User_id
-                 INNER JOIN Programmes p ON p.Programme_id = e.Programme_id
-                 LEFT JOIN Digital_Center dc ON dc.digital_center_id = e.digital_center_id
-                 WHERE e.Enrolment_id = ?
+        if (status === 'Enrolled') {
+            const [activeEnrolments] = await pool.execute(
+                `SELECT li.interest_id,
+                        li.programme_id,
+                        p.Programme_name AS programme_name,
+                        dc.center_name   AS centre_name
+                 FROM learner_interests li
+                 LEFT JOIN Programmes p ON p.Programme_id = li.programme_id
+                 LEFT JOIN Digital_Center dc ON dc.digital_center_id = li.digital_center_id
+                 WHERE li.user_id = ?
+                   AND li.status = 'Enrolled'
+                   AND li.interest_id != ?
                  LIMIT 1`,
-                [id]
+                [user_id, id]
             );
 
-            if (enrolments.length === 0) {
-                return res.status(404).json({
+            if (activeEnrolments.length > 0) {
+                const active = activeEnrolments[0];
+                return res.status(409).json({
                     success: false,
-                    message: 'Enrolment not found.'
+                    message:
+                        `This learner is already enrolled in "${active.programme_name}" ` +
+                        `at ${active.centre_name}. Complete or remove that enrolment before ` +
+                        `enrolling them in another programme.`
                 });
             }
+        }
 
-            const enrolment = enrolments[0];
+        if (status === 'Enrolled') {
+            try {
+                const enrolmentCentreId = digital_center_id ?? adminCentreId;
 
-            
-            if (!isSuperAdmin) {
-                if (!adminCentreId) {
-                    return res.status(403).json({
+                if (!enrolmentCentreId) {
+                    return res.status(400).json({
                         success: false,
-                        message: 'Your account is not assigned to a centre.'
+                        message:
+                            'Cannot determine digital center for enrolment. ' +
+                            'The interest record has no centre assigned.'
                     });
                 }
 
-                if (String(enrolment.digital_center_id) !== String(adminCentreId)) {
-                    return res.status(403).json({
-                        success: false,
-                        message: 'This enrolment does not belong to your centre.'
-                    });
+                const [existingEnrolment] = await pool.execute(
+                    `SELECT Enrolment_id FROM Enrolment
+                     WHERE User_id = ? AND Programme_id = ?`,
+                    [user_id, programme_id]
+                );
+
+                if (existingEnrolment.length === 0) {
+                    await pool.execute(
+                        `INSERT INTO Enrolment
+                            (User_id, Programme_id, digital_center_id, Enrolment_date, Completion_status)
+                         VALUES (?, ?, ?, NOW(), 'Active')`,
+                        [user_id, programme_id, enrolmentCentreId]
+                    );
+                } else {
+                    await pool.execute(
+                        `UPDATE Enrolment
+                         SET Completion_status = 'Active',
+                             Enrolment_date = NOW(),
+                             digital_center_id = COALESCE(?, digital_center_id)
+                         WHERE User_id = ? AND Programme_id = ?`,
+                        [enrolmentCentreId, user_id, programme_id]
+                    );
                 }
-            }
 
-            
-            if (enrolment.Completion_status === 'Completed') {
-                return res.status(200).json({
-                    success: true,
-                    message: 'This enrolment is already marked as completed.',
-                    data: {
-                        Enrolment_id: enrolment.Enrolment_id,
-                        Completion_status: 'Completed',
-                        Completion_date: enrolment.Completion_date
-                    }
+                // ============================================
+                // Sync the learner's high-level status so Learner Management
+                // shows them as ACTIVE once enrolled.
+                // ============================================
+                await pool.execute(
+                    `UPDATE user SET status = 'Active'
+                     WHERE User_id = ? AND role_id = 2`,
+                    [user_id]
+                );
+            } catch (enrolmentError) {
+                console.error('Error creating enrolment:', enrolmentError);
+                return res.status(500).json({
+                    success: false,
+                    message:
+                        'Failed to add learner to enrolment table: ' +
+                        enrolmentError.message
+                });
+            }
+        }
+
+        const updateFields = ['status = ?'];
+        const values = [status];
+
+        if (status === 'Contacted') {
+            updateFields.push('contacted_date = NOW()');
+        }
+        if (status === 'Enrolled') {
+            updateFields.push('enrolled_date = NOW()');
+        }
+
+        values.push(id);
+
+        await pool.execute(
+            `UPDATE learner_interests
+             SET ${updateFields.join(', ')}
+             WHERE interest_id = ?`,
+            values
+        );
+
+        return res.status(200).json({
+            success: true,
+            message:
+                status === 'Enrolled'
+                    ? 'Learner enrolled successfully'
+                    : `Learner status updated to ${status} successfully`
+        });
+
+    } catch (error) {
+        console.error('Error updating interest status:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to update learner status: ' + error.message
+        });
+    }
+}
+
+// MARK AN ENROLMENT AS COMPLETED
+static async markEnrolmentComplete(req, res) {
+    try {
+        const { id } = req.params;
+
+        if (!id) {
+            return res.status(400).json({
+                success: false,
+                message: 'Enrolment ID is required.'
+            });
+        }
+
+        const adminCentreId = req.user?.centreId ?? null;
+        const isSuperAdmin = req.user?.roleId === 3;
+        const actorAdminId = req.user?.userId ?? req.user?.Admin_ID ?? null;
+        const actorName = `${req.user?.name || ''} ${req.user?.surname || ''}`.trim() || 'Admin';
+
+        // ---- Look up the enrolment ----
+        const [enrolments] = await pool.execute(
+            `SELECT
+                e.Enrolment_id,
+                e.User_id,
+                e.Programme_id,
+                e.digital_center_id,
+                e.Completion_status,
+                e.Completion_date,
+                u.name          AS learner_name,
+                u.surname       AS learner_surname,
+                p.Programme_name,
+                dc.center_name
+             FROM Enrolment e
+             INNER JOIN user u ON u.User_id = e.User_id
+             INNER JOIN Programmes p ON p.Programme_id = e.Programme_id
+             LEFT JOIN Digital_Center dc ON dc.digital_center_id = e.digital_center_id
+             WHERE e.Enrolment_id = ?
+             LIMIT 1`,
+            [id]
+        );
+
+        if (enrolments.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Enrolment not found.'
+            });
+        }
+
+        const enrolment = enrolments[0];
+
+        if (!isSuperAdmin) {
+            if (!adminCentreId) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Your account is not assigned to a centre.'
                 });
             }
 
-            
-            await pool.execute(
-                `UPDATE Enrolment
-                 SET Completion_status = 'Completed',
-                     Completion_date = NOW()
-                 WHERE Enrolment_id = ?`,
-                [id]
-            );
-
-            console.log(
-                `Enrolment ${id} marked Completed by admin ${actorAdminId}. ` +
-                `Learner ${enrolment.User_id}, programme ${enrolment.Programme_id}, ` +
-                `centre ${enrolment.digital_center_id}.`
-            );
-
-            // ---- Notify the centre's admins 
-            const centreIdForNotify = enrolment.digital_center_id;
-            const learnerName = `${enrolment.learner_name || ''} ${enrolment.learner_surname || ''}`.trim() || 'Learner';
-            const programmeName = enrolment.Programme_name || 'Programme';
-            const centreName = enrolment.center_name || 'your centre';
-
-            if (centreIdForNotify) {
-                setImmediate(async () => {
-                    try {
-                        const [admins] = await pool.execute(
-                            `SELECT Admin_ID, Name, Surname, Email_address
-                             FROM Admin
-                             WHERE Centre_ID = ?
-                               AND Email_address IS NOT NULL
-                               AND Email_address != ''`,
-                            [centreIdForNotify]
-                        );
-
-                        if (admins.length === 0) {
-                            console.log(`📧 No admins at centre ${centreIdForNotify} to notify.`);
-                            return;
-                        }
-
-                        
-                        const opted = admins.filter(
-    (a) => getAdminPrefs(a.Admin_ID).notifyOnCertificate === true
-);
-
-                        if (opted.length === 0) {
-                            console.log('📧 No opted-in admins to notify about this completion.');
-                            return;
-                        }
-
-                        await emailService.sendLearnerCompletedToAdmins(opted, {
-                            learnerName,
-                            programmeName,
-                            centreName,
-                            completedAt: new Date(),
-                            markedByName: actorName,
-                        });
-                    } catch (err) {
-                        console.error(' Background learner-completed email failed:', err.message);
-                    }
+            if (String(enrolment.digital_center_id) !== String(adminCentreId)) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'This enrolment does not belong to your centre.'
                 });
-            } else {
-                console.log(' Enrolment has no centre — skipping admin notification.');
             }
+        }
 
+        if (enrolment.Completion_status === 'Completed') {
             return res.status(200).json({
                 success: true,
-                message: 'Enrolment marked as completed.',
+                message: 'This enrolment is already marked as completed.',
                 data: {
                     Enrolment_id: enrolment.Enrolment_id,
                     Completion_status: 'Completed',
-                    Completion_date: new Date()
+                    Completion_date: enrolment.Completion_date
                 }
             });
-
-        } catch (error) {
-            console.error('Error marking enrolment complete:', error);
-            return res.status(500).json({
-                success: false,
-                message: 'Failed to mark enrolment as completed: ' + error.message
-            });
         }
+
+        await pool.execute(
+            `UPDATE Enrolment
+             SET Completion_status = 'Completed',
+                 Completion_date = NOW()
+             WHERE Enrolment_id = ?`,
+            [id]
+        );
+
+        console.log(
+            `Enrolment ${id} marked Completed by admin ${actorAdminId}. ` +
+            `Learner ${enrolment.User_id}, programme ${enrolment.Programme_id}, ` +
+            `centre ${enrolment.digital_center_id}.`
+        );
+
+        // ---- Notify the centre's admins
+        const centreIdForNotify = enrolment.digital_center_id;
+        const learnerName = `${enrolment.learner_name || ''} ${enrolment.learner_surname || ''}`.trim() || 'Learner';
+        const programmeName = enrolment.Programme_name || 'Programme';
+        const centreName = enrolment.center_name || 'your centre';
+
+        if (centreIdForNotify) {
+            setImmediate(async () => {
+                try {
+                    const [admins] = await pool.execute(
+                        `SELECT Admin_ID, Name, Surname, Email_address
+                         FROM Admin
+                         WHERE Centre_ID = ?
+                           AND Email_address IS NOT NULL
+                           AND Email_address != ''`,
+                        [centreIdForNotify]
+                    );
+
+                    if (admins.length === 0) {
+                        console.log(`📧 No admins at centre ${centreIdForNotify} to notify.`);
+                        return;
+                    }
+
+                    const opted = admins.filter(
+                        (a) => getAdminPrefs(a.Admin_ID).notifyOnCertificate === true
+                    );
+
+                    if (opted.length === 0) {
+                        console.log('📧 No opted-in admins to notify about this completion.');
+                        return;
+                    }
+
+                    await emailService.sendLearnerCompletedToAdmins(opted, {
+                        learnerName,
+                        programmeName,
+                        centreName,
+                        completedAt: new Date(),
+                        markedByName: actorName,
+                    });
+                } catch (err) {
+                    console.error(' Background learner-completed email failed:', err.message);
+                }
+            });
+        } else {
+            console.log(' Enrolment has no centre — skipping admin notification.');
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: 'Enrolment marked as completed.',
+            data: {
+                Enrolment_id: enrolment.Enrolment_id,
+                Completion_status: 'Completed',
+                Completion_date: new Date()
+            }
+        });
+
+    } catch (error) {
+        console.error('Error marking enrolment complete:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to mark enrolment as completed: ' + error.message
+        });
     }
+}
 
     // ============================================
     // SEND BULK EMAIL

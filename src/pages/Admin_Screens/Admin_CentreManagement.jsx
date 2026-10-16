@@ -269,8 +269,6 @@ const AdminCentreManagement = () => {
   const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
-  // patchCentre still exists as a local fallback but is no longer used
-  // by any live action — everything now goes through the backend.
   const patchCentre = (id, patch) => {
     setChanges(prev => ({
       ...prev,

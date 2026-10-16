@@ -111,7 +111,7 @@ class User {
             surname: 'surname',
             phone_number: 'phone_number',
             gender_id: 'gender_id',
-            physicalAddress: 'Physical_address'   // <-- NEW
+            physicalAddress: 'Physical_address'  
         };
 
         for (const [key, column] of Object.entries(fieldMap)) {

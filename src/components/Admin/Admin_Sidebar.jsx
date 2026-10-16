@@ -4,7 +4,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import '../../styles/Admin/Admin_Sidebar.css';
 import { navigationAPI } from '../../services/api';
 
-
 const CENTRE_NAV_ITEM = {
     id: 'centres',
     label: 'Centre Management',
