@@ -1,6 +1,6 @@
 // src/pages/Learner_Screens/LocateCenter.jsx
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import '../../styles/Learner/Locate_Center.css';
 import api from '../../services/api';
 
@@ -136,6 +136,10 @@ const formatDistance = (distance) => {
 // ============================================
 const LocateCenter = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleBack = () =>
+    window.history.state?.idx > 0 ? navigate(-1) : navigate('/learner-dashboard');
 
   const [searchTerm, setSearchTerm] = useState('');
   const [centers, setCenters] = useState([]);
@@ -362,7 +366,10 @@ const LocateCenter = () => {
     <div className="locate-page">
       <section className="locate-hero">
         <div className="hero-content">
-          
+          <button type="button" className="locate-back-btn" onClick={handleBack}>
+            ← Back
+          </button>
+
           <h1>Locate a Digital Center Near You</h1>
           <p className="hero-subtitle">
             Enter your address to find the nearest physical digital learning centre, explore accessible resources, and
