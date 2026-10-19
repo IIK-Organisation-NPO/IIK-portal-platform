@@ -23,6 +23,10 @@ const Admin_InterestedLearners = () => {
   const [showEnrollModal, setShowEnrollModal] = useState(false);
   const [enrollTarget, setEnrollTarget] = useState(null);
 
+  // Un-enrollment confirmation modal ({ id, name })
+  const [unenrollTarget, setUnenrollTarget] = useState(null);
+  const [unenrolling, setUnenrolling] = useState(false);
+
   // Selection state
   const [selectedIds, setSelectedIds] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
@@ -385,6 +389,30 @@ const Admin_InterestedLearners = () => {
   const cancelEnroll = () => {
     setShowEnrollModal(false);
     setEnrollTarget(null);
+  };
+
+  // ============================================
+  // UN-ENROLL
+  // ============================================
+  const handleUnenrollClick = (learner) => {
+    const name = `${learner.name || learner.first_name || ''} ${learner.surname || learner.last_name || ''}`.trim();
+    setUnenrollTarget({
+      id: learner.interest_id || learner.id,
+      name: name || 'this learner',
+      // Revert to Contacted if they were contacted before enrolling, otherwise New
+      revertStatus: learner.contacted_date ? 'Contacted' : 'New'
+    });
+  };
+
+  const confirmUnenroll = async () => {
+    if (!unenrollTarget) return;
+    setUnenrolling(true);
+    const success = await updateLearnerStatus(unenrollTarget.id, unenrollTarget.revertStatus);
+    setUnenrolling(false);
+    if (success) {
+      setUnenrollTarget(null);
+      alert('Learner successfully un-enrolled!');
+    }
   };
 
   // ============================================
@@ -752,6 +780,7 @@ const Admin_InterestedLearners = () => {
               <tbody>
                 {currentItems.map((learner) => {
                   const learnerId = learner.interest_id || learner.id;
+                  const isEnrolled = (learner.status || '').toLowerCase() === 'enrolled';
                   return (
                     <tr key={learnerId}>
                       <td>
@@ -779,17 +808,21 @@ const Admin_InterestedLearners = () => {
                         >
                           Contact
                         </button>
-                        <button
-                          className="action-btn enroll"
-                          onClick={() => handleEnrollClick(learnerId)}
-                          disabled={learner.status === 'Enrolled' || learner.status === 'enrolled'}
-                          style={{
-                            opacity: learner.status === 'Enrolled' || learner.status === 'enrolled' ? 0.5 : 1,
-                            cursor: learner.status === 'Enrolled' || learner.status === 'enrolled' ? 'not-allowed' : 'pointer'
-                          }}
-                        >
-                          {learner.status === 'Enrolled' || learner.status === 'enrolled' ? '✓ Enrolled' : 'Enroll'}
-                        </button>
+                        {isEnrolled ? (
+                          <button
+                            className="action-btn unenroll"
+                            onClick={() => handleUnenrollClick(learner)}
+                          >
+                            Un-enroll
+                          </button>
+                        ) : (
+                          <button
+                            className="action-btn enroll"
+                            onClick={() => handleEnrollClick(learnerId)}
+                          >
+                            Enroll
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );
@@ -798,8 +831,18 @@ const Admin_InterestedLearners = () => {
             </table>
           </div>
 
-          {/* Pagination */}
-          {renderPagination()}
+          {/* Back button + Pagination */}
+          <div className="interested-footer-row">
+            <button
+              className="interested-back-btn"
+              onClick={() =>
+                window.history.state?.idx > 0 ? navigate(-1) : navigate('/admin/learners')
+              }
+            >
+              ← Back
+            </button>
+            {renderPagination()}
+          </div>
         </div>
       </div>
 
@@ -838,6 +881,39 @@ const Admin_InterestedLearners = () => {
               </button>
               <button className="modal-btn confirm-btn" onClick={confirmEnroll}>
                 Yes, Enroll
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== UN-ENROLLMENT CONFIRMATION MODAL ===== */}
+      {unenrollTarget && (
+        <div className="unenroll-modal-overlay">
+          <div className="unenroll-modal" role="dialog" aria-modal="true" aria-labelledby="unenroll-modal-title">
+            <h2 id="unenroll-modal-title">Un-enroll Learner?</h2>
+            <div className="unenroll-modal-content">
+              <p className="unenroll-confirmation-question">
+                Are you sure you want to un-enroll <strong>{unenrollTarget.name}</strong>?
+              </p>
+              <p className="unenroll-modal-warning">
+                This action will change the learner's status from "Enrolled" back to "{unenrollTarget.revertStatus}".
+              </p>
+            </div>
+            <div className="unenroll-modal-actions">
+              <button
+                className="unenroll-modal-cancel"
+                onClick={() => setUnenrollTarget(null)}
+                disabled={unenrolling}
+              >
+                Cancel
+              </button>
+              <button
+                className="unenroll-modal-confirm"
+                onClick={confirmUnenroll}
+                disabled={unenrolling}
+              >
+                {unenrolling ? 'Un-enrolling...' : 'Un-enroll Learner'}
               </button>
             </div>
           </div>
