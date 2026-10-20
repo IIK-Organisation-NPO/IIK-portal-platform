@@ -257,6 +257,7 @@ const VerifyEmail = () => {
               <input
                 key={index}
                 type="text"
+                inputMode="numeric"
                 maxLength="1"
                 value={digit}
                 onChange={(e) => handleChange(index, e.target.value)}
