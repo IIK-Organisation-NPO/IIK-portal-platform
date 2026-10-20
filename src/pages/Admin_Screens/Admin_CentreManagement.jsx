@@ -27,7 +27,9 @@ const EMPTY_FORM = {
   phone: '',
   hours: '',
   status: 'Active',
-  region: DEFAULT_REGION
+  region: DEFAULT_REGION,
+  latitude: '',
+  longitude: ''
 };
 
 const STORAGE_KEY = 'iik_centre_management_changes';
@@ -110,6 +112,22 @@ const validateHours = (value) => {
   if (v.length > 60) return 'Opening hours must be less than 60 characters';
   return '';
 };
+
+// ---- Coordinates -----------------------------------------------------
+// Optional, but latitude and longitude must be entered together.
+const validateCoordinate = (value, label, limit, example) => {
+  const v = (value || '').trim();
+  if (!v) return '';
+  if (!/^-?\d+(\.\d+)?$/.test(v)) return `${label} must be a decimal number (e.g. ${example})`;
+  if (Math.abs(Number(v)) > limit) return `${label} must be between -${limit} and ${limit}`;
+  return '';
+};
+
+const validateLatitude = (value) => validateCoordinate(value, 'Latitude', 90, '-29.8587');
+const validateLongitude = (value) => validateCoordinate(value, 'Longitude', 180, '31.0218');
+
+// Matches a "lat, lng" pair as copied from Google Maps, e.g. "-29.858680, 31.021840"
+const COORDINATE_PAIR = /^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/;
 
 // ---- Fetch helpers ----------------------------------------------------
 const fetchJson = async (endpoint) => {
@@ -312,6 +330,8 @@ const AdminCentreManagement = () => {
       case 'address': return validateAddress(value);
       case 'phone':   return validatePhone(value);
       case 'hours':   return validateHours(value);
+      case 'latitude':  return validateLatitude(value);
+      case 'longitude': return validateLongitude(value);
       default:        return '';
     }
   };
@@ -340,6 +360,21 @@ const AdminCentreManagement = () => {
     }
   };
 
+  // ---- Coordinate paste handler (Create form) --------------------------
+  // Pasting "lat, lng" into either box fills both.
+  const handleCoordinatePaste = (e) => {
+    const match = e.clipboardData.getData('text').match(COORDINATE_PAIR);
+    if (!match) return;
+    e.preventDefault();
+    const [, latitude, longitude] = match;
+    setFormData(prev => ({ ...prev, latitude, longitude }));
+    setErrors(prev => ({
+      ...prev,
+      latitude: validateLatitude(latitude),
+      longitude: validateLongitude(longitude)
+    }));
+  };
+
   const handleBlur = (e) => {
     const { name, value } = e.target;
     setErrors(prev => ({ ...prev, [name]: validateField(name, value) }));
@@ -350,10 +385,15 @@ const AdminCentreManagement = () => {
     e.preventDefault();
 
     const newErrors = {};
-    ['name', 'address', 'phone', 'hours'].forEach(field => {
+    ['name', 'address', 'phone', 'hours', 'latitude', 'longitude'].forEach(field => {
       const err = validateField(field, formData[field]);
       if (err) newErrors[field] = err;
     });
+
+    const latitude = formData.latitude.trim();
+    const longitude = formData.longitude.trim();
+    if (latitude && !longitude) newErrors.longitude = 'Enter the longitude as well';
+    if (longitude && !latitude) newErrors.latitude = 'Enter the latitude as well';
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
 
@@ -366,6 +406,13 @@ const AdminCentreManagement = () => {
       status: formData.status || 'Active',
       region: formData.region || null
     };
+
+    // Only sent when filled in, so updating an existing centre with the
+    // boxes left empty keeps its saved coordinates.
+    if (latitude && longitude) {
+      payload.latitude = Number(Number(latitude).toFixed(6));
+      payload.longitude = Number(Number(longitude).toFixed(6));
+    }
 
     const existing = centres.find(
       c => (c.name || '').toLowerCase() === payload.center_name.toLowerCase()
@@ -709,6 +756,42 @@ const AdminCentreManagement = () => {
                       <option key={region} value={region}>{region}</option>
                     ))}
                   </select>
+                </div>
+
+                <div className="cm-form-group">
+                  <label htmlFor="cm-latitude">Latitude</label>
+                  <input
+                    id="cm-latitude"
+                    type="text"
+                    name="latitude"
+                    placeholder="Enter latitude..."
+                    value={formData.latitude}
+                    onChange={handleInputChange}
+                    onBlur={handleBlur}
+                    onPaste={handleCoordinatePaste}
+                    className={errors.latitude ? 'error' : ''}
+                    autoComplete="off"
+                    maxLength={20}
+                  />
+                  {errors.latitude && <span className="cm-field-error">{errors.latitude}</span>}
+                </div>
+
+                <div className="cm-form-group">
+                  <label htmlFor="cm-longitude">Longitude</label>
+                  <input
+                    id="cm-longitude"
+                    type="text"
+                    name="longitude"
+                    placeholder="Enter longitude..."
+                    value={formData.longitude}
+                    onChange={handleInputChange}
+                    onBlur={handleBlur}
+                    onPaste={handleCoordinatePaste}
+                    className={errors.longitude ? 'error' : ''}
+                    autoComplete="off"
+                    maxLength={20}
+                  />
+                  {errors.longitude && <span className="cm-field-error">{errors.longitude}</span>}
                 </div>
               </div>
 
