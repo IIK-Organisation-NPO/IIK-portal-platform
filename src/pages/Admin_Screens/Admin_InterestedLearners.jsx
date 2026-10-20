@@ -404,14 +404,30 @@ const Admin_InterestedLearners = () => {
     });
   };
 
-  const confirmUnenroll = async () => {
+   const confirmUnenroll = async () => {
     if (!unenrollTarget) return;
     setUnenrolling(true);
-    const success = await updateLearnerStatus(unenrollTarget.id, unenrollTarget.revertStatus);
-    setUnenrolling(false);
-    if (success) {
-      setUnenrollTarget(null);
-      alert('Learner successfully un-enrolled!');
+
+    try {
+      // 1. Tell the backend to delete the Enrolment and set user.status = Inactive
+      const res = await api.delete(`/admin/interested-learners/${unenrollTarget.id}/enrolment`);
+      
+      if (!res.data.success) {
+        throw new Error(res.data.message || 'Failed to remove enrolment');
+      }
+
+      // 2. Update the interest status back to New/Contacted
+      const success = await updateLearnerStatus(unenrollTarget.id, unenrollTarget.revertStatus);
+      
+      if (success) {
+        setUnenrollTarget(null);
+        alert('Learner successfully un-enrolled!');
+      }
+    } catch (err) {
+      console.error('Error un-enrolling:', err);
+      alert(err.response?.data?.message || err.message || 'Failed to un-enroll learner.');
+    } finally {
+      setUnenrolling(false);
     }
   };
 
