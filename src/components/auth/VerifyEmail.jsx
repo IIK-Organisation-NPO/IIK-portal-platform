@@ -1,6 +1,7 @@
 // src/components/auth/VerifyEmail.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import '../../styles/components/forgotpassword.css';
 import "/src/styles/components/VerifyEmail.css";
 import logo from '../../assets/images/small Mki.png';
 import api from '../../services/api';
@@ -80,14 +81,12 @@ const VerifyEmail = () => {
   };
 
   const handleChange = (index, value) => {
-    if (value.length > 1) return;
-    if (value && !/^\d$/.test(value)) return;
+    if (!/^\d*$/.test(value)) return;
 
     const newCode = [...code];
-    newCode[index] = value;
+    newCode[index] = value.slice(0, 1);
     setCode(newCode);
     setError('');
-
     if (value && index < 5) {
       inputRefs.current[index + 1].focus();
     }
@@ -104,12 +103,19 @@ const VerifyEmail = () => {
 
   const handlePaste = (e) => {
     e.preventDefault();
-    const paste = e.clipboardData.getData('text').slice(0, 6);
-    if (/^\d{6}$/.test(paste)) {
-      const pasteArray = paste.split('');
-      setCode(pasteArray);
-      inputRefs.current[5].focus();
-    }
+    const pastedData = e.clipboardData.getData('text').slice(0, 6);
+    const digits = pastedData.replace(/\D/g, '').split('');
+
+    const newCode = [...code];
+    digits.forEach((digit, index) => {
+      if (index < 6) {
+        newCode[index] = digit;
+      }
+    });
+    setCode(newCode);
+
+    const nextIndex = digits.length < 6 ? digits.length : 5;
+    inputRefs.current[nextIndex]?.focus();
   };
 
   const handleVerify = async () => {
@@ -252,19 +258,19 @@ const VerifyEmail = () => {
             </span>
           </div>
 
-          <div className="code-input-group">
+          <div className="otp-input-container">
             {code.map((digit, index) => (
               <input
                 key={index}
+                ref={(el) => (inputRefs.current[index] = el)}
                 type="text"
                 inputMode="numeric"
-                maxLength="1"
+                maxLength={1}
                 value={digit}
                 onChange={(e) => handleChange(index, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(index, e)}
                 onPaste={handlePaste}
-                ref={(el) => (inputRefs.current[index] = el)}
-                className="code-input"
+                className={`otp-input-box ${error ? 'error' : ''} ${digit ? 'filled' : ''}`}
                 aria-label={`Digit ${index + 1}`}
                 disabled={isVerifying || isResending}
                 autoComplete="off"

@@ -128,51 +128,9 @@
   font-weight: 500;
 }
 
-/* ===== CODE INPUT STYLES ===== */
-.verify-email-container .code-input-group {
-  display: flex;
-  gap: clamp(0.3rem, 2vw, 0.6rem);
-  justify-content: center;
-  width: 100%;
-  margin-bottom: 1.5rem;
-}
-
-/* Individual digit input fields.
-   Boxes share the row width (capped at 52px) so they fit any screen.
-   padding: 0 is required: EmailComposerModal.css gives every input[type='text']
-   10px 14px of padding, which squeezed the digit out of the box on phones.
-   Font stays >= 16px so iOS Safari doesn't zoom in on focus. */
-.verify-email-container .code-input {
-  flex: 1 1 0;
-  min-width: 0;
-  max-width: 52px;
-  height: auto;
-  aspect-ratio: 52 / 60;
-  padding: 0;
-  box-sizing: border-box;
-  line-height: 1;
-  -webkit-appearance: none;
-  appearance: none;
-  background: #f5f5f5; /* Changed from #1a1a1a to light grey */
-  border: 2px solid #cccccc; /* Changed from #333 to light border */
-  border-radius: 10px;
-  color: #000000; /* Changed from #fff to #000 */
-  font-size: clamp(1rem, 6vw, 1.8rem);
-  font-weight: 600;
-  text-align: center;
-  outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.verify-email-container .code-input:focus {
-  border-color: #666666; /* Changed from #888 to darker grey */
-  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05); /* Lighter shadow */
-  background: #ffffff; /* Changed from #222 to white */
-}
-
-.verify-email-container .code-input::placeholder {
-  color: #aaaaaa; /* Changed from #444 to lighter grey */
-}
+/* ===== CODE INPUT STYLES =====
+   The digit boxes use .otp-input-container / .otp-input-box from
+   forgotpassword.css, the same styles as the Verify OTP page. */
 
 /* ===== BUTTON & MESSAGE STYLES ===== */
 .verify-email-container .btn-primary {
@@ -477,15 +435,6 @@
 
   .verify-email-container .verify-card {
     padding: 1rem 1.2rem;
-  }
-
-  .verify-email-container .code-input {
-    max-width: 40px;
-    font-size: 1.2rem;
-  }
-
-  .verify-email-container .code-input-group {
-    margin-bottom: 0.8rem;
   }
 
   .verify-email-container .verify-card h1 {
