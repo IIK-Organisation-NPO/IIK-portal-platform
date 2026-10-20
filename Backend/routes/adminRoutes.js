@@ -31,6 +31,7 @@ router.get('/learners/:id/completed-programmes',AdminController.getLearnerComple
 // ============================================
 router.get('/interested-learners', AdminController.getInterestedLearners);
 router.put('/interested-learners/:id', AdminController.updateInterestedLearnerStatus);
+router.delete('/interested-learners/:id/enrolment', AdminController.removeEnrolment);
 
 // ============================================
 // PROGRAMME INTEREST COUNTS

@@ -2870,6 +2870,51 @@ static async getCentreSummaryStats(req, res) {
     return res.status(500).json({ success: false, message: err.message });
   }
 }
+// ============================================
+// REMOVE ENROLMENT (UN-ENROLL)
+// DELETE /api/admin/interested-learners/:id/enrolment
+// ============================================
+static async removeEnrolment(req, res) {
+  try {
+    const { id } = req.params; // this is the interest_id
+
+    // 1. Look up the interest to find user_id and programme_id
+    const [existing] = await pool.execute(
+      'SELECT user_id, programme_id FROM learner_interests WHERE interest_id = ?',
+      [id]
+    );
+
+    if (existing.length === 0) {
+      return res.status(404).json({ success: false, message: 'Interest record not found.' });
+    }
+
+    const { user_id, programme_id } = existing[0];
+
+    // 2. Delete the Enrolment record
+    await pool.execute(
+      `DELETE FROM Enrolment WHERE User_id = ? AND Programme_id = ?`,
+      [user_id, programme_id]
+    );
+
+    // 3. Flip the user status back to Inactive
+    await pool.execute(
+      `UPDATE user SET status = 'Inactive' WHERE User_id = ? AND role_id = 2`,
+      [user_id]
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: 'Enrolment removed and learner set to Inactive.'
+    });
+
+  } catch (error) {
+    console.error('Error removing enrolment:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to remove enrolment: ' + error.message
+    });
+  }
+}
 }
 
 module.exports = AdminController;
