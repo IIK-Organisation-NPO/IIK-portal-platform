@@ -25,7 +25,7 @@ setInterval(() => {
         }
     }
     if (removed > 0) {
-        console.log(`🧹 Cleaned up ${removed} expired pending signup(s)`);
+        console.log(`Cleaned up ${removed} expired pending signup(s)`);
     }
 }, 5 * 60 * 1000);
 
@@ -299,7 +299,6 @@ static generateRefreshJWT(user) {
                 password,
                 confirmPassword,
                 terms_accepted,
-                captchaToken,
                 physicalAddress
             } = req.body;
 
@@ -311,38 +310,6 @@ static generateRefreshJWT(user) {
                     message: 'Email validation failed',
                     errors: [{ field: 'email', message: emailValidation.message }]
                 });
-            }
-
-            // Verify CAPTCHA if enabled
-            if (process.env.ENABLE_CAPTCHA === 'true') {
-                if (!captchaToken) {
-                    return res.status(400).json({
-                        success: false,
-                        message: 'CAPTCHA verification required',
-                        errors: [{ field: 'captcha', message: 'Please complete the CAPTCHA' }]
-                    });
-                }
-
-                try {
-                    const response = await fetch(
-                        `https://www.google.com/recaptcha/api/siteverify?secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${captchaToken}`,
-                        { method: 'POST' }
-                    );
-                    const data = await response.json();
-                    if (!data.success) {
-                        return res.status(400).json({
-                            success: false,
-                            message: 'CAPTCHA verification failed. Please try again.',
-                            errors: [{ field: 'captcha', message: 'CAPTCHA verification failed' }]
-                        });
-                    }
-                } catch (captchaError) {
-                    console.error(' CAPTCHA verification error:', captchaError);
-                    return res.status(500).json({
-                        success: false,
-                        message: 'CAPTCHA verification failed. Please try again.'
-                    });
-                }
             }
 
             const phoneValidation = AuthController.validateAndCleanPhone(phone_number);
@@ -704,7 +671,7 @@ static async login(req, res) {
         
         await AuthController.createSession(id, refreshToken, ipAddress, userAgent);
 
-        // Set HTTP-only secure cookies
+       
         res.cookie('accessToken', accessToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
@@ -751,7 +718,7 @@ static async login(req, res) {
     }
 }
     // ============================================
-    // ✅ REFRESH TOKEN
+    // REFRESH TOKEN
     // ============================================
     static async refreshToken(req, res) {
         try {
@@ -829,7 +796,7 @@ static async login(req, res) {
     }
 
     // ============================================
-    // ✅ LOGOUT
+    // LOGOUT
     // ============================================
     static async logout(req, res) {
         try {
