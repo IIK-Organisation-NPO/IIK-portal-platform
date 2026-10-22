@@ -2431,10 +2431,8 @@ static async bulkUploadCertificates(req, res) {
     }
   }
 
-    // ============================================
+  // ============================================
   // CREATE CENTRE
-  // POST /api/admin/centres
-  // Body: { center_name, address, contact_number, opening_hours, status, region, latitude?, longitude? }
   // ============================================
   static async createCentre(req, res) {
     try {
@@ -2460,6 +2458,17 @@ static async bulkUploadCertificates(req, res) {
         return res.status(400).json({
           success: false,
           message: 'Address is required.'
+        });
+      }
+
+      // ============================================
+      // VALIDATION: Do not allow a centre without coordinates
+      // ============================================
+      if (latitude === null || latitude === undefined || String(latitude).trim() === '' ||
+          longitude === null || longitude === undefined || String(longitude).trim() === '') {
+        return res.status(400).json({
+          success: false,
+          message: 'Latitude and longitude are required to create a centre.'
         });
       }
 
@@ -2544,11 +2553,8 @@ static async bulkUploadCertificates(req, res) {
     }
   }
 
-  // ============================================
+   // ============================================
   // UPDATE CENTRE
-  // PUT /api/admin/centres/:id
-  // Body: any subset of { center_name, address, contact_number,
-  //                       opening_hours, status, region, latitude, longitude }
   // ============================================
   static async updateCentre(req, res) {
     try {
@@ -2561,10 +2567,9 @@ static async bulkUploadCertificates(req, res) {
         });
       }
 
-      // Confirm the centre exists — pull its current status so we can
-      // detect Active ⇄ Inactive transitions.
+    
       const [existing] = await pool.execute(
-        `SELECT digital_center_id, status FROM digital_center
+        `SELECT digital_center_id, status, latitude, longitude FROM digital_center
          WHERE digital_center_id = ? LIMIT 1`,
         [id]
       );
@@ -2577,8 +2582,10 @@ static async bulkUploadCertificates(req, res) {
       }
 
       const previousStatus = existing[0].status;
+      const currentLat = existing[0].latitude;
+      const currentLon = existing[0].longitude;
 
-      // Only update fields that were actually sent
+      
       const fields = [];
       const values = [];
 
@@ -2678,6 +2685,20 @@ static async bulkUploadCertificates(req, res) {
         });
       }
 
+      // ==============================================================
+      // VALIDATION: Do not allow a centre to exist without coordinates
+      // ===============================================================
+      const newLat = req.body.latitude !== undefined ? req.body.latitude : currentLat;
+      const newLon = req.body.longitude !== undefined ? req.body.longitude : currentLon;
+
+      if (newLat === null || newLat === undefined || newLat === '' ||
+          newLon === null || newLon === undefined || newLon === '') {
+        return res.status(400).json({
+          success: false,
+          message: 'Latitude and longitude are required. You cannot save a centre without its coordinates.'
+        });
+      }
+
       values.push(id);
 
       await pool.execute(
@@ -2690,8 +2711,6 @@ static async bulkUploadCertificates(req, res) {
 
       // ============================================
       // Handle status transitions for Programme_Centre
-      //   Inactive → Active : create missing links
-      //   Active   → Inactive : archive existing links
       // ============================================
       if (previousStatus !== newStatus) {
         try {
@@ -2748,10 +2767,8 @@ static async bulkUploadCertificates(req, res) {
       });
     }
   }
-
   // ============================================
   // DELETE CENTRE
-  // DELETE /api/admin/centres/:id
   // ============================================
   static async deleteCentre(req, res) {
     try {
@@ -2794,8 +2811,7 @@ static async bulkUploadCertificates(req, res) {
       }
 
       // ============================================
-      // Clean up Programme_Centre links first —
-      // the FK constraint would otherwise block the delete
+      // Clean up Programme_Centre 
       // ============================================
       await pool.execute(
         `DELETE FROM Programme_Centre WHERE digital_center_id = ?`,
@@ -2828,10 +2844,8 @@ static async bulkUploadCertificates(req, res) {
       });
     }
   }
-  // ============================================
+// ============================================
 // PER-CENTRE ANALYTICS
-// GET /api/admin/analytics/centres
-// Returns: [{ name, count }, ...] — one row per centre
 // ============================================
 static async getCentreStats(req, res) {
   try {
@@ -2853,8 +2867,6 @@ static async getCentreStats(req, res) {
 
 // ============================================
 // SUMMARY STATS
-// GET /api/admin/centres/stats
-// Returns: { totalCentres, activeCentres, totalLearners }
 // ============================================
 static async getCentreSummaryStats(req, res) {
   try {
@@ -2872,11 +2884,10 @@ static async getCentreSummaryStats(req, res) {
 }
 // ============================================
 // REMOVE ENROLMENT (UN-ENROLL)
-// DELETE /api/admin/interested-learners/:id/enrolment
 // ============================================
 static async removeEnrolment(req, res) {
   try {
-    const { id } = req.params; // this is the interest_id
+    const { id } = req.params; 
 
     // 1. Look up the interest to find user_id and programme_id
     const [existing] = await pool.execute(
