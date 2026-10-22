@@ -114,16 +114,9 @@ const validateHours = (value) => {
 };
 
 // ---- Coordinates -----------------------------------------------------
-const validateCoordinate = (value, label, limit, example) => {
-  const v = (value || '').trim();
-  if (!v) return `${label} is required`;
-  if (!/^-?\d+(\.\d+)?$/.test(v)) return `${label} must be a decimal number (e.g. ${example})`;
-  if (Math.abs(Number(v)) > limit) return `${label} must be between -${limit} and ${limit}`;
-  return '';
-};
-
-const validateLatitude = (value) => validateCoordinate(value, 'Latitude', 90, '-29.8587');
-const validateLongitude = (value) => validateCoordinate(value, 'Longitude', 180, '31.0218');
+// Only required: coordinates can be pasted in many formats.
+const validateLatitude = (value) => ((value || '').trim() ? '' : 'Latitude is required');
+const validateLongitude = (value) => ((value || '').trim() ? '' : 'Longitude is required');
 
 // Matches a "lat, lng" pair as copied from Google Maps, e.g. "-29.858680, 31.021840"
 const COORDINATE_PAIR = /^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/;
@@ -400,8 +393,8 @@ const AdminCentreManagement = () => {
       opening_hours: formData.hours.trim() || null,
       status: formData.status || 'Active',
       region: formData.region || null,
-      latitude: Number(Number(formData.latitude.trim()).toFixed(6)),
-      longitude: Number(Number(formData.longitude.trim()).toFixed(6))
+      latitude: formData.latitude.trim(),
+      longitude: formData.longitude.trim()
     };
 
     const existing = centres.find(
@@ -761,7 +754,6 @@ const AdminCentreManagement = () => {
                     onPaste={handleCoordinatePaste}
                     className={errors.latitude ? 'error' : ''}
                     autoComplete="off"
-                    maxLength={20}
                   />
                   {errors.latitude && <span className="cm-field-error">{errors.latitude}</span>}
                 </div>
@@ -779,7 +771,6 @@ const AdminCentreManagement = () => {
                     onPaste={handleCoordinatePaste}
                     className={errors.longitude ? 'error' : ''}
                     autoComplete="off"
-                    maxLength={20}
                   />
                   {errors.longitude && <span className="cm-field-error">{errors.longitude}</span>}
                 </div>
