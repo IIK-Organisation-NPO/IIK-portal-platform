@@ -114,10 +114,9 @@ const validateHours = (value) => {
 };
 
 // ---- Coordinates -----------------------------------------------------
-// Optional, but latitude and longitude must be entered together.
 const validateCoordinate = (value, label, limit, example) => {
   const v = (value || '').trim();
-  if (!v) return '';
+  if (!v) return `${label} is required`;
   if (!/^-?\d+(\.\d+)?$/.test(v)) return `${label} must be a decimal number (e.g. ${example})`;
   if (Math.abs(Number(v)) > limit) return `${label} must be between -${limit} and ${limit}`;
   return '';
@@ -390,10 +389,6 @@ const AdminCentreManagement = () => {
       if (err) newErrors[field] = err;
     });
 
-    const latitude = formData.latitude.trim();
-    const longitude = formData.longitude.trim();
-    if (latitude && !longitude) newErrors.longitude = 'Enter the longitude as well';
-    if (longitude && !latitude) newErrors.latitude = 'Enter the latitude as well';
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
 
@@ -404,15 +399,10 @@ const AdminCentreManagement = () => {
       contact_number: normalisePhone(formData.phone),
       opening_hours: formData.hours.trim() || null,
       status: formData.status || 'Active',
-      region: formData.region || null
+      region: formData.region || null,
+      latitude: Number(Number(formData.latitude.trim()).toFixed(6)),
+      longitude: Number(Number(formData.longitude.trim()).toFixed(6))
     };
-
-    // Only sent when filled in, so updating an existing centre with the
-    // boxes left empty keeps its saved coordinates.
-    if (latitude && longitude) {
-      payload.latitude = Number(Number(latitude).toFixed(6));
-      payload.longitude = Number(Number(longitude).toFixed(6));
-    }
 
     const existing = centres.find(
       c => (c.name || '').toLowerCase() === payload.center_name.toLowerCase()
