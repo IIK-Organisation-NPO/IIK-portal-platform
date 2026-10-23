@@ -40,6 +40,72 @@ const AdminAnalytics = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Download stats as JSON (same structure as impact_report_data.json)
+  const slugify = (text) =>
+    String(text || '')
+      .toLowerCase()
+      .replace(/&/g, 'and')
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+
+  const buildImpactReport = () => {
+    const gender = { female: analytics.gender.female, male: analytics.gender.male };
+    if (analytics.gender.other > 0) gender.other = analytics.gender.other;
+
+    const totalImpact = {
+      id: 'total_impact',
+      title: 'Total Impact',
+      key_metrics: {
+        trained_candidates: analytics.stats.completedProgrammes,
+        digital_centres: centres.length,
+        training_hours: 0,
+        skills_acquired: 0,
+        participants_started: analytics.stats.totalRegistered,
+        participants_completed: analytics.stats.completedProgrammes
+      },
+      gender_data: gender,
+      age_groups: Object.entries(analytics.age).map(([label, count]) => ({ label, count })),
+      digital_centres_data: centres.map((c) => ({ name: c.name, count: c.count })),
+      skills: [],
+      reviews: [],
+      images: []
+    };
+
+    const programmeEntries = programmes.map((prog) => ({
+      id: slugify(prog.name),
+      title: prog.name,
+      key_metrics: {
+        trained_candidates: prog.completed,
+        digital_centres: 0,
+        training_hours: 0,
+        skills_acquired: 0,
+        participants_started: prog.enrolled,
+        participants_completed: prog.completed
+      },
+      gender_data: {},
+      age_groups: [],
+      digital_centres_data: [],
+      skills: [],
+      reviews: [],
+      images: []
+    }));
+
+    return { programs: [totalImpact, ...programmeEntries] };
+  };
+
+  const handleDownloadStats = () => {
+    const report = buildImpactReport();
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'impact_report_data.json';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   // Fetch analytics data
   const fetchAnalytics = async () => {
     try {
@@ -128,7 +194,7 @@ const AdminAnalytics = () => {
           <main className="admin-content">
             <div style={{ textAlign: 'center', padding: '60px 20px' }}>
               <h3 style={{ color: '#dc3545' }}>Error: {error}</h3>
-              <button 
+              <button
                 onClick={fetchAnalytics}
                 style={{
                   marginTop: '20px',
@@ -151,22 +217,36 @@ const AdminAnalytics = () => {
 
   return (
     <div className="app-container">
-      <Admin_Header 
+      <Admin_Header
         onMenuToggle={toggleMobileMenu}
         isMobileMenuOpen={isMobileMenuOpen}
       />
 
       <div className="main-layout">
-        <Admin_Sidebar 
+        <Admin_Sidebar
           active={activeNav}
           isMobileOpen={isMobileMenuOpen}
           onClose={closeMobileMenu}
         />
 
         <main className="admin-content">
-          <div className="page-header">
-            <h1>Analytics & Statistics</h1>
-            <p>Comprehensive overview of learner demographics, programme performance, and centre activity.</p>
+          <div className="page-header page-header--with-action">
+            <div className="page-header-text">
+              <h1>Analytics & Statistics</h1>
+              <p>Comprehensive overview of learner demographics, programme performance, and centre activity.</p>
+            </div>
+            <button
+              type="button"
+              className="download-stats-btn"
+              onClick={handleDownloadStats}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Download stats
+            </button>
           </div>
 
           {/* Top Stats Cards */}
@@ -178,7 +258,7 @@ const AdminAnalytics = () => {
             <div className="stat-card">
               <span className="stat-label">Completed Programme</span>
               <span className="stat-value">
-                {analytics.stats.completedProgrammes} 
+                {analytics.stats.completedProgrammes}
                 <span className="stat-sub">{analytics.stats.completionRate}%</span>
               </span>
             </div>
@@ -195,7 +275,7 @@ const AdminAnalytics = () => {
           {/* Completion Funnel */}
           <div className="card funnel-card">
             <h3 className="card-title">Completion Funnel</h3>
-            
+
             <div className="funnel-row">
               <div className="funnel-label">Registered</div>
               <div className="funnel-bar-container">
@@ -227,7 +307,7 @@ const AdminAnalytics = () => {
 
           {/* Charts Row */}
           <div className="charts-row">
-            
+
             {/* Gender Distribution */}
             <div className="card chart-card">
               <h3 className="card-title">Gender Distribution</h3>
@@ -334,8 +414,8 @@ const AdminAnalytics = () => {
 
       {/* Scroll to Top Button */}
       {showScrollButton && (
-        <button 
-          className="scroll-to-top-btn" 
+        <button
+          className="scroll-to-top-btn"
           onClick={scrollToTop}
           aria-label="Scroll to top"
         >
