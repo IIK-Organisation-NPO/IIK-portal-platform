@@ -48,7 +48,18 @@ exports.getAssignableRoles = async (req, res) => {
 exports.getDigitalCenters = async (req, res) => {
   try {
     const [rows] = await pool.query(
-      'SELECT digital_center_id, center_name FROM digital_center ORDER BY center_name ASC'
+      `SELECT
+         digital_center_id,
+         center_name,
+         address,
+         contact_number,
+         opening_hours,
+         status,
+         region,
+         latitude,
+         longitude
+       FROM digital_center
+       ORDER BY center_name ASC`
     );
     res.json({ success: true, data: rows });
   } catch (err) {

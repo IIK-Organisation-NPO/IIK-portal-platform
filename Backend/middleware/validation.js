@@ -102,13 +102,12 @@ const validateSignup = [
         .isLength({ max: 255 }).withMessage('Physical address must be less than 255 characters'),
 
     // 8. Password - Will be hashed as password_hash
-    body('password')
-        .notEmpty().withMessage('Password is required')
-        .isLength({ min: 8 }).withMessage('Password must be at least 8 characters')
-        .isLength({ max: 50 }).withMessage('Password must be less than 50 characters')
-        .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/)
-        .withMessage('Password must contain uppercase, lowercase, number, and special character (@$!%*?&)'),
-
+   body('password')
+  .notEmpty().withMessage('Password is required')
+  .isLength({ min: 8 }).withMessage('Password must be at least 8 characters')
+  .isLength({ max: 50 }).withMessage('Password must be less than 50 characters')
+  .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/)
+  .withMessage('Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character (@$!%*?&)'),
     // 9. Confirm Password - Validation only (not stored)
     body('confirmPassword')
         .notEmpty().withMessage('Please confirm your password')

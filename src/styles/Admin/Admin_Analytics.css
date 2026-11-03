@@ -52,7 +52,7 @@
   background: white;
   padding: 15px 20px;
   border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   display: flex;
   flex-direction: column;
 }
@@ -83,7 +83,7 @@
   background: white;
   border-radius: 12px;
   padding: 20px 24px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   margin-bottom: 20px;
 }
 
@@ -431,6 +431,7 @@
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -602,5 +603,45 @@
 
   .funnel-bar-container {
     height: 14px;
+  }
+}
+
+/* ===== Download Stats button (added) ===== */
+.page-header--with-action {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.download-stats-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 10px 16px;
+  background: #111827;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s ease;
+}
+
+.download-stats-btn:hover {
+  background: #1f2937;
+}
+
+.download-stats-btn:active {
+  transform: scale(0.98);
+}
+
+@media screen and (max-width: 768px) {
+  .page-header--with-action {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }

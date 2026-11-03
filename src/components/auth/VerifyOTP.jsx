@@ -370,6 +370,7 @@ const VerifyOTP = () => {
                           key={index}
                           ref={(el) => (inputRefs.current[index] = el)}
                           type="text"
+                          inputMode="numeric"
                           maxLength={1}
                           value={digit}
                           onChange={(e) => handleChange(index, e.target.value)}

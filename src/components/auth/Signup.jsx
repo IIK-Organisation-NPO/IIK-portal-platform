@@ -9,7 +9,6 @@ import {
   FaLock,
   FaEye,
   FaEyeSlash,
-  FaGoogle,
   FaVenusMars,
   FaSpinner,
   FaExclamationCircle,
@@ -23,7 +22,7 @@ import Footer from '../common/Footer';
 import '../../styles/components/auth.css';
 import '../../styles/components/mobile-nav.css';
 import logo from '../../assets/images/small Mki.png';
-import { API, GOOGLE_CLIENT_ID } from '../../config/api';
+import { API } from '../../config/api';
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -46,8 +45,6 @@ const Signup = () => {
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState('');
   const [connectionStatus, setConnectionStatus] = useState('');
-  const [googleLoading, setGoogleLoading] = useState(false);
-  const [isGoogleInitialized, setIsGoogleInitialized] = useState(false);
   const [genders, setGenders] = useState([]);
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -233,55 +230,6 @@ const Signup = () => {
       return { valid: false, message: 'Password must contain at least one special character (@$!%*?&)' };
     }
     return { valid: true, message: 'Strong password' };
-  };
-
-  useEffect(() => {
-    const loadGoogleLibrary = () => {
-      if (!window.google) {
-        const script = document.createElement('script');
-        script.src = 'https://accounts.google.com/gsi/client';
-        script.async = true;
-        script.defer = true;
-        script.onload = () => {
-          console.log('Google OAuth library loaded');
-          renderGoogleButton();
-        };
-        document.head.appendChild(script);
-      } else {
-        renderGoogleButton();
-      }
-    };
-    loadGoogleLibrary();
-  }, []);
-
-  const renderGoogleButton = () => {
-    try {
-      if (!GOOGLE_CLIENT_ID) {
-        console.error('GOOGLE_CLIENT_ID is not configured');
-        return;
-      }
-      if (window.google && window.google.accounts && !isGoogleInitialized) {
-        window.google.accounts.id.initialize({
-          client_id: GOOGLE_CLIENT_ID,
-          callback: handleGoogleCredentialResponse,
-        });
-        setIsGoogleInitialized(true);
-        window.google.accounts.id.renderButton(
-          document.getElementById('google-signin-button'),
-          {
-            theme: 'outline',
-            size: 'large',
-            width: 350,
-            text: 'continue_with',
-            shape: 'rectangular',
-            logo_alignment: 'left'
-          }
-        );
-        console.log('Google Sign-In button rendered');
-      }
-    } catch (error) {
-      console.error('Error rendering Google button:', error);
-    }
   };
 
   const handlePhoneChange = (e) => {
@@ -664,62 +612,6 @@ const Signup = () => {
     }
   };
 
-  const handleGoogleCredentialResponse = async (response) => {
-    try {
-      setGoogleLoading(true);
-      const googleToken = response.credential;
-      console.log('Google credential received');
-      const apiResponse = await fetch(API.auth.googleAuth, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ googleToken })
-      });
-      const data = await apiResponse.json();
-      console.log('Google auth response:', data);
-      if (apiResponse.status === 409) {
-        setServerError(' ' + (data.error || 'This email is already registered. Please login instead.'));
-        setGoogleLoading(false);
-        setTimeout(() => {
-          navigate('/login', {
-            state: {
-              message: 'This email is already registered. Please login instead.'
-            }
-          });
-        }, 3000);
-        return;
-      }
-      if (apiResponse.ok && data.success) {
-        if (data.data?.requiresVerification) {
-          console.log('Redirecting to email verification');
-          navigate('/verify-email', {
-            state: {
-              email: data.data.email,
-              fullName: data.data.fullName || `${data.data.name || ''} ${data.data.surname || ''}`,
-              isGoogleUser: true,
-              userId: data.data.userId,
-              alreadyExists: data.data.alreadyExists || false,
-              verificationSent: true
-            }
-          });
-          setGoogleLoading(false);
-        } else {
-          localStorage.setItem('token', data.data.token);
-          localStorage.setItem('user', JSON.stringify(data.data.user));
-          navigate('/dashboard');
-        }
-      } else {
-        setServerError(data.error || 'Google sign-in failed');
-        setGoogleLoading(false);
-      }
-    } catch (error) {
-      console.error('Google credential error:', error);
-      setServerError('Google sign-in failed. Please try again.');
-      setGoogleLoading(false);
-    }
-  };
-
   const hasError = (field) => {
     return errors[field] && touched[field];
   };
@@ -1087,23 +979,6 @@ const Signup = () => {
               )}
             </button>
           </form>
-
-          <div className="auth-divider">
-            <hr />
-            <span>or continue with</span>
-            <hr />
-          </div>
-
-          <div
-            id="google-signin-button"
-            style={{
-              display: 'flex',
-              justifyContent: 'center',
-              marginBottom: '15px',
-              width: '100%',
-              minHeight: '50px'
-            }}
-          ></div>
 
           <p className="auth-footer-text">
             Already have an account? <Link to="/login">Login</Link>
