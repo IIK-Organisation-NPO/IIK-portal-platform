@@ -381,6 +381,7 @@ static async getLearners(req, res) {
                 u.surname,
                 u.email,
                 u.phone_number,
+                u.id_number,
                 u.email_verify as isVerified,
                 u.register_at as joinedDate,
                 g.gender_description as gender,
@@ -463,7 +464,7 @@ static async getLearners(req, res) {
 }
 
 // ============================================
-// UPDATE LEARNER
+// UPDATE LEARNER (Profile + Status)
 // ============================================
 static async updateLearner(req, res) {
   try {
@@ -472,96 +473,100 @@ static async updateLearner(req, res) {
 
     console.log('Updating learner:', { id, name, surname, email, phone, status });
 
-    // ============================================
-    // DEACTIVATE
-    // ============================================
-    if (status === 'Inactive') {
-      // 1. Flip the learner's status on the user table
-      const [userRes] = await pool.execute(
-        `UPDATE user SET status = 'Inactive'
-         WHERE User_id = ? AND role_id = 2`,
-        [id]
-      );
+    // 1. Check if the learner exists
+    const [existingUser] = await pool.execute(
+      `SELECT User_id, status FROM user WHERE User_id = ? AND role_id = 2`,
+      [id]
+    );
 
-      if (userRes.affectedRows === 0) {
-        return res.status(404).json({
-          success: false,
-          message: 'Learner not found.'
-        });
-      }
-
-      // 2. Also mark any active enrolments as Inactive, for consistency
-      const [enrolRes] = await pool.execute(
-        `UPDATE Enrolment SET Completion_status = 'Inactive'
-         WHERE User_id = ?
-           AND Completion_status NOT IN ('Inactive', 'Withdrawn')`,
-        [id]
-      );
-
-      console.log(
-        `Deactivated user ${id}. ${enrolRes.affectedRows} enrolment(s) marked inactive.`
-      );
-
-      return res.status(200).json({
-        success: true,
-        message:
-          enrolRes.affectedRows > 0
-            ? `Learner deactivated. ${enrolRes.affectedRows} enrolment(s) marked inactive.`
-            : 'Learner is now inactive.'
+    if (existingUser.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Learner not found.'
       });
     }
 
     // ============================================
-    // ACTIVATE
+    // VALIDATION: Check for programmes before status change
     // ============================================
-    if (status === 'Active') {
-      const [userRes] = await pool.execute(
-        `UPDATE user SET status = 'Active'
-         WHERE User_id = ? AND role_id = 2`,
+    if (status === 'Active' || status === 'Completed') {
+      const [enrolments] = await pool.execute(
+        `SELECT COUNT(*) as count FROM Enrolment WHERE User_id = ?`,
         [id]
       );
 
-      if (userRes.affectedRows === 0) {
-        return res.status(404).json({
+      if (enrolments[0].count === 0) {
+        return res.status(400).json({
           success: false,
-          message: 'Learner not found.'
+          message: `Cannot mark learner as ${status} because they are not enrolled in any programme.`
         });
       }
-
-      // Bring any Inactive enrolments back to Active
-      const [enrolRes] = await pool.execute(
-        `UPDATE Enrolment SET Completion_status = 'Active'
-         WHERE User_id = ?
-           AND Completion_status = 'Inactive'`,
-        [id]
-      );
-
-      return res.status(200).json({
-        success: true,
-        message:
-          enrolRes.affectedRows > 0
-            ? `Learner activated. ${enrolRes.affectedRows} enrolment(s) marked active.`
-            : 'Learner is now active.'
-      });
     }
 
-    // ============================================
-    // PROFILE UPDATE
-    // ============================================
+    // 2. Update Profile Details (if provided)
     const safeName    = (name !== undefined && name !== '') ? name : null;
     const safeSurname = (surname !== undefined && surname !== '') ? surname : null;
     const safeEmail   = (email !== undefined && email !== '') ? email : null;
     const safePhone   = (phone !== undefined && phone !== '') ? phone : null;
 
-    await pool.execute(
-      `UPDATE user 
-       SET name = ?, 
-           surname = ?, 
-           email = ?, 
-           phone_number = ?
-       WHERE User_id = ? AND role_id = 2`,
-      [safeName, safeSurname, safeEmail, safePhone, id]
-    );
+    if (safeName || safeSurname || safeEmail || safePhone) {
+      await pool.execute(
+        `UPDATE user 
+         SET name = COALESCE(?, name), 
+             surname = COALESCE(?, surname), 
+             email = COALESCE(?, email), 
+             phone_number = COALESCE(?, phone_number)
+         WHERE User_id = ? AND role_id = 2`,
+        [safeName, safeSurname, safeEmail, safePhone, id]
+      );
+    }
+
+    // 3. Update Status (if provided)
+    if (status) {
+      const validStatuses = ['Active', 'Inactive', 'Completed'];
+      
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid status provided. Must be Active, Inactive, or Completed.'
+        });
+      }
+
+      // Update the user table
+      await pool.execute(
+        `UPDATE user SET status = ? WHERE User_id = ? AND role_id = 2`,
+        [status, id]
+      );
+
+      // Update the Enrolment table to keep records in sync
+      if (status === 'Inactive') {
+        await pool.execute(
+          `UPDATE Enrolment 
+           SET Completion_status = 'Inactive'
+           WHERE User_id = ? 
+             AND Completion_status NOT IN ('Inactive', 'Withdrawn')`,
+          [id]
+        );
+      } else if (status === 'Active') {
+        await pool.execute(
+          `UPDATE Enrolment 
+           SET Completion_status = 'Active'
+           WHERE User_id = ? 
+             AND Completion_status = 'Inactive'`,
+          [id]
+        );
+      } else if (status === 'Completed') {
+        // Mark their active enrolments as completed
+        await pool.execute(
+          `UPDATE Enrolment 
+           SET Completion_status = 'Completed',
+               Completion_date = NOW()
+           WHERE User_id = ? 
+             AND Completion_status IN ('Active', 'In Progress', 'Enrolled')`,
+          [id]
+        );
+      }
+    }
 
     return res.status(200).json({
       success: true,

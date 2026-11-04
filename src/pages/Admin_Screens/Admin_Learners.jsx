@@ -30,7 +30,8 @@ const Admin_Learners = () => {
     name: '',
     surname: '',
     email: '',
-    phone: ''
+    phone: '',
+    status: ''
   });
 
   const [deactivatingId, setDeactivatingId] = useState(null);
@@ -46,6 +47,13 @@ const Admin_Learners = () => {
 
   const statusOptions = [
     { value: "", label: "Status: All" },
+    { value: "Active", label: "Active" },
+    { value: "Inactive", label: "Inactive" },
+    { value: "Completed", label: "Completed" },
+  ];
+
+  // Options shown inside the inline edit dropdown (no "All" option)
+  const editStatusOptions = [
     { value: "Active", label: "Active" },
     { value: "Inactive", label: "Inactive" },
     { value: "Completed", label: "Completed" },
@@ -97,7 +105,7 @@ const Admin_Learners = () => {
         setStats([
           { label: "Total Learners", value: data.totalLearners || 0 },
           { label: "Active Enrolments", value: activeEnrolments },
-          { label: "Completed Programmes", value: data.completedEnrollments || 0 },
+          { label: "Completed Programmes", value: data.completedEnrolments || 0 },
         ]);
       }
     } catch (err) {
@@ -138,7 +146,7 @@ const Admin_Learners = () => {
         await fetchLearners();
         await fetchStats();
         setEditingId(null);
-        setEditedLearner({ id: '', name: '', surname: '', email: '', phone: '' });
+        setEditedLearner({ id: '', name: '', surname: '', email: '', phone: '', status: '' });
         alert('Learner updated successfully!');
         return true;
       } else {
@@ -154,15 +162,14 @@ const Admin_Learners = () => {
     }
   };
 
-  
+  // ============================================
   // DEACTIVATE LEARNER
- 
+  // ============================================
   const deactivateLearner = async (id) => {
     try {
       const response = await api.put(`/admin/learners/${id}`, { status: 'Inactive' });
 
       if (response.data.success) {
-        
         const patch = (l) =>
           l.id === id
             ? {
@@ -209,6 +216,7 @@ const Admin_Learners = () => {
         learner.name?.toLowerCase().includes(term) ||
         learner.surname?.toLowerCase().includes(term) ||
         learner.email?.toLowerCase().includes(term) ||
+        learner.id_number?.toLowerCase().includes(term) || // <--- ADDED ID NUMBER SEARCH
         `${learner.name} ${learner.surname}`.toLowerCase().includes(term)
       );
     }
@@ -367,13 +375,14 @@ const Admin_Learners = () => {
       name: learner.name || '',
       surname: learner.surname || '',
       email: learner.email || '',
-      phone: learner.phone || learner.phone_number || ''
+      phone: learner.phone || learner.phone_number || '',
+      status: learner.status || 'Active'
     });
   };
 
   const handleCancelEdit = () => {
     setEditingId(null);
-    setEditedLearner({ id: '', name: '', surname: '', email: '', phone: '' });
+    setEditedLearner({ id: '', name: '', surname: '', email: '', phone: '', status: '' });
   };
 
   const handleSaveEdit = async () => {
@@ -390,7 +399,8 @@ const Admin_Learners = () => {
       name: editedLearner.name,
       surname: editedLearner.surname,
       email: editedLearner.email,
-      phone: editedLearner.phone
+      phone: editedLearner.phone,
+      status: editedLearner.status
     };
 
     await updateLearner(editedLearner.id, updatedData);
@@ -546,7 +556,7 @@ const Admin_Learners = () => {
               </select>
               <input
                 type="text"
-                placeholder="Search name or email..."
+                placeholder="Search name, email, or ID number..." // <--- UPDATED PLACEHOLDER
                 className="search-input"
                 value={searchTerm}
                 onChange={handleSearchChange}
@@ -574,6 +584,7 @@ const Admin_Learners = () => {
                 <tr>
                   <th>NAME</th>
                   <th>EMAIL</th>
+                  <th>ID NUMBER</th> {/* <--- ADDED HEADER */}
                   <th>PHONE</th>
                   <th>PROGRAMME</th>
                   <th>ENROLMENT DATE</th>
@@ -618,6 +629,12 @@ const Admin_Learners = () => {
                           learner.email || 'N/A'
                         )}
                       </td>
+
+                      {/* ID NUMBER COLUMN */}
+                      <td>
+                        {learner.id_number || 'N/A'}
+                      </td>
+
                       <td>
                         {isEditing ? (
                           <input
@@ -647,10 +664,24 @@ const Admin_Learners = () => {
                           : formatDate(learner.enrolment_date || learner.date || learner.created_at)}
                       </td>
 
+                      {/* STATUS — editable dropdown while editing */}
                       <td>
-                        <span className={`status-badge ${getStatusClass(learner.status)}`}>
-                          {learner.status || 'Inactive'}
-                        </span>
+                        {isEditing ? (
+                          <select
+                            name="status"
+                            value={editedLearner.status}
+                            onChange={handleInputChange}
+                            className="edit-select"
+                          >
+                            {editStatusOptions.map((opt) => (
+                              <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className={`status-badge ${getStatusClass(learner.status)}`}>
+                            {learner.status || 'Inactive'}
+                          </span>
+                        )}
                       </td>
 
                       <td>
@@ -659,7 +690,16 @@ const Admin_Learners = () => {
                             <button
                               className="action-btn save"
                               onClick={handleSaveEdit}
-                              disabled={isSaving}
+                              disabled={
+                                isSaving || 
+                                // Optional validation: disable if no programmes and trying to set Active/Completed
+                                ((learner.enrolled_count === 0) && (editedLearner.status === 'Active' || editedLearner.status === 'Completed'))
+                              }
+                              title={
+                                ((learner.enrolled_count === 0) && (editedLearner.status === 'Active' || editedLearner.status === 'Completed'))
+                                  ? "Cannot set to Active/Completed without a programme enrollment"
+                                  : ""
+                              }
                             >
                               {isSaving ? 'Saving...' : 'Save'}
                             </button>
