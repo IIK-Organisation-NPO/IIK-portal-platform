@@ -21,7 +21,7 @@ app.set('trust proxy', 1);
 
 // ===== ALLOWED ORIGINS (from .env or hardcoded production fallbacks) =====
 const allowedOrigins = (process.env.ALLOWED_ORIGINS ||
-    'https://happy-mushroom-01643cd03.1.azurestaticapps.net,http://localhost:5173,http://localhost:3000')
+    'https://happy-mushroom-01643cd03.1.azurestaticapps.net,http://localhost:5173,http://localhost:3000,https://portal.iik.co.za')
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
@@ -59,6 +59,8 @@ app.use(cors({
         if (!origin || allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
+            // For debugging: log rejected origins but still allow them if needed
+            console.log(`CORS request from unlisted origin: ${origin}`);
             callback(null, true); 
         }
     },
@@ -94,9 +96,14 @@ app.use((req, res, next) => {
 // ===== SECURITY HEADERS MIDDLEWARE =====
 app.use((req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
+    
+    // X-Frame-Options acts as a fallback. CSP takes precedence in modern browsers.
     res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    
+    // Allow framing from the specified origins (fixes the PDF viewing issue)
     const frameAncestors = ["'self'", ...allowedOrigins].join(' ');
     res.setHeader('Content-Security-Policy', `frame-ancestors ${frameAncestors};`);
+    
     res.setHeader('X-XSS-Protection', '1; mode=block');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
     next();
