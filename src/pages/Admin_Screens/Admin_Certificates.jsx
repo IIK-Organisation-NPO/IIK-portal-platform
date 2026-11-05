@@ -40,7 +40,11 @@ const Admin_Certificates = () => {
     const [showEditModal, setShowEditModal] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deletingCertificate, setDeletingCertificate] = useState(null);
+    
+    // PDF Blob States
     const [viewPdfUrl, setViewPdfUrl] = useState('');
+    const [loadingPdf, setLoadingPdf] = useState(false);
+    const [pdfError, setPdfError] = useState(null);
 
     // Learner-specific completed programmes
     const [learnerProgrammes, setLearnerProgrammes] = useState([]);
@@ -364,8 +368,7 @@ const Admin_Certificates = () => {
         }
   
         if (!certificateForm.learner_id) {
-    
-    newErrors.programme_id = 'Please select an academic programme.';
+            newErrors.programme_id = 'Please select an academic programme.';
         } else if (learnerProgrammes.length === 0) {
           newErrors.programme_id = 'This learner has no completed programmes. Certificates cannot be issued.';
         } else if (!certificateForm.programme_id) {
@@ -527,11 +530,43 @@ const Admin_Certificates = () => {
     // ============================================
     // VIEW / EDIT
     // ============================================
-    const handleViewCertificate = (cert) => {
+    const handleViewCertificate = async (cert) => {
         setSelectedCertificate(cert);
-        const url = `${api.defaults.baseURL}/admin/certificates/view/${cert.Certificate_id}`;
-        setViewPdfUrl(url);
         setShowViewModal(true);
+        setLoadingPdf(true);
+        setPdfError(null);
+        
+        // Clean up old URL if it exists
+        if (viewPdfUrl) {
+            URL.revokeObjectURL(viewPdfUrl);
+            setViewPdfUrl('');
+        }
+
+        try {
+            // Fetch the PDF as a Blob using the authenticated Axios instance
+            const response = await api.get(`/admin/certificates/view/${cert.Certificate_id}`, {
+                responseType: 'blob',
+            });
+
+            // Convert Blob to a local URL
+            const blob = new Blob([response.data], { type: 'application/pdf' });
+            const localUrl = URL.createObjectURL(blob);
+            setViewPdfUrl(localUrl);
+        } catch (err) {
+            console.error('Error fetching PDF Blob:', err);
+            setPdfError('Failed to load the PDF. You may need to log in again.');
+        } finally {
+            setLoadingPdf(false);
+        }
+    };
+
+    const handleCloseViewModal = () => {
+        setShowViewModal(false);
+        setSelectedCertificate(null);
+        if (viewPdfUrl) {
+            URL.revokeObjectURL(viewPdfUrl);
+            setViewPdfUrl('');
+        }
     };
 
     const handleEditCertificate = (cert) => {
@@ -723,7 +758,7 @@ const Admin_Certificates = () => {
                     </div>
 
                     <div className="certificates-two-column">
-                        {/* ===== UPLOAD COLUMN — file error now stacks below the dropzone ===== */}
+                        {/* ===== UPLOAD COLUMN ===== */}
                         <div className="upload-column">
                             <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
                                 <div
@@ -1060,7 +1095,7 @@ const Admin_Certificates = () => {
 
             {/* View Modal */}
             {showViewModal && selectedCertificate && (
-                <div className="modal-overlay" onClick={() => setShowViewModal(false)}>
+                <div className="modal-overlay" onClick={handleCloseViewModal}>
                     <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '900px', width: '95%' }}>
                         <h2 style={{ marginBottom: '8px' }}>
                             <i className="fas fa-file-pdf" style={{ color: '#dc3545', marginRight: '10px' }}></i>
@@ -1074,25 +1109,35 @@ const Admin_Certificates = () => {
                             marginBottom: '20px',
                             borderRadius: '8px',
                             overflow: 'hidden',
-                            backgroundColor: '#f5f5f5'
+                            backgroundColor: '#f5f5f5',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
                         }}>
-                            <iframe
-                                src={viewPdfUrl}
-                                style={{ width: '100%', height: '100%', border: 'none' }}
-                                title="Certificate PDF"
-                            />
+                            {loadingPdf && <p>Loading certificate...</p>}
+                            
+                            {pdfError && <p style={{ color: '#dc3545' }}>{pdfError}</p>}
+                            
+                            {viewPdfUrl && !loadingPdf && !pdfError && (
+                                <iframe
+                                    src={viewPdfUrl}
+                                    style={{ width: '100%', height: '100%', border: 'none' }}
+                                    title="Certificate PDF"
+                                />
+                            )}
                         </div>
 
                         <div className="modal-actions">
                             <button
                                 className="modal-btn cancel-btn"
                                 onClick={() => window.open(viewPdfUrl, '_blank')}
+                                disabled={!viewPdfUrl}
                             >
                                 <i className="fas fa-download"></i> Download
                             </button>
                             <button
                                 className="modal-btn confirm-btn"
-                                onClick={() => setShowViewModal(false)}
+                                onClick={handleCloseViewModal}
                             >
                                 Close
                             </button>
