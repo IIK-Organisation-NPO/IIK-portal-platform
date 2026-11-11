@@ -594,7 +594,7 @@ class EmailService {
         }
     }
 
-    // ============================================
+     // ============================================
     // SEND NEW PROGRAMME NOTIFICATION TO A LEARNER
     // ============================================
     async sendNewProgrammeNotification(email, fullName, programme) {
@@ -615,6 +615,9 @@ class EmailService {
             })
             : 'To be announced';
 
+        // Use the specific production URL
+        const baseUrl = 'https://portal.iik.co.za';
+
         try {
             const htmlContent = `
                 <!DOCTYPE html>
@@ -623,7 +626,107 @@ class EmailService {
                     <meta charset="UTF-8">
                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
                     <title>New Programme Available</title>
-                    <style>${EMAIL_STYLES}</style>
+                    <style>
+                        body {
+                            background-color: #000000;
+                            color: #ffffff;
+                            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                            margin: 0;
+                            padding: 0;
+                        }
+                        .wrapper {
+                            width: 100%;
+                            padding: 40px 0;
+                        }
+                        .container {
+                            max-width: 600px;
+                            margin: 0 auto;
+                            background-color: #111111; /* Slightly lighter black for the card */
+                            border-radius: 8px;
+                            border: 1px solid #333333;
+                            overflow: hidden;
+                        }
+                        .header {
+                            text-align: center;
+                            padding: 30px 20px;
+                            border-bottom: 1px solid #333333;
+                        }
+                        .header h1 {
+                            color: #ffffff;
+                            margin: 0 0 10px 0;
+                            font-size: 24px;
+                        }
+                        .header p {
+                            color: #a0a0a0;
+                            margin: 0;
+                            font-size: 14px;
+                        }
+                        .content {
+                            padding: 30px;
+                        }
+                        .greeting {
+                            font-size: 16px;
+                            margin-bottom: 16px;
+                        }
+                        .message {
+                            font-size: 14px;
+                            line-height: 1.6;
+                            color: #d1d5db;
+                            margin-bottom: 24px;
+                        }
+                        .details {
+                            background-color: #1f1f1f; /* Dark gray for the details box */
+                            border-radius: 8px;
+                            padding: 16px;
+                            margin: 24px 0;
+                            border: 1px solid #333333;
+                        }
+                        .detail-row {
+                            display: flex;
+                            justify-content: space-between;
+                            padding: 12px 0;
+                            border-bottom: 1px solid #333333;
+                        }
+                        .detail-row:last-child {
+                            border-bottom: none;
+                        }
+                        .detail-label {
+                            font-weight: 600;
+                            color: #a0a0a0;
+                            width: 30%;
+                        }
+                        .detail-value {
+                            font-weight: 500;
+                            color: #ffffff;
+                            width: 70%;
+                            text-align: right;
+                        }
+                        .btn-wrap {
+                            text-align: center;
+                            margin-top: 32px;
+                        }
+                        .btn {
+                            background-color: #ffffff;
+                            color: #000000;
+                            padding: 12px 24px;
+                            text-decoration: none;
+                            border-radius: 6px;
+                            font-weight: bold;
+                            display: inline-block;
+                        }
+                        .footer {
+                            text-align: center;
+                            padding: 20px;
+                            font-size: 12px;
+                            color: #6e6e6e;
+                            border-top: 1px solid #333333;
+                        }
+                        .footer .brand {
+                            color: #ffffff;
+                            font-weight: bold;
+                            margin-bottom: 8px;
+                        }
+                    </style>
                 </head>
                 <body>
                     <div class="wrapper">
@@ -641,25 +744,25 @@ class EmailService {
                                 </p>
 
                                 <div class="details">
-                                    <div class="row">
-                                        <span class="k">Programme</span>
-                                        <span class="v">${name}</span>
+                                    <div class="detail-row">
+                                        <span class="detail-label">Programme:</span>
+                                        <span class="detail-value">${name}</span>
                                     </div>
                                     ${description ? `
-                                        <div class="row">
-                                            <span class="k">Description</span>
-                                            <span class="v">${description}</span>
+                                        <div class="detail-row">
+                                            <span class="detail-label">Description:</span>
+                                            <span class="detail-value">${description}</span>
                                         </div>
                                     ` : ''}
                                     ${duration ? `
-                                        <div class="row">
-                                            <span class="k">Duration</span>
-                                            <span class="v">${duration}</span>
+                                        <div class="detail-row">
+                                            <span class="detail-label">Duration:</span>
+                                            <span class="detail-value">${duration}</span>
                                         </div>
                                     ` : ''}
-                                    <div class="row">
-                                        <span class="k">Starts</span>
-                                        <span class="v">${formattedStart}</span>
+                                    <div class="detail-row">
+                                        <span class="detail-label">Starts:</span>
+                                        <span class="detail-value">${formattedStart}</span>
                                     </div>
                                 </div>
 
@@ -697,7 +800,6 @@ class EmailService {
             throw error;
         }
     }
-
     // ============================================
     // BROADCAST NEW PROGRAMME TO MANY LEARNERS
     // ============================================
