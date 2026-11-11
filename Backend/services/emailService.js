@@ -126,10 +126,11 @@ const EMAIL_STYLES = `
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
-        gap: 12px;
-        padding: 10px 0;
+        gap: 16px;
+        padding: 14px 0;
         border-bottom: 1px solid #1f1f1f;
         font-size: 14px;
+        line-height: 1.5;
     }
     .details .row:last-child {
         border-bottom: none;
@@ -137,11 +138,13 @@ const EMAIL_STYLES = `
     .details .row .k {
         color: #8a8a8a;
         flex-shrink: 0;
+        font-weight: 500;
     }
     .details .row .v {
         color: #e5e5e5;
         text-align: right;
         word-break: break-word;
+        font-weight: 600;
     }
     .btn-wrap {
         text-align: center;
@@ -195,7 +198,7 @@ const EMAIL_STYLES = `
         .details .row {
             flex-direction: column;
             align-items: flex-start;
-            gap: 4px;
+            gap: 6px;
         }
         .details .row .v {
             text-align: left;
@@ -417,7 +420,7 @@ class EmailService {
                                 </div>
 
                                 <div class="btn-wrap">
-                                    <a href="${this.frontendUrl}/dashboard" class="btn">Go to Dashboard</a>
+                                    <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/login" class="btn">Go to Login</a>
                                 </div>
 
                                 <p style="color: #6e6e6e; font-size: 13px; margin-top: 12px;">
@@ -439,7 +442,7 @@ class EmailService {
                 to: email,
                 subject: 'Welcome to IIK Learner Portal',
                 html: htmlContent,
-                text: `Hello ${fullName},\n\nWelcome to IIK Learner Portal! Your account has been successfully created and verified.\n\nYou can now:\n- Access your learning materials and certificates\n- Track your progress\n- Update your profile\n\nVisit: ${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard\n\nIIK Learner Certificate Portal`
+                text: `Hello ${fullName},\n\nWelcome to IIK Learner Portal! Your account has been successfully created and verified.\n\nYou can now:\n- Access your learning materials and certificates\n- Track your progress\n- Update your profile\n\nVisit: ${process.env.FRONTEND_URL || 'http://localhost:5173'}/login\n\nIIK Learner Certificate Portal`
             });
 
             console.log('Welcome email sent to:', email);
@@ -661,11 +664,11 @@ class EmailService {
                                 </div>
 
                                 <div class="btn-wrap">
-                                    <a href="${this.frontendUrl}/learner-programmes" class="btn">View Programme</a>
+                                    <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/login" class="btn">View Programme</a>
                                 </div>
 
                                 <p style="color: #6e6e6e; font-size: 13px; margin-top: 12px;">
-                                    You'receiving this because you opted in to new programme notifications.
+                                    You're receiving this because you opted in to new programme notifications.
                                     You can turn this off anytime in your Settings.
                                 </p>
                             </div>
@@ -684,7 +687,7 @@ class EmailService {
                 to: email,
                 subject: `New Programme Available: ${name}`,
                 html: htmlContent,
-                text: `Hello ${fullName},\n\nA new programme is now available on the IIK Learner Portal.\n\nProgramme: ${name}\n${description ? `Description: ${description}\n` : ''}${duration ? `Duration: ${duration}\n` : ''}Starts: ${formattedStart}\n\nView it here: ${process.env.FRONTEND_URL || 'http://localhost:5173'}/learner-programmes\n\nYou're receiving this because you opted in to new programme notifications.\n\nIIK Learner Certificate Portal`
+                text: `Hello ${fullName},\n\nA new programme is now available on the IIK Learner Portal.\n\nProgramme: ${name}\n${description ? `Description: ${description}\n` : ''}${duration ? `Duration: ${duration}\n` : ''}Starts: ${formattedStart}\n\nView it here: ${process.env.FRONTEND_URL || 'http://localhost:5173'}/login\n\nYou're receiving this because you opted in to new programme notifications.\n\nIIK Learner Certificate Portal`
             });
 
             console.log('New programme notification sent to:', email);
@@ -790,7 +793,7 @@ class EmailService {
                                 </div>
 
                                 <div class="btn-wrap">
-                                    <a href="${this.frontendUrl}/admin/learners" class="btn">View in Admin Portal</a>
+                                    <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/login" class="btn">View in Admin Portal</a>
                                 </div>
 
                                 <p style="color: #6e6e6e; font-size: 13px; margin-top: 12px;">
@@ -813,7 +816,7 @@ class EmailService {
                 to: email,
                 subject: `New Learner Registered: ${fullName}`,
                 html: htmlContent,
-                text: `Hello ${adminName},\n\nA new learner has just registered on the IIK Learner Portal.\n\nName: ${fullName}\nEmail: ${learnerEmail}\nRegistered: ${formattedDate}\n\nView them in the admin portal: ${process.env.FRONTEND_URL || 'http://localhost:5173'}/admin/learners\n\nIIK Learner Certificate Portal`
+                text: `Hello ${adminName},\n\nA new learner has just registered on the IIK Learner Portal.\n\nName: ${fullName}\nEmail: ${learnerEmail}\nRegistered: ${formattedDate}\n\nView them in the admin portal: ${process.env.FRONTEND_URL || 'http://localhost:5173'}/login\n\nIIK Learner Certificate Portal`
             });
 
             console.log('New-learner notification sent to admin:', email);
@@ -931,7 +934,7 @@ class EmailService {
                                 </div>
 
                                 <div class="btn-wrap">
-                                    <a href="${this.frontendUrl}/admin-certificates" class="btn">Issue Certificate</a>
+                                    <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/login" class="btn">Issue Certificate</a>
                                 </div>
 
                                 <p style="color: #6e6e6e; font-size: 13px; margin-top: 12px;">
@@ -954,7 +957,7 @@ class EmailService {
                 to: adminEmail,
                 subject: `Ready for certificate: ${learnerName} - ${programmeName}`,
                 html: htmlContent,
-                text: `Hello ${adminName},\n\nA learner at your centre has completed a programme and is ready for their certificate.\n\nLearner: ${learnerName}\nProgramme: ${programmeName}\nCentre: ${centreName}\nCompleted: ${formattedDate}\nMarked by: ${markedByName}\n\nIssue their certificate here: ${process.env.FRONTEND_URL || 'http://localhost:5173'}/admin-certificates\n\nIIK Learner Certificate Portal`
+                text: `Hello ${adminName},\n\nA learner at your centre has completed a programme and is ready for their certificate.\n\nLearner: ${learnerName}\nProgramme: ${programmeName}\nCentre: ${centreName}\nCompleted: ${formattedDate}\nMarked by: ${markedByName}\n\nIssue their certificate here: ${process.env.FRONTEND_URL || 'http://localhost:5173'}/login\n\nIIK Learner Certificate Portal`
             });
 
             console.log('Learner-completed notification sent to admin:', adminEmail);
@@ -1095,7 +1098,7 @@ class EmailService {
                                 </div>
 
                                 <div class="btn-wrap">
-                                    <a href="${this.frontendUrl}/admin-analytics" class="btn">View Full Analytics</a>
+                                    <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/login" class="btn">View Full Analytics</a>
                                 </div>
 
                                 <p style="color: #6e6e6e; font-size: 13px; margin-top: 12px;">
@@ -1118,7 +1121,7 @@ class EmailService {
                 to: adminEmail,
                 subject: `Weekly summary - ${scopeLabel} (${periodLabel})`,
                 html: htmlContent,
-                text: `Hello ${adminName},\n\nWeekly summary - ${scopeLabel}\n${periodLabel}\n\nThis week:\n${isGlobal ? `- New learner registrations: ${newRegistrations}\n` : ''}- New interests: ${newInterests}\n- New enrolments: ${newEnrolments}\n- Completions: ${completions}\n- Certificates issued: ${certificatesIssued}\n\nRunning totals:\n- Active learners: ${totalActiveLearners}\n${isGlobal ? `- Total centres: ${totalCentres}\n` : ''}\nView analytics: ${process.env.FRONTEND_URL || 'http://localhost:5173'}/admin-analytics\n\nIIK Learner Certificate Portal`
+                text: `Hello ${adminName},\n\nWeekly summary - ${scopeLabel}\n${periodLabel}\n\nThis week:\n${isGlobal ? `- New learner registrations: ${newRegistrations}\n` : ''}- New interests: ${newInterests}\n- New enrolments: ${newEnrolments}\n- Completions: ${completions}\n- Certificates issued: ${certificatesIssued}\n\nRunning totals:\n- Active learners: ${totalActiveLearners}\n${isGlobal ? `- Total centres: ${totalCentres}\n` : ''}\nView analytics: ${process.env.FRONTEND_URL || 'http://localhost:5173'}/login\n\nIIK Learner Certificate Portal`
             });
 
             console.log('Weekly summary sent to:', adminEmail);
@@ -1253,7 +1256,7 @@ class EmailService {
                                 </div>
 
                                 <div class="btn-wrap">
-                                    <a href="${this.frontendUrl}/learner-certificates" class="btn">View My Certificate</a>
+                                    <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/login" class="btn">View My Certificate</a>
                                 </div>
 
                                 <p style="color: #6e6e6e; font-size: 13px; margin-top: 12px;">
@@ -1276,7 +1279,7 @@ class EmailService {
                 to: email,
                 subject: `Certificate Issued: ${programmeName}`,
                 html: htmlContent,
-                text: `Congratulations ${fullName}!\n\nYour certificate for "${programmeName}" has been issued.\n\nCertificate #: ${certificateNumber}\nIssued: ${formattedDate}\n\nView it here: ${process.env.FRONTEND_URL || 'http://localhost:5173'}/learner-certificates\n\nIIK Learner Certificate Portal`
+                text: `Congratulations ${fullName}!\n\nYour certificate for "${programmeName}" has been issued.\n\nCertificate #: ${certificateNumber}\nIssued: ${formattedDate}\n\nView it here: ${process.env.FRONTEND_URL || 'http://localhost:5173'}/login\n\nIIK Learner Certificate Portal`
             });
 
             console.log('Certificate issued notification sent to:', email);
@@ -1293,7 +1296,7 @@ class EmailService {
     async sendVerificationEmail(email, fullName, verificationToken) {
         console.log(`Sending verification email to: ${email}`);
 
-        const verificationLink = `${this.frontendUrl}/verify-email/${verificationToken}`;
+        const verificationLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email/${verificationToken}`;
 
         try {
             const htmlContent = `
@@ -1486,6 +1489,84 @@ class EmailService {
             return { success: true };
         } catch (error) {
             console.error('Failed to send contact form email:', error.message);
+            throw error;
+        }
+    }
+
+    // ============================================
+    // SEND RECOVERY CODES EMAIL
+    // ============================================
+    async sendRecoveryCodesEmail(email, fullName, codes) {
+        console.log(`Sending recovery codes email to: ${email}`);
+
+        const codeRows = codes.map(code => `
+            <div style="font-family: 'Courier New', monospace; font-size: 18px; color: #d4af37; background: #000; padding: 8px 12px; border-radius: 6px; border: 1px solid #1f1f1f; margin-bottom: 8px; text-align: center; letter-spacing: 2px;">
+                ${code}
+            </div>
+        `).join('');
+
+        try {
+            const htmlContent = `
+                <!DOCTYPE html>
+                <html lang="en">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Your Recovery Codes</title>
+                    <style>${EMAIL_STYLES}</style>
+                </head>
+                <body>
+                    <div class="wrapper">
+                        <div class="container">
+                            <div class="header">
+                                <h1>Account Recovery Codes</h1>
+                                <p>IIK Learner Certificate Portal</p>
+                            </div>
+                            <div class="content">
+                                <p class="greeting">Hello <strong>${fullName}</strong>,</p>
+                                <p class="message">
+                                    Your account has been successfully verified! As an added layer of security, 
+                                    we have generated <strong>10 Recovery Codes</strong> for your account.
+                                </p>
+                                <p class="message">
+                                    If you ever lose access to your email or phone, you can use one of these codes to log back in. 
+                                    <strong>Each code can only be used once.</strong>
+                                </p>
+
+                                <div class="code-box" style="text-align: left; padding: 20px;">
+                                    <span class="label" style="margin-bottom: 16px;">Your Recovery Codes</span>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                        ${codeRows}
+                                    </div>
+                                </div>
+
+                                <div class="alert">
+                                    <strong>Important:</strong> Please save these codes in a safe place (like a password manager or print them out). 
+                                    You will not be able to see them again!
+                                </div>
+                            </div>
+                            <div class="footer">
+                                <p class="brand">IIK Learner Certificate Portal</p>
+                                <p>&copy; ${new Date().getFullYear()} All rights reserved.</p>
+                                <p>This is an automated message, please do not reply.</p>
+                            </div>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `;
+
+            await graphSendMail({
+                to: email,
+                subject: 'Your Recovery Codes - IIK Learner Portal',
+                html: htmlContent,
+                text: `Hello ${fullName},\n\nYour account has been verified. Here are your 10 Recovery Codes:\n\n${codes.join('\n')}\n\nPlease save these somewhere safe. Each code can only be used once.`
+            });
+
+            console.log('Recovery codes email sent to:', email);
+            return { success: true };
+        } catch (error) {
+            console.error('Failed to send recovery codes email:', error.message);
             throw error;
         }
     }

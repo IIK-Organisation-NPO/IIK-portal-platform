@@ -36,7 +36,7 @@ const mapProgrammeRow = (row) => {
         startDate: formattedStartDate,
         startDateRaw: row.Start_date || null,
         status: row.Programme_status || 'Draft',
-        enrolled: 0,
+        enrolled: Number(row.enrolled_count) || 0, // <--- UPDATED: Uses the count from SQL
         category: 'General',
         archived: row.Programme_status === 'Archived'
     };
@@ -222,10 +222,22 @@ const createProgramme = async (req, res) => {
 // ===========================================
 const getAllProgrammes = async (req, res) => {
     try {
-        const rows = await getMany(
-            'SELECT * FROM programmes ORDER BY Programme_id DESC'
-        );
+        // UPDATED: Added a subquery to count actual enrolments for each programme
+        const rows = await getMany(`
+            SELECT 
+                p.*,
+                (
+                    SELECT COUNT(DISTINCT e.User_id) 
+                    FROM Enrolment e 
+                    WHERE e.Programme_id = p.Programme_id 
+                      AND e.Completion_status != 'Withdrawn'
+                ) AS enrolled_count
+            FROM programmes p 
+            ORDER BY p.Programme_id DESC
+        `);
+        
         const programmes = rows.map(mapProgrammeRow);
+        
         return res.status(200).json({
             success: true,
             count: programmes.length,
