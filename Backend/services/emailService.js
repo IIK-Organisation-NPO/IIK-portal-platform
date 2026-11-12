@@ -594,7 +594,7 @@ class EmailService {
         }
     }
 
-     // ============================================
+      // ============================================
     // SEND NEW PROGRAMME NOTIFICATION TO A LEARNER
     // ============================================
     async sendNewProgrammeNotification(email, fullName, programme) {
@@ -615,7 +615,7 @@ class EmailService {
             })
             : 'To be announced';
 
-        // Use the specific production URL
+        // Hardcode the production URL
         const baseUrl = 'https://portal.iik.co.za';
 
         try {
@@ -641,7 +641,7 @@ class EmailService {
                         .container {
                             max-width: 600px;
                             margin: 0 auto;
-                            background-color: #111111; /* Slightly lighter black for the card */
+                            background-color: #111111;
                             border-radius: 8px;
                             border: 1px solid #333333;
                             overflow: hidden;
@@ -675,7 +675,7 @@ class EmailService {
                             margin-bottom: 24px;
                         }
                         .details {
-                            background-color: #1f1f1f; /* Dark gray for the details box */
+                            background-color: #1f1f1f;
                             border-radius: 8px;
                             padding: 16px;
                             margin: 24px 0;
@@ -767,7 +767,7 @@ class EmailService {
                                 </div>
 
                                 <div class="btn-wrap">
-                                    <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/login" class="btn">View Programme</a>
+                                    <a href="${baseUrl}/learner-programmes" class="btn">View Programme</a>
                                 </div>
 
                                 <p style="color: #6e6e6e; font-size: 13px; margin-top: 12px;">
@@ -790,7 +790,7 @@ class EmailService {
                 to: email,
                 subject: `New Programme Available: ${name}`,
                 html: htmlContent,
-                text: `Hello ${fullName},\n\nA new programme is now available on the IIK Learner Portal.\n\nProgramme: ${name}\n${description ? `Description: ${description}\n` : ''}${duration ? `Duration: ${duration}\n` : ''}Starts: ${formattedStart}\n\nView it here: ${process.env.FRONTEND_URL || 'http://localhost:5173'}/login\n\nYou're receiving this because you opted in to new programme notifications.\n\nIIK Learner Certificate Portal`
+                text: `Hello ${fullName},\n\nA new programme is now available on the IIK Learner Portal.\n\nProgramme: ${name}\n${description ? `Description: ${description}\n` : ''}${duration ? `Duration: ${duration}\n` : ''}Starts: ${formattedStart}\n\nView it here: ${baseUrl}/learner-programmes\n\nYou're receiving this because you opted in to new programme notifications.\n\nIIK Learner Certificate Portal`
             });
 
             console.log('New programme notification sent to:', email);
