@@ -10,10 +10,12 @@ const { pool } = require('../config/database');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 
+
 dotenv.config();
 
 const oauthClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const pendingSignups = new Map();
+const recoveryAttempts = new Map();
 
 setInterval(() => {
     const now = Date.now();
@@ -299,8 +301,26 @@ static generateRefreshJWT(user) {
                 password,
                 confirmPassword,
                 terms_accepted,
-                physicalAddress
+                physicalAddress,
+                // NEW: Security Questions
+                security_question_1,
+                security_answer_1,
+                security_question_2,
+                security_answer_2,
+                security_question_3,
+                security_answer_3
             } = req.body;
+
+            // Validate Security Questions
+            if (!security_question_1 || !security_answer_1 || 
+                !security_question_2 || !security_answer_2 || 
+                !security_question_3 || !security_answer_3) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'All three security questions and answers are required.',
+                    errors: [{ field: 'security', message: 'Please complete all security questions.' }]
+                });
+            }
 
             // Validate email with disposable blocking
             const emailValidation = AuthController.validateEmail(email);
@@ -372,6 +392,14 @@ static generateRefreshJWT(user) {
              errors: [{ field: 'id_number', message: 'ID number already registered. Please contact support.' }]
             });
             }
+            
+            // Hash the security answers
+            const bcrypt = require('bcryptjs');
+            const salt = await bcrypt.genSalt(10);
+            const answer1Hash = await bcrypt.hash(security_answer_1.toLowerCase().trim(), salt);
+            const answer2Hash = await bcrypt.hash(security_answer_2.toLowerCase().trim(), salt);
+            const answer3Hash = await bcrypt.hash(security_answer_3.toLowerCase().trim(), salt);
+
             // Generate OTP and stash the pending signup in memory
             const otp = AuthController.generateOTP();
             const now = Date.now();
@@ -387,6 +415,15 @@ static generateRefreshJWT(user) {
                 physicalAddress: physicalAddress ? physicalAddress.trim() : null,
                 terms_accepted: true,
                 role_id: 2,
+                
+                // NEW: Store the questions and hashed answers
+                security_question_1,
+                security_answer_1: answer1Hash,
+                security_question_2,
+                security_answer_2: answer2Hash,
+                security_question_3,
+                security_answer_3: answer3Hash,
+
                 otp,
                 issued_at: now,
                 expire_at: now + 30 * 60 * 1000,
@@ -910,7 +947,7 @@ static async login(req, res) {
         }
     }
 
-    // ============================================
+   // ============================================
     //  VERIFY REGISTRATION OTP
     // ============================================
     static async verifyRegistrationOTP(req, res) {
@@ -993,7 +1030,15 @@ static async login(req, res) {
                 password: pending.password,          
                 terms_accepted: pending.terms_accepted,
                 role_id: pending.role_id,
-                physicalAddress: pending.physicalAddress
+                physicalAddress: pending.physicalAddress,
+                
+                // NEW: Pass the security questions and hashed answers
+                security_question_1: pending.security_question_1,
+                security_answer_1: pending.security_answer_1,
+                security_question_2: pending.security_question_2,
+                security_answer_2: pending.security_answer_2,
+                security_question_3: pending.security_question_3,
+                security_answer_3: pending.security_answer_3
             });
 
             console.log(`User created via OTP verification. ID: ${newUser.user_id}`);
@@ -1079,7 +1124,6 @@ static async login(req, res) {
             });
         }
     }
-
     // ============================================
     // RESEND REGISTRATION OTP
     // ============================================
@@ -1686,7 +1730,248 @@ static async login(req, res) {
             });
         }
     }
+        // ============================================
+    // GET RECOVERY QUESTIONS
+    // ============================================
+    static async getRecoveryQuestions(req, res) {
+        try {
+            const { id_number } = req.body;
 
+            if (!id_number) {
+                return res.status(400).json({ success: false, message: 'ID number is required.' });
+            }
+
+            // Look up the user by ID
+            const user = await User.findByIdNumber(id_number.trim());
+
+            // CHANGE: If no user is found, stop them here.
+            if (!user) {
+                return res.status(404).json({ 
+                    success: false, 
+                    message: 'No account found with this ID number. Please check your ID and try again.' 
+                });
+            }
+
+            // Return the user's actual questions
+            return res.status(200).json({
+                success: true,
+                data: [
+                    user.security_question_1,
+                    user.security_question_2,
+                    user.security_question_3
+                ]
+            });
+
+        } catch (error) {
+            console.error('Error fetching recovery questions:', error);
+            return res.status(500).json({ success: false, message: 'Server error' });
+        }
+    }
+    
+    // ============================================
+    // RECOVER ACCOUNT VIA SECURITY QUESTIONS
+    // ============================================
+    static async recoverAccount(req, res) {
+        try {
+            const {
+                id_number,
+                security_answer_1,
+                security_answer_2,
+                security_answer_3,
+                new_password
+            } = req.body;
+
+            if (!id_number || !security_answer_1 || !security_answer_2 || !security_answer_3 || !new_password) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'All fields are required.'
+                });
+            }
+
+            if (new_password.length < 8) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Password must be at least 8 characters.'
+                });
+            }
+
+            // Find the user
+            const user = await User.findByIdNumber(id_number.trim());
+            
+            // If no user, fail gracefully (don't reveal existence)
+            if (!user) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'One or more security answers are incorrect.'
+                });
+            }
+
+            const bcrypt = require('bcryptjs');
+            
+            // Verify all three answers
+            const match1 = await bcrypt.compare(security_answer_1.toLowerCase().trim(), user.security_answer_1);
+            const match2 = await bcrypt.compare(security_answer_2.toLowerCase().trim(), user.security_answer_2);
+            const match3 = await bcrypt.compare(security_answer_3.toLowerCase().trim(), user.security_answer_3);
+
+            if (!match1 || !match2 || !match3) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'One or more security answers are incorrect.'
+                });
+            }
+
+            // Update the password
+            await User.updatePassword(user.User_id, new_password);
+
+            return res.status(200).json({
+                success: true,
+                message: 'Account recovered successfully. You can now log in with your new password.'
+            });
+
+        } catch (error) {
+            console.error('Recovery error:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to recover account. Please try again later.'
+            });
+        }
+    }
+       // ============================================
+    // VERIFY SECURITY ANSWERS (STEP 2)
+    // ============================================
+    static async verifySecurityAnswers(req, res) {
+        try {
+            const { id_number, security_answer_1, security_answer_2, security_answer_3 } = req.body;
+            const cleanId = id_number.trim();
+
+            // 1. Check Memory Map for Lock Status
+            const record = recoveryAttempts.get(cleanId) || { attempts: 0, lockedUntil: null };
+
+            if (record.lockedUntil) {
+                const now = Date.now();
+                if (now < record.lockedUntil) {
+                    const minutesLeft = Math.ceil((record.lockedUntil - now) / 60000);
+                    return res.status(403).json({ 
+                        success: false, 
+                        message: `Account is temporarily locked due to too many failed attempts. Please try again in ${minutesLeft} minute(s).` 
+                    });
+                } else {
+                    // Lock expired, reset attempts
+                    record.attempts = 0;
+                    record.lockedUntil = null;
+                    recoveryAttempts.set(cleanId, record);
+                }
+            }
+
+            // 2. Find User
+            const user = await User.findByIdNumber(cleanId);
+            if (!user) return res.status(401).json({ success: false, message: 'Invalid ID or answers.' });
+
+            // 3. Check Answers
+            const bcrypt = require('bcryptjs');
+            const match1 = await bcrypt.compare(security_answer_1.toLowerCase().trim(), user.security_answer_1);
+            const match2 = await bcrypt.compare(security_answer_2.toLowerCase().trim(), user.security_answer_2);
+            const match3 = await bcrypt.compare(security_answer_3.toLowerCase().trim(), user.security_answer_3);
+
+            // 4. Handle Incorrect Answers
+            if (!match1 || !match2 || !match3) {
+                record.attempts += 1;
+
+                // If 3rd attempt, lock for 3 minutes
+                if (record.attempts >= 3) {
+                    record.lockedUntil = Date.now() + 3 * 60 * 1000; // 3 minutes from now
+                    recoveryAttempts.set(cleanId, record);
+
+                    // Send Alert Email
+                    try {
+                        const emailService = require('../services/emailService');
+                        await emailService.sendAccountLockAlertEmail(
+                            user.email, 
+                            user.name, 
+                            'Your security questions were answered incorrectly 3 times.'
+                        );
+                    } catch (err) {
+                        console.error('Failed to send lock alert email:', err.message);
+                    }
+
+                    return res.status(403).json({ 
+                        success: false, 
+                        message: 'Too many incorrect answers. Your account has been locked for 3 minutes. An alert email has been sent.' 
+                    });
+                }
+
+                // Not locked yet, just save the new attempt count
+                recoveryAttempts.set(cleanId, record);
+
+                return res.status(401).json({ 
+                    success: false, 
+                    message: `One or more security answers are incorrect. You have ${3 - record.attempts} attempt(s) left.` 
+                });
+            }
+
+            // 5. Success: Reset attempts in memory
+            recoveryAttempts.delete(cleanId);
+
+            return res.status(200).json({ 
+                success: true, 
+                message: 'Identity verified successfully.',
+                data: {
+                    name: user.name,
+                    surname: user.surname
+                }
+            });
+
+        } catch (error) {
+            console.error('Verification error:', error);
+            return res.status(500).json({ success: false, message: 'Server error' });
+        }
+    }
+
+    // ============================================
+    // RECOVER ACCOUNT (STEP 3)
+    // ============================================
+    static async recoverAccount(req, res) {
+        try {
+            const { id_number, new_email, new_phone, new_password } = req.body;
+
+            if (!id_number || !new_password) {
+                return res.status(400).json({ success: false, message: 'Password is required.' });
+            }
+
+            const user = await User.findByIdNumber(id_number.trim());
+            if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
+
+            // Update password
+            await User.updatePassword(user.User_id, new_password);
+
+            // Update email and phone if provided
+            if (new_email || new_phone) {
+                const updates = [];
+                const values = [];
+                
+                if (new_email) {
+                    updates.push('email = ?');
+                    values.push(new_email);
+                }
+                if (new_phone) {
+                    updates.push('phone_number = ?');
+                    values.push(new_phone);
+                }
+                
+                values.push(user.User_id);
+                await pool.execute(`UPDATE user SET ${updates.join(', ')} WHERE User_id = ?`, values);
+            }
+
+            return res.status(200).json({
+                success: true,
+                message: 'Account recovered successfully.'
+            });
+
+        } catch (error) {
+            console.error('Recovery error:', error);
+            return res.status(500).json({ success: false, message: 'Failed to recover account.' });
+        }
+    }
     // ============================================
     //  GOOGLE OAUTH
     // ============================================

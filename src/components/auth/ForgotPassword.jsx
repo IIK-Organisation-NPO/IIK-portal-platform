@@ -159,6 +159,17 @@ const ForgotPassword = () => {
             </button>
           </form>
 
+          {/* NEW: Link to Account Recovery for users without email access */}
+          <div style={{ textAlign: 'center', marginTop: '20px', marginBottom: '10px' }}>
+            <span style={{ fontSize: '14px', color: '#64748b' }}>Don't have access to your email? </span>
+            <Link 
+              to="/account-recovery" 
+              style={{ fontSize: '14px', color: '#1e293b', fontWeight: '600', textDecoration: 'underline' }}
+            >
+              Use Account Recovery
+            </Link>
+          </div>
+
           <div className="back-to-login">
             <Link to="/login">
               <FaArrowLeft style={{ marginRight: '0.5rem' }} />

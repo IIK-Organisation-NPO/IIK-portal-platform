@@ -15,7 +15,14 @@ class User {
             password,
             terms_accepted,
             role_id = 2,
-            physicalAddress   // <-- NEW
+            physicalAddress,
+            // NEW: Security Questions
+            security_question_1,
+            security_answer_1,
+            security_question_2,
+            security_answer_2,
+            security_question_3,
+            security_answer_3
         } = userData;
 
         const salt = await bcrypt.genSalt(10);
@@ -32,8 +39,14 @@ class User {
                 gender_id,
                 terms_accepted,
                 role_id,
-                Physical_address
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                Physical_address,
+                security_question_1,
+                security_answer_1,
+                security_question_2,
+                security_answer_2,
+                security_question_3,
+                security_answer_3
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
 
         const [result] = await pool.execute(query, [
@@ -46,7 +59,14 @@ class User {
             gender_id || null,
             terms_accepted ? 1 : 0,
             role_id,
-            physicalAddress || null   // <-- NEW: '' becomes NULL
+            physicalAddress || null,
+            // NEW: Security Fields
+            security_question_1,
+            security_answer_1,
+            security_question_2,
+            security_answer_2,
+            security_question_3,
+            security_answer_3
         ]);
 
         return {
@@ -57,7 +77,7 @@ class User {
             phone_number,
             gender_id,
             id_number,
-            physicalAddress: physicalAddress || null   // <-- NEW
+            physicalAddress: physicalAddress || null
         };
     }
 
@@ -165,7 +185,7 @@ class User {
                 u.email,
                 u.id_number,
                 u.phone_number,
-                u.Physical_address,     -- <-- NEW
+                u.Physical_address,     
                 u.terms_accepted,
                 u.email_verify,
                 u.register_at,
@@ -192,7 +212,7 @@ class User {
                 u.email,
                 u.id_number,
                 u.phone_number,
-                u.Physical_address,     -- <-- NEW
+                u.Physical_address,     
                 u.email_verify,
                 u.register_at,
                 g.gender_description,
@@ -224,7 +244,7 @@ class User {
                 u.email,
                 u.id_number,
                 u.phone_number,
-                u.Physical_address,     -- <-- NEW
+                u.Physical_address,     
                 u.email_verify,
                 u.register_at,
                 g.gender_description,
@@ -260,7 +280,7 @@ class User {
                 u.email,
                 u.id_number,
                 u.phone_number,
-                u.Physical_address,     -- <-- NEW
+                u.Physical_address,     
                 u.email_verify,
                 u.register_at,
                 g.gender_description,

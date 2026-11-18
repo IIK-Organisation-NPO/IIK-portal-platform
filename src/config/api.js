@@ -25,6 +25,11 @@ export const API = {
     googleAuth:        url('/api/auth/google-auth'),
     genders:           url('/api/auth/genders'),
     roles:             url('/api/auth/roles'),
+    
+    // NEW: Account Recovery Endpoints
+    getRecoveryQuestions: url('/api/auth/get-recovery-questions'),
+    verifyAnswers:        url('/api/auth/verify-security-answers'),
+    recoverAccount:       url('/api/auth/recover-account'),
   },
   staff: {
     list:            url('/api/staff'),
@@ -62,8 +67,6 @@ export const API = {
     sendWeeklySummaryNow: url('/api/admin/weekly-summary/send-now'),
     centresStats: `${API_BASE}/api/admin/centres/stats`,
     centres: `${API_BASE}/api/admin/centres`, 
-    
-
   },
   learner: {
     profile:         url('/api/learner/profile'),
@@ -88,7 +91,7 @@ export const authHeaders = (extra = {}) => {
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...extra,
   };
-};;
+};
 
 export const apiFetch = async (endpoint, options = {}) => {
   const res = await fetch(endpoint, {

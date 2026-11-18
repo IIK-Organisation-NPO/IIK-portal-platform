@@ -16,13 +16,24 @@ import {
   FaCheckCircle,
   FaShieldAlt,
   FaMapMarkerAlt,
-  FaBars
+  FaBars,
+  FaQuestionCircle
 } from 'react-icons/fa';
 import Footer from '../common/Footer';
 import '../../styles/components/auth.css';
 import '../../styles/components/mobile-nav.css';
 import logo from '../../assets/images/small Mki.png';
 import { API } from '../../config/api';
+
+const SECURITY_QUESTIONS = [
+  "What is your mother's maiden name?",
+  "What was the name of your first pet?",
+  "What city were you born in?",
+  "What is the name of your first school?",
+  "What is your favourite book?",
+  "What was your childhood nickname?",
+  "What is the name of the street you grew up on?"
+];
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -35,7 +46,13 @@ const Signup = () => {
     id_number: '',
     physicalAddress: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    security_question_1: '',
+    security_answer_1: '',
+    security_question_2: '',
+    security_answer_2: '',
+    security_question_3: '',
+    security_answer_3: ''
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -480,6 +497,39 @@ const Signup = () => {
       }
     });
 
+    // Validate Security Questions
+    if (!formData.security_question_1) {
+      newErrors.security_question_1 = 'Please select question 1';
+      isValid = false;
+    }
+    if (!formData.security_answer_1.trim()) {
+      newErrors.security_answer_1 = 'Answer is required';
+      isValid = false;
+    }
+    if (!formData.security_question_2) {
+      newErrors.security_question_2 = 'Please select question 2';
+      isValid = false;
+    }
+    if (!formData.security_answer_2.trim()) {
+      newErrors.security_answer_2 = 'Answer is required';
+      isValid = false;
+    }
+    if (!formData.security_question_3) {
+      newErrors.security_question_3 = 'Please select question 3';
+      isValid = false;
+    }
+    if (!formData.security_answer_3.trim()) {
+      newErrors.security_answer_3 = 'Answer is required';
+      isValid = false;
+    }
+
+    if (formData.security_question_1 === formData.security_question_2 ||
+        formData.security_question_1 === formData.security_question_3 ||
+        formData.security_question_2 === formData.security_question_3) {
+      newErrors.security_question_1 = 'Please select three different questions';
+      isValid = false;
+    }
+
     if (!terms_accepted) {
       newErrors.terms = 'You must agree to the Terms of Service and Privacy Policy to continue.';
       isValid = false;
@@ -536,7 +586,15 @@ const Signup = () => {
         password: formData.password,
         confirmPassword: formData.confirmPassword,
         terms_accepted: terms_accepted,
-        captchaToken: captchaToken
+        captchaToken: captchaToken,
+        
+        // Security Questions
+        security_question_1: formData.security_question_1,
+        security_answer_1: formData.security_answer_1.trim(),
+        security_question_2: formData.security_question_2,
+        security_answer_2: formData.security_answer_2.trim(),
+        security_question_3: formData.security_question_3,
+        security_answer_3: formData.security_answer_3.trim()
       };
       console.log('Sending signup data:', signupData);
       const response = await fetch(API.auth.signup, {
@@ -647,8 +705,6 @@ const Signup = () => {
             <img src={logo} alt="IIK Portal Logo" />
             <span className="logo-text">Learner Certificate Portal</span>
           </div>
-
-         
 
           <h2>Create Your Account</h2>
           <p className="subtitle">
@@ -833,6 +889,94 @@ const Signup = () => {
                 {errors.physicalAddress && (
                   <span className="error-text">{errors.physicalAddress}</span>
                 )}
+              </div>
+            </div>
+
+            {/* ===== SECURITY QUESTIONS ===== */}
+            <div style={{ marginTop: '24px', marginBottom: '24px', padding: '20px', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1e293b', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <FaQuestionCircle /> Account Recovery (Required)
+              </h3>
+              <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '16px' }}>
+                Please select three security questions. You will need these to recover your account if you lose access to your email.
+              </p>
+
+              {/* Question 1 */}
+              <div style={{ marginBottom: '16px' }}>
+                <select
+                  className="input-field"
+                  value={formData.security_question_1}
+                  onChange={(e) => setFormData({ ...formData, security_question_1: e.target.value })}
+                  required
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', marginBottom: '8px' }}
+                >
+                  <option value="">-- Select Question 1 --</option>
+                  {SECURITY_QUESTIONS.map((q, i) => (
+                    <option key={i} value={q} disabled={q === formData.security_question_2 || q === formData.security_question_3}>{q}</option>
+                  ))}
+                </select>
+                <input
+                  type="text"
+                  className="input-field"
+                  placeholder="Your Answer 1"
+                  value={formData.security_answer_1}
+                  onChange={(e) => setFormData({ ...formData, security_answer_1: e.target.value })}
+                  required
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                />
+                {hasError('security_question_1') && <span className="error-text">{errors.security_question_1}</span>}
+              </div>
+
+              {/* Question 2 */}
+              <div style={{ marginBottom: '16px' }}>
+                <select
+                  className="input-field"
+                  value={formData.security_question_2}
+                  onChange={(e) => setFormData({ ...formData, security_question_2: e.target.value })}
+                  required
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', marginBottom: '8px' }}
+                >
+                  <option value="">-- Select Question 2 --</option>
+                  {SECURITY_QUESTIONS.map((q, i) => (
+                    <option key={i} value={q} disabled={q === formData.security_question_1 || q === formData.security_question_3}>{q}</option>
+                  ))}
+                </select>
+                <input
+                  type="text"
+                  className="input-field"
+                  placeholder="Your Answer 2"
+                  value={formData.security_answer_2}
+                  onChange={(e) => setFormData({ ...formData, security_answer_2: e.target.value })}
+                  required
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                />
+                 {hasError('security_question_2') && <span className="error-text">{errors.security_question_2}</span>}
+              </div>
+
+              {/* Question 3 */}
+              <div style={{ marginBottom: '16px' }}>
+                <select
+                  className="input-field"
+                  value={formData.security_question_3}
+                  onChange={(e) => setFormData({ ...formData, security_question_3: e.target.value })}
+                  required
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', marginBottom: '8px' }}
+                >
+                  <option value="">-- Select Question 3 --</option>
+                  {SECURITY_QUESTIONS.map((q, i) => (
+                    <option key={i} value={q} disabled={q === formData.security_question_1 || q === formData.security_question_2}>{q}</option>
+                  ))}
+                </select>
+                <input
+                  type="text"
+                  className="input-field"
+                  placeholder="Your Answer 3"
+                  value={formData.security_answer_3}
+                  onChange={(e) => setFormData({ ...formData, security_answer_3: e.target.value })}
+                  required
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                />
+                {hasError('security_question_3') && <span className="error-text">{errors.security_question_3}</span>}
               </div>
             </div>
 

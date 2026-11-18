@@ -11,6 +11,7 @@ import ForgotPassword from '../components/auth/ForgotPassword';
 import VerifyOTP from '../components/auth/VerifyOTP';
 import ResetPassword from '../components/auth/ResetPassword';
 import VerifyEmail from '../components/auth/VerifyEmail';
+import AccountRecovery from '../components/auth/AccountRecovery'; // <-- NEW IMPORT
 
 import LearnerDashBoard from '../pages/Learner_Screens/Learner_DashBoard';
 import LearnerProfile from '../pages/Learner_Screens/Learner_Profile';
@@ -38,6 +39,7 @@ import RoleRoute from '../components/auth/RoleRoute';
 import NotFound from '../pages/NotFound';
 
 import TermsAndConditions from "../components/auth/terms_and_conditions";
+
 const AppRoutes = () => {
   return (
     <Router>
@@ -51,6 +53,10 @@ const AppRoutes = () => {
         <Route path="/signup" element={<Signup />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        
+        {/* NEW ACCOUNT RECOVERY ROUTE */}
+        <Route path="/account-recovery" element={<AccountRecovery />} />
+
         <Route path="/verify-otp" element={<VerifyOTP />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/about" element={<About />} />

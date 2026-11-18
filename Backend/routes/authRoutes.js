@@ -35,6 +35,11 @@ router.post('/verify-password-reset-otp', AuthController.verifyPasswordResetOTP)
 router.post('/reset-password', AuthController.resetPassword);
 router.post('/resend-password-reset-otp', AuthController.resendPasswordResetOTP);
 
+// ===== ACCOUNT RECOVERY (SECURITY QUESTIONS) =====
+router.post('/get-recovery-questions', AuthController.getRecoveryQuestions);
+router.post('/verify-security-answers', AuthController.verifySecurityAnswers);
+router.post('/recover-account', AuthController.recoverAccount);
+
 // ===== GOOGLE OAUTH =====
 router.post('/google-auth', AuthController.googleAuth);
 

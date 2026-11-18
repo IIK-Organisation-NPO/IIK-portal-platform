@@ -1594,6 +1594,77 @@ class EmailService {
             throw error;
         }
     }
+    // ============================================
+    // SEND ACCOUNT LOCK ALERT EMAIL
+    // ============================================
+    async sendAccountLockAlertEmail(email, fullName, reason) {
+        // Fallbacks to prevent 502 errors from undefined payload data
+        const safeName = fullName || 'Learner';
+        const safeReason = reason || 'Your security questions were answered incorrectly 3 times.';
+
+        console.log(`Sending account lock alert to: ${email}`);
+        const baseUrl = 'https://portal.iik.co.za';
+
+        try {
+            const htmlContent = `
+                <!DOCTYPE html>
+                <html lang="en">
+                <head>
+                    <meta charset="UTF-8">
+                    <style>
+                        body { font-family: Arial, sans-serif; background-color: #f4f4f5; padding: 20px; margin: 0; }
+                        .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; border: 1px solid #e4e4e7; }
+                        .header { background-color: #ef4444; color: #ffffff; padding: 20px; text-align: center; }
+                        .header h1 { margin: 0; font-size: 24px; }
+                        .content { padding: 30px; color: #3f3f46; line-height: 1.6; }
+                        .alert-box { background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 15px; margin: 20px 0; }
+                        .btn { display: inline-block; padding: 12px 24px; background-color: #000000; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: bold; margin-top: 20px; }
+                        .footer { background-color: #fafafa; padding: 15px; text-align: center; font-size: 12px; color: #71717a; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h1>Security Alert</h1>
+                        </div>
+                        <div class="content">
+                            <p>Hello <strong>${safeName}</strong>,</p>
+                            <div class="alert-box">
+                                <p style="margin: 0; font-weight: bold; color: #b91c1c;">Someone tried to recover your account.</p>
+                                <p style="margin: 10px 0 0 0; font-size: 14px;">${safeReason}</p>
+                            </div>
+                            <p>For your security, we have temporarily locked the account recovery process for <strong>3 minutes</strong>.</p>
+                            <p>If this was you, simply wait 3 minutes and try again.</p>
+                            <p>If this was <strong>not</strong> you, someone else may be trying to access your account. Please ensure your password is secure and do not share your ID number with anyone.</p>
+                            
+                            <a href="${baseUrl}/login" class="btn">Go to Portal</a>
+                            
+                            <p style="margin-top: 30px; font-size: 13px; color: #71717a;">
+                                If you have any concerns, please contact the IIK support team immediately.
+                            </p>
+                        </div>
+                        <div class="footer">
+                            <p>&copy; ${new Date().getFullYear()} IIK Learner Certificate Portal. All rights reserved.</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `;
+
+            await graphSendMail({
+                to: email,
+                subject: 'Security Alert: Account Recovery Attempt Failed',
+                html: htmlContent,
+                text: `Hello ${safeName},\n\nSomeone tried to recover your account. ${safeReason}\n\nFor your security, we have temporarily locked the account recovery process for 3 minutes.\n\nIf this was not you, someone may be trying to access your account. Please ensure your password is secure.\n\nIIK Learner Certificate Portal`
+            });
+
+            console.log('Account lock alert email sent to:', email);
+            return { success: true };
+        } catch (error) {
+            console.error('Failed to send account lock alert email:', error.message);
+            throw error;
+        }
+    }
 
     // ============================================
     // SEND RECOVERY CODES EMAIL

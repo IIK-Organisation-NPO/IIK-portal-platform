@@ -7,7 +7,7 @@
 //   TENANT_ID
 //   CLIENT_ID
 //   CLIENT_SECRET
-//   MAIL_FROM   (mailbox the emails are sent FROM, e.g. noreply@iik.org.za)
+//   MAIL_FROM   (mailbox the emails are sent FROM, e.g. noreply@iik.co.za)
 // ============================================================
 
 const { ClientSecretCredential } = require('@azure/identity');
@@ -58,13 +58,6 @@ function init() {
 
 // ----------------------------------------------------------
 // sendMail — the single entry point used by emailService.js
-//
-// @param {Object} opts
-// @param {string|string[]} opts.to       – recipient(s)
-// @param {string}          opts.subject
-// @param {string}          opts.html
-// @param {string}         [opts.text]   – optional plain-text fallback
-// @param {string}         [opts.replyTo]
 // ----------------------------------------------------------
 async function sendMail({ to, subject, html, text, replyTo }) {
     init();
@@ -96,9 +89,22 @@ async function sendMail({ to, subject, html, text, replyTo }) {
             .api(`/users/${_fromAddress}/sendMail`)
             .post({ message, saveToSentItems: true });
 
+        console.log(`Graph sendMail success to ${to}`);
         return { success: true };
     } catch (err) {
-        console.error('Graph sendMail error:', err.message, err.statusCode || '');
+        const status = err.statusCode || err.status || 0;
+        console.error(`Graph sendMail error: ${status} - ${err.message || '(no message)'}`);
+        
+        // Log the full error body from Microsoft to see exactly what's wrong
+        if (err.body) {
+            try {
+                const body = typeof err.body === 'string' ? JSON.parse(err.body) : err.body;
+                console.error('Graph Error Body:', JSON.stringify(body, null, 2));
+            } catch {
+                console.error('Graph Error Body (raw):', err.body);
+            }
+        }
+        
         throw err;
     }
 }
