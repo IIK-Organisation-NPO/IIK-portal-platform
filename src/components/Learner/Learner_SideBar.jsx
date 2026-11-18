@@ -1,3 +1,4 @@
+// src/components/Learner/Learner_SideBar.jsx
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import '../../styles/Learner/Learner_SideBar.css';
@@ -14,6 +15,7 @@ const Learner_SideBar = ({ active = 'dashboard', isMobileOpen, onClose }) => {
     { id: 'certificates', label: 'Certificates', icon: 'fa-certificate', path: '/learner-certificates' },
     { id: 'profile', label: 'Profile', icon: 'fa-user', path: '/learner/profile' },
     { id: 'settings', label: 'Settings', icon: 'fa-cog', path: '/learner/settings' },
+    { id: 'help', label: 'Help & Support', icon: 'fa-question-circle', path: '/learner/help' }, // <-- NEW HELP TAB
     { id: 'logout', label: 'Logout', icon: 'fa-sign-out-alt', path: '#', isLogout: true },
   ];
 
@@ -26,16 +28,11 @@ const Learner_SideBar = ({ active = 'dashboard', isMobileOpen, onClose }) => {
 
   // Confirm logout - actually perform the logout
   const confirmLogout = () => {
-    // Add your logout logic here
-    // For example: clear tokens, user session, etc.
     localStorage.removeItem('token'); // Clear learner token
     localStorage.removeItem('user');  // Clear user data
     sessionStorage.clear(); // Clear any session data
     
-    // Close the modal
     setShowLogoutModal(false);
-    
-    // Navigate to login page
     navigate('/login');
   };
 
@@ -81,8 +78,6 @@ const Learner_SideBar = ({ active = 'dashboard', isMobileOpen, onClose }) => {
             );
           })}
         </nav>
-
-        
       </aside>
 
       {/* Logout Confirmation Modal */}
@@ -93,7 +88,7 @@ const Learner_SideBar = ({ active = 'dashboard', isMobileOpen, onClose }) => {
             <div className="logout-modal-header">
               <h2>Confirm Logout</h2>
               <button className="logout-modal-close" onClick={cancelLogout}>
-                
+                ×
               </button>
             </div>
             
