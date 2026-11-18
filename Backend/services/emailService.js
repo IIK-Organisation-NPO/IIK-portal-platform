@@ -420,7 +420,7 @@ class EmailService {
                                 </div>
 
                                 <div class="btn-wrap">
-                                    <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/login" class="btn">Go to Login</a>
+                                    <a href="https://portal.iik.co.za/login" class="btn">Go to Login</a>
                                 </div>
 
                                 <p style="color: #6e6e6e; font-size: 13px; margin-top: 12px;">
@@ -442,7 +442,7 @@ class EmailService {
                 to: email,
                 subject: 'Welcome to IIK Learner Portal',
                 html: htmlContent,
-                text: `Hello ${fullName},\n\nWelcome to IIK Learner Portal! Your account has been successfully created and verified.\n\nYou can now:\n- Access your learning materials and certificates\n- Track your progress\n- Update your profile\n\nVisit: ${process.env.FRONTEND_URL || 'http://localhost:5173'}/login\n\nIIK Learner Certificate Portal`
+                text: `Hello ${fullName},\n\nWelcome to IIK Learner Portal! Your account has been successfully created and verified.\n\nYou can now:\n- Access your learning materials and certificates\n- Track your progress\n- Update your profile\n\nVisit: https://portal.iik.co.za/login\n\nIIK Learner Certificate Portal`
             });
 
             console.log('Welcome email sent to:', email);
@@ -833,7 +833,7 @@ class EmailService {
         return results;
     }
 
-    // ============================================
+        // ============================================
     // NOTIFY ADMINS OF A NEW LEARNER REGISTRATION
     // ============================================
     async sendNewLearnerRegistrationNotification(email, adminName, learner) {
@@ -895,7 +895,7 @@ class EmailService {
                                 </div>
 
                                 <div class="btn-wrap">
-                                    <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/login" class="btn">View in Admin Portal</a>
+                                    <a href="https://portal.iik.co.za/admin/learners" class="btn">View in Admin Portal</a>
                                 </div>
 
                                 <p style="color: #6e6e6e; font-size: 13px; margin-top: 12px;">
@@ -918,7 +918,7 @@ class EmailService {
                 to: email,
                 subject: `New Learner Registered: ${fullName}`,
                 html: htmlContent,
-                text: `Hello ${adminName},\n\nA new learner has just registered on the IIK Learner Portal.\n\nName: ${fullName}\nEmail: ${learnerEmail}\nRegistered: ${formattedDate}\n\nView them in the admin portal: ${process.env.FRONTEND_URL || 'http://localhost:5173'}/login\n\nIIK Learner Certificate Portal`
+                text: `Hello ${adminName},\n\nA new learner has just registered on the IIK Learner Portal.\n\nName: ${fullName}\nEmail: ${learnerEmail}\nRegistered: ${formattedDate}\n\nView them in the admin portal: https://portal.iik.co.za/admin/learners\n\nIIK Learner Certificate Portal`
             });
 
             console.log('New-learner notification sent to admin:', email);
@@ -966,7 +966,7 @@ class EmailService {
         return results;
     }
 
-    // ============================================
+       // ============================================
     // NOTIFY AN ADMIN THAT A LEARNER COMPLETED A PROGRAMME
     // ============================================
     async sendLearnerCompletedNotification(adminEmail, adminName, details) {
@@ -1036,7 +1036,7 @@ class EmailService {
                                 </div>
 
                                 <div class="btn-wrap">
-                                    <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/login" class="btn">Issue Certificate</a>
+                                    <a href="https://portal.iik.co.za/admin-certificates" class="btn">Issue Certificate</a>
                                 </div>
 
                                 <p style="color: #6e6e6e; font-size: 13px; margin-top: 12px;">
@@ -1059,7 +1059,7 @@ class EmailService {
                 to: adminEmail,
                 subject: `Ready for certificate: ${learnerName} - ${programmeName}`,
                 html: htmlContent,
-                text: `Hello ${adminName},\n\nA learner at your centre has completed a programme and is ready for their certificate.\n\nLearner: ${learnerName}\nProgramme: ${programmeName}\nCentre: ${centreName}\nCompleted: ${formattedDate}\nMarked by: ${markedByName}\n\nIssue their certificate here: ${process.env.FRONTEND_URL || 'http://localhost:5173'}/login\n\nIIK Learner Certificate Portal`
+                text: `Hello ${adminName},\n\nA learner at your centre has completed a programme and is ready for their certificate.\n\nLearner: ${learnerName}\nProgramme: ${programmeName}\nCentre: ${centreName}\nCompleted: ${formattedDate}\nMarked by: ${markedByName}\n\nIssue their certificate here: https://portal.iik.co.za/admin-certificates\n\nIIK Learner Certificate Portal`
             });
 
             console.log('Learner-completed notification sent to admin:', adminEmail);
@@ -1069,7 +1069,6 @@ class EmailService {
             throw error;
         }
     }
-
     // ============================================
     // BROADCAST LEARNER-COMPLETED TO MANY ADMINS
     // ============================================
@@ -1107,7 +1106,7 @@ class EmailService {
         return results;
     }
 
-    // ============================================
+        // ============================================
     // SEND WEEKLY SUMMARY TO AN ADMIN
     // ============================================
     async sendWeeklySummary(adminEmail, adminName, summary) {
@@ -1147,6 +1146,9 @@ class EmailService {
         const centresRow = isGlobal
             ? `<div class="row"><span class="k">Total centres</span><span class="v">${totalCentres}</span></div>`
             : '';
+
+        // Hardcode the production URL
+        const baseUrl = 'https://portal.iik.co.za';
 
         try {
             const htmlContent = `
@@ -1200,7 +1202,7 @@ class EmailService {
                                 </div>
 
                                 <div class="btn-wrap">
-                                    <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/login" class="btn">View Full Analytics</a>
+                                    <a href="${baseUrl}/admin-analytics" class="btn">View Full Analytics</a>
                                 </div>
 
                                 <p style="color: #6e6e6e; font-size: 13px; margin-top: 12px;">
@@ -1223,7 +1225,7 @@ class EmailService {
                 to: adminEmail,
                 subject: `Weekly summary - ${scopeLabel} (${periodLabel})`,
                 html: htmlContent,
-                text: `Hello ${adminName},\n\nWeekly summary - ${scopeLabel}\n${periodLabel}\n\nThis week:\n${isGlobal ? `- New learner registrations: ${newRegistrations}\n` : ''}- New interests: ${newInterests}\n- New enrolments: ${newEnrolments}\n- Completions: ${completions}\n- Certificates issued: ${certificatesIssued}\n\nRunning totals:\n- Active learners: ${totalActiveLearners}\n${isGlobal ? `- Total centres: ${totalCentres}\n` : ''}\nView analytics: ${process.env.FRONTEND_URL || 'http://localhost:5173'}/login\n\nIIK Learner Certificate Portal`
+                text: `Hello ${adminName},\n\nWeekly summary - ${scopeLabel}\n${periodLabel}\n\nThis week:\n${isGlobal ? `- New learner registrations: ${newRegistrations}\n` : ''}- New interests: ${newInterests}\n- New enrolments: ${newEnrolments}\n- Completions: ${completions}\n- Certificates issued: ${certificatesIssued}\n\nRunning totals:\n- Active learners: ${totalActiveLearners}\n${isGlobal ? `- Total centres: ${totalCentres}\n` : ''}\nView analytics: ${baseUrl}/admin-analytics\n\nIIK Learner Certificate Portal`
             });
 
             console.log('Weekly summary sent to:', adminEmail);
@@ -1233,7 +1235,6 @@ class EmailService {
             throw error;
         }
     }
-
     // ============================================
     // BROADCAST WEEKLY SUMMARY TO MANY ADMINS
     // ============================================
@@ -1294,7 +1295,7 @@ class EmailService {
         return results;
     }
 
-    // ============================================
+      // ============================================
     // SEND CERTIFICATE ISSUED NOTIFICATION TO A LEARNER
     // ============================================
     async sendCertificateIssuedNotification(email, fullName, certificate) {
@@ -1317,6 +1318,9 @@ class EmailService {
                 day: 'numeric',
                 year: 'numeric',
             });
+
+        // Hardcode the production URL
+        const baseUrl = 'https://portal.iik.co.za';
 
         try {
             const htmlContent = `
@@ -1358,7 +1362,8 @@ class EmailService {
                                 </div>
 
                                 <div class="btn-wrap">
-                                    <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/login" class="btn">View My Certificate</a>
+                                    <!-- Updated link to point to the portal -->
+                                    <a href="${baseUrl}" class="btn">View My Certificate</a>
                                 </div>
 
                                 <p style="color: #6e6e6e; font-size: 13px; margin-top: 12px;">
@@ -1381,7 +1386,7 @@ class EmailService {
                 to: email,
                 subject: `Certificate Issued: ${programmeName}`,
                 html: htmlContent,
-                text: `Congratulations ${fullName}!\n\nYour certificate for "${programmeName}" has been issued.\n\nCertificate #: ${certificateNumber}\nIssued: ${formattedDate}\n\nView it here: ${process.env.FRONTEND_URL || 'http://localhost:5173'}/login\n\nIIK Learner Certificate Portal`
+                text: `Congratulations ${fullName}!\n\nYour certificate for "${programmeName}" has been issued.\n\nCertificate #: ${certificateNumber}\nIssued: ${formattedDate}\n\nView it here: ${baseUrl}\n\nIIK Learner Certificate Portal`
             });
 
             console.log('Certificate issued notification sent to:', email);
