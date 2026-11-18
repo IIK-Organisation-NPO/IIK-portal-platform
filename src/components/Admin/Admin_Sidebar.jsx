@@ -10,8 +10,15 @@ const CENTRE_NAV_ITEM = {
     icon: 'fa-map-marker-alt',
     path: '/admin/centres',
 };
-// Centre Management sits directly below Staff Management (above Settings),
-// so it is shown to the same role that can see Staff Management.
+
+const HELP_NAV_ITEM = {
+    id: 'help',
+    label: 'Help & Support',
+    icon: 'fa-question-circle',
+    path: '/admin/help',
+};
+
+// Centre Management sits directly below Staff Management (above Settings)
 const withCentreManagement = (items) => {
     if (items.some((item) => item.id === CENTRE_NAV_ITEM.id)) return items;
 
@@ -24,13 +31,29 @@ const withCentreManagement = (items) => {
         ...items.slice(staffIndex + 1),
     ];
 };
+
+// Help sits directly BELOW Settings
+const withHelp = (items) => {
+    if (items.some((item) => item.id === HELP_NAV_ITEM.id)) return items;
+
+    const settingsIndex = items.findIndex((item) => item.id === 'settings');
+    if (settingsIndex === -1) {
+        // If no settings tab exists, just append help at the end
+        return [...items, HELP_NAV_ITEM];
+    }
+
+    // Insert Help AFTER Settings
+    return [
+        ...items.slice(0, settingsIndex + 1),
+        HELP_NAV_ITEM,
+        ...items.slice(settingsIndex + 1),
+    ];
+};
+
 const Admin_Sidebar = ({ active = 'dashboard', isMobileOpen, onClose }) => {
     const navigate = useNavigate();
 
-    // State to control the logout confirmation modal visibility
     const [showLogoutModal, setShowLogoutModal] = useState(false);
-
-    // Nav items are now driven by the backend based on the user's role.
     const [navItems, setNavItems] = useState([]);
     const [navLoading, setNavLoading] = useState(true);
 
@@ -45,15 +68,17 @@ const Admin_Sidebar = ({ active = 'dashboard', isMobileOpen, onClose }) => {
                 const res = await navigationAPI.getAdminNav();
 
                 if (!cancelled && res.data?.success) {
-                    setNavItems(res.data.data || []);
-                    setNavItems(withCentreManagement(res.data.data || []));
+                    // Apply both Centre Management and Help injections
+                    let items = withCentreManagement(res.data.data || []);
+                    items = withHelp(items);
+                    setNavItems(items);
                 }
             } catch (err) {
                 console.error('Failed to load navigation:', err);
 
-                // Fallback: show safe items only (no Staff Management)
+                // Fallback: show safe items + centre + help
                 if (!cancelled) {
-                    setNavItems([
+                    const fallbackItems = [
                         { id: 'dashboard',    label: 'Dashboard',    icon: 'fa-th-large',   path: '/admin-dashboard' },
                         { id: 'analytics',    label: 'Analytics',    icon: 'fa-chart-line', path: '/admin-analytics' },
                         { id: 'learners',     label: 'Learners',     icon: 'fa-users',      path: '/admin/learners' },
@@ -61,7 +86,8 @@ const Admin_Sidebar = ({ active = 'dashboard', isMobileOpen, onClose }) => {
                         { id: 'programmes',   label: 'Programmes',   icon: 'fa-book-open',  path: '/admin/programmes' },
                         { id: 'blog',         label: 'Blog & News',  icon: 'fa-newspaper',  path: '/admin/blog-management' },
                         { id: 'settings',     label: 'Settings',     icon: 'fa-cog',        path: '/admin/settings' },
-                    ]);
+                    ];
+                    setNavItems(withHelp(fallbackItems));
                 }
             } finally {
                 if (!cancelled) setNavLoading(false);
@@ -72,13 +98,11 @@ const Admin_Sidebar = ({ active = 'dashboard', isMobileOpen, onClose }) => {
         return () => { cancelled = true; };
     }, []);
 
-    // Open the logout confirmation modal
     const handleLogoutClick = () => {
         setShowLogoutModal(true);
         if (onClose) onClose();
     };
 
-    // Confirm logout - actually perform the logout
     const confirmLogout = () => {
         localStorage.removeItem('adminToken');
         localStorage.removeItem('token');
@@ -89,19 +113,16 @@ const Admin_Sidebar = ({ active = 'dashboard', isMobileOpen, onClose }) => {
         navigate('/login');
     };
 
-    // Cancel logout - close the modal without logging out
     const cancelLogout = () => {
         setShowLogoutModal(false);
     };
 
     return (
         <>
-            {/* Mobile Overlay */}
             {isMobileOpen && (
                 <div className="admin-sidebar-overlay" onClick={onClose}></div>
             )}
 
-            {/* Sidebar */}
             <aside className={`admin-sidebar ${isMobileOpen ? 'mobile-open' : ''}`}>
                 <div className="admin-sidebar-menu-label">Admin Portal</div>
 
@@ -110,7 +131,6 @@ const Admin_Sidebar = ({ active = 'dashboard', isMobileOpen, onClose }) => {
                         <div className="admin-sidebar-loading">Loading…</div>
                     ) : (
                         <>
-                            {/* Role-filtered nav items from the backend */}
                             {navItems.map((item) => (
                                 <Link
                                     key={item.id}
@@ -123,7 +143,6 @@ const Admin_Sidebar = ({ active = 'dashboard', isMobileOpen, onClose }) => {
                                 </Link>
                             ))}
 
-                            {/* Logout — always present, not from the API */}
                             <button
                                 className="admin-logout-nav-item"
                                 onClick={handleLogoutClick}
@@ -136,7 +155,6 @@ const Admin_Sidebar = ({ active = 'dashboard', isMobileOpen, onClose }) => {
                 </nav>
             </aside>
 
-            {/* Logout Confirmation Modal */}
             {showLogoutModal && (
                 <div className="logout-modal-overlay" onClick={cancelLogout}>
                     <div className="logout-modal-content confirmation-modal" onClick={(e) => e.stopPropagation()}>
